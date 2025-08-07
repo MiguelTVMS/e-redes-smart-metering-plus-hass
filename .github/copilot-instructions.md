@@ -101,7 +101,7 @@ Ensure HACS compatibility:
   "name": "E-Redes Smart Metering Plus",
   "content_in_root": false,
   "domains": ["e_redes_smart_metering_plus"],
-  "homeassistant": "2024.6.0"
+  "homeassistant": "2025.8.0"
 }
 ```
 
@@ -141,3 +141,8 @@ Add translations:
 * `.translations/en.json`
 * `.translations/pt.json`
 * `strings.json` for config flow
+
+
+## Documentation to help Copilot
+
+[Home Assistant Developer Documentation](https://developers.home-assistant.io/docs)

@@ -66,7 +66,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
 
     def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
         """Initialize HACS options flow."""
-        self.config_entry = config_entry
+        # No need to set self.config_entry, base class does this
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
@@ -84,23 +84,11 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         # Log for debugging
         _LOGGER.info("Options flow: webhook_url = %s", webhook_url)
         
-        # If user clicked something, just close the dialog
-        if user_input is not None:
-            return self.async_create_entry(title="", data={})
-        
-        # Create description with embedded webhook URL
-        description = f"""Configure your E-Redes Smart Metering Plus integration.
-
-**Webhook URL for E-Redes Configuration:**
-
-{webhook_url}
-
-Copy this URL and configure it in your E-Redes energy provider dashboard to start receiving energy data."""
-        
-        # Show the webhook URL information with a field containing the URL
+        # Show the webhook URL using description placeholders from strings.json
         return self.async_show_form(
             step_id="init",
-            data_schema=vol.Schema({
-                vol.Optional("webhook_url_info", default=webhook_url): str,
-            }),
+            data_schema=vol.Schema({}),
+            description_placeholders={
+                "webhook_url": webhook_url,
+            },
         )

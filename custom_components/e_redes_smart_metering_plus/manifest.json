@@ -11,5 +11,6 @@
     "iot_class": "cloud_push",
     "issue_tracker": "https://github.com/migueltvms/e-redes-smart-metering-plus-hass/issues",
     "requirements": [],
-    "version": "1.0.0"
+    "version": "0.1.0",
+    "homeassistant": "2025.8.0"
 }
