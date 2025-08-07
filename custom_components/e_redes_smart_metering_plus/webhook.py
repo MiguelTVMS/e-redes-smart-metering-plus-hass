@@ -51,6 +51,13 @@ async def async_setup_webhook(hass: HomeAssistant, entry: ConfigEntry) -> str:
         data={**entry.data, "webhook_url": webhook_url}
     )
     
+    # Also store webhook URL in integration data for easy access
+    if DOMAIN not in hass.data:
+        hass.data[DOMAIN] = {}
+    if entry.entry_id not in hass.data[DOMAIN]:
+        hass.data[DOMAIN][entry.entry_id] = {}
+    hass.data[DOMAIN][entry.entry_id]["webhook_url"] = webhook_url
+    
     return webhook_id
 
 

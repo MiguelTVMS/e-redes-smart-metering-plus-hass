@@ -19,11 +19,9 @@
     "options": {
         "step": {
             "init": {
-                "title": "Opções E-Redes Smart Metering Plus",
-                "description": "Configure a sua integração E-Redes Smart Metering Plus.",
-                "data": {
-                    "webhook_url": "URL do Webhook"
-                }
+                "title": "Configuração E-Redes Smart Metering Plus",
+                "description": "Configure a sua integração E-Redes Smart Metering Plus.\n\n**URL do Webhook para Configuração E-Redes:**\n\n{webhook_url}\n\nCopie este URL e configure-o no dashboard do seu fornecedor de energia E-Redes para começar a receber dados de energia.",
+                "data": {}
             }
         }
     },

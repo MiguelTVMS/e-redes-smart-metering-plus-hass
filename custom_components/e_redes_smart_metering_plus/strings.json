@@ -19,10 +19,10 @@
     "options": {
         "step": {
             "init": {
-                "title": "E-Redes Smart Metering Plus Options",
-                "description": "Configure your E-Redes Smart Metering Plus integration.",
+                "title": "E-Redes Smart Metering Plus Configuration",
+                "description": "Your webhook URL is displayed below. Copy it to configure your E-Redes energy provider.",
                 "data": {
-                    "webhook_url": "Webhook URL"
+                    "webhook_url_info": "Webhook URL (copy this value)"
                 }
             }
         }
