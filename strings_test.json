@@ -13,9 +13,6 @@
                     "description": "Test webhook URL: {webhook_url}"
                 }
             }
-        },
-        "error": {
-            "base": "This is a test message displayed as an error"
         }
     }
 }

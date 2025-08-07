@@ -134,15 +134,6 @@ Support modern Python tooling:
 * `requirements_dev.txt`
 * GitHub Actions workflow for HACS lint + tests
 
-### 9. Language Support
-
-Add translations:
-
-* `translations/en.json`
-* `translations/pt.json`
-* `strings.json` for config flow
-
-
 ## Documentation to help Copilot
 
 [Home Assistant Developer Documentation](https://developers.home-assistant.io/docs)
