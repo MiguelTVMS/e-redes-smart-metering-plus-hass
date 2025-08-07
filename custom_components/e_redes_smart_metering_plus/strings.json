@@ -2,20 +2,23 @@
     "config": {
         "step": {
             "user": {
-                "title": "Test Title",
-                "description": "Test description with placeholder: {cloud_status}"
-            }
-        },
-        "options": {
-            "step": {
-                "init": {
-                    "title": "Test Options",
-                    "description": "Test webhook URL: {webhook_url}"
-                }
+                "title": "E-Redes Smart Metering Plus",
+                "description": "Set up your E-Redes Smart Metering Plus integration."
             }
         },
         "error": {
-            "base": "This is a test message displayed as an error"
+            "base": "Configuration information"
+        }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "title": "E-Redes Webhook Configuration",
+                "description": "View your webhook URL for E-Redes configuration."
+            }
+        },
+        "error": {
+            "base": "Webhook information"
         }
     }
 }

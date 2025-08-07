@@ -107,7 +107,8 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             except Exception as err:
                 webhook_url = f"Error generating URL: {err}"
         
-        # Display webhook URL as an "informational error" (workaround)
+        # Display webhook URL using errors (HA limitation workaround)
+        # Note: Normal descriptions don't render in forms, errors display reliably
         return self.async_show_form(
             step_id="init",
             data_schema=vol.Schema({}),
