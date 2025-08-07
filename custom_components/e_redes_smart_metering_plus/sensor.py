@@ -58,12 +58,19 @@ class ERedisSensor(SensorEntity):
     @property
     def device_info(self) -> DeviceInfo:
         """Return device information."""
+        # Try to get webhook URL for configuration_url
+        webhook_url = None
+        if (DOMAIN in self.hass.data 
+            and self._config_entry_id in self.hass.data[DOMAIN]
+            and "webhook_url" in self.hass.data[DOMAIN][self._config_entry_id]):
+            webhook_url = self.hass.data[DOMAIN][self._config_entry_id]["webhook_url"]
+        
         return DeviceInfo(
             identifiers={(DOMAIN, self._cpe)},
             name=f"E-Redes Smart Meter {self._cpe}",
             manufacturer=MANUFACTURER,
             model=MODEL,
-            configuration_url=None,
+            configuration_url=webhook_url,
         )
 
     @property
@@ -73,6 +80,20 @@ class ERedisSensor(SensorEntity):
         if self._last_update:
             attrs["last_update"] = self._last_update
         attrs["cpe"] = self._cpe
+        
+        # Add webhook URL info to the first sensor of each device for easy access
+        if self._sensor_key == "instantaneous_active_power_import":
+            webhook_url = None
+            if (DOMAIN in self.hass.data 
+                and self._config_entry_id in self.hass.data[DOMAIN]
+                and "webhook_url" in self.hass.data[DOMAIN][self._config_entry_id]):
+                webhook_url = self.hass.data[DOMAIN][self._config_entry_id]["webhook_url"]
+            
+            if webhook_url:
+                attrs["integration_webhook_url"] = webhook_url
+                attrs["webhook_info"] = "This URL receives data for ALL E-Redes meters"
+                attrs["configuration_note"] = "Configure this URL once in your E-Redes provider dashboard - it will handle all your meters"
+        
         return attrs
 
     async def async_added_to_hass(self) -> None:

@@ -34,7 +34,47 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Set up platforms
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
+    # Register services
+    await async_setup_services(hass)
+
     return True
+
+
+async def async_setup_services(hass: HomeAssistant) -> None:
+    """Set up services for the integration."""
+    
+    async def get_webhook_url_service(call) -> None:
+        """Service to get webhook URL."""
+        config_entry_id = call.data.get("config_entry_id")
+        
+        # If no config entry ID provided, use the first one found
+        if not config_entry_id:
+            if DOMAIN in hass.data and hass.data[DOMAIN]:
+                config_entry_id = next(iter(hass.data[DOMAIN].keys()))
+            else:
+                _LOGGER.error("No E-Redes config entries found")
+                return
+        
+        # Get webhook URL
+        if (config_entry_id in hass.data.get(DOMAIN, {}) 
+            and "webhook_url" in hass.data[DOMAIN][config_entry_id]):
+            webhook_url = hass.data[DOMAIN][config_entry_id]["webhook_url"]
+            _LOGGER.info("E-Redes Webhook URL: %s", webhook_url)
+            
+            # Also fire an event with the webhook URL
+            hass.bus.async_fire(
+                f"{DOMAIN}_webhook_url",
+                {"webhook_url": webhook_url, "config_entry_id": config_entry_id}
+            )
+        else:
+            _LOGGER.error("Webhook URL not found for config entry %s", config_entry_id)
+    
+    # Register the service
+    hass.services.async_register(
+        DOMAIN,
+        "get_webhook_url",
+        get_webhook_url_service,
+    )
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:

@@ -7,6 +7,8 @@ services:
     volumes:
       # Persist Home Assistant config in a Docker-managed volume
       - hass_config:/config
+      # Mount your config directory for development
+      - ./config:/config
       # Mount only your integration into the custom_components directory
       - ./custom_components/e_redes_smart_metering_plus:/config/custom_components/e_redes_smart_metering_plus
     environment:

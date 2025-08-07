@@ -4,5 +4,5 @@
     "domains": [
         "e_redes_smart_metering_plus"
     ],
-    "homeassistant": "2024.6.0"
+    "homeassistant": "2025.8.0"
 }

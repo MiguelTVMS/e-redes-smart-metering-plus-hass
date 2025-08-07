@@ -1,0 +1,10 @@
+get_webhook_url:
+  name: Get Webhook URL
+  description: Get the webhook URL for configuring E-Redes provider
+  fields:
+    config_entry_id:
+      name: Config Entry ID
+      description: The config entry ID (optional, uses first found if not provided)
+      required: false
+      selector:
+        text:
