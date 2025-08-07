@@ -1,0 +1,15 @@
+{
+    "domain": "e_redes_smart_metering_plus",
+    "name": "E-Redes Smart Metering Plus",
+    "codeowners": [
+        "@migueltvms"
+    ],
+    "config_flow": true,
+    "dependencies": [],
+    "documentation": "https://github.com/migueltvms/e-redes-smart-metering-plus-hass",
+    "integration_type": "service",
+    "iot_class": "cloud_push",
+    "issue_tracker": "https://github.com/migueltvms/e-redes-smart-metering-plus-hass/issues",
+    "requirements": [],
+    "version": "1.0.0"
+}

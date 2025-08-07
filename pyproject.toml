@@ -1,0 +1,197 @@
+[build-system]
+requires = ["setuptools>=45", "wheel", "setuptools_scm[toml]>=6.2"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "e-redes-smart-metering-plus-hass"
+description = "Home Assistant integration for E-Redes Smart Metering Plus"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+authors = [
+    {name = "Miguel Silva", email = "miguel@example.com"},
+]
+keywords = ["home-assistant", "e-redes", "smart-metering", "energy"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Home Automation",
+]
+dynamic = ["version"]
+
+[tool.setuptools_scm]
+write_to = "custom_components/e_redes_smart_metering_plus/_version.py"
+
+[tool.black]
+target-version = ["py311"]
+extend-exclude = "/generated/"
+
+[tool.isort]
+# https://github.com/PyCQA/isort/wiki/isort-Settings
+profile = "black"
+# will group `import x` and `from x import` of the same module.
+force_sort_within_sections = true
+known_first_party = [
+    "homeassistant",
+]
+forced_separate = [
+    "tests",
+]
+combine_as_imports = true
+
+[tool.pylint.MASTER]
+py-version = "3.11"
+ignore = [
+    "tests",
+]
+# Use a conservative default here; 2 should speed up most setups and not hurt
+# any too bad. Override on command line as appropriate.
+jobs = 2
+init-hook = """\
+    import sys; sys.path.append(".")
+"""
+load-plugins = [
+    "pylint.extensions.code_style",
+    "pylint.extensions.typing",
+]
+persistent = false
+extension-pkg-allow-list = [
+    "orjson",
+]
+
+[tool.pylint.BASIC]
+class-const-naming-style = "any"
+good-names = [
+    "_",
+    "ev",
+    "ex",
+    "fp",
+    "i",
+    "id",
+    "j",
+    "k",
+    "Run",
+    "T",
+]
+
+[tool.pylint.CODE_STYLE]
+max-line-length-suggestions = 72
+
+[tool.pylint."MESSAGES CONTROL"]
+# Reasons disabled:
+# format - handled by black
+# locally-disabled - it spams too much
+# duplicate-code - unavoidable
+# cyclic-import - doesn't test if both import on load
+# abstract-class-little-used - prevents from setting right foundation
+# unused-argument - generic callbacks and setup methods
+# too-many-* - are not enforced for the sake of readability
+# too-few-* - same as too-many-*
+# abstract-method - with intro of async there are always methods missing
+# inconsistent-return-statements - doesn't handle raise
+# too-many-ancestors - it's too strict.
+# wrong-import-order - isort guards this
+# consider-using-f-string - str.format sometimes more readable
+# ---
+# Enable once current issues are fixed:
+# consider-using-namedtuple-or-dataclass (py3.7+)
+# consider-using-assignment-expr (py3.8+)
+disable = [
+    "format",
+    "abstract-class-little-used",
+    "abstract-method",
+    "cyclic-import",
+    "duplicate-code",
+    "inconsistent-return-statements",
+    "locally-disabled",
+    "not-context-manager",
+    "too-few-public-methods",
+    "too-many-ancestors",
+    "too-many-arguments",
+    "too-many-branches",
+    "too-many-instance-attributes",
+    "too-many-lines",
+    "too-many-locals",
+    "too-many-public-methods",
+    "too-many-return-statements",
+    "too-many-statements",
+    "too-many-boolean-expressions",
+    "unused-argument",
+    "wrong-import-order",
+    "consider-using-f-string",
+    "consider-using-namedtuple-or-dataclass",
+    "consider-using-assignment-expr",
+]
+enable = [
+    #"useless-suppression",  # temporarily every now and then to clean them up
+    "use-symbolic-message-instead",
+]
+
+[tool.pylint.REPORTS]
+score = false
+
+[tool.pylint.TYPECHECK]
+ignored-classes = [
+    "_CountingAttr",  # for attrs
+]
+mixin-class-rgx = ".*[Mm]ixin"
+
+[tool.pylint.FORMAT]
+expected-line-ending-format = "LF"
+
+[tool.pytest.ini_options]
+testpaths = [
+    "tests",
+]
+norecursedirs = [
+    ".git",
+    "testing_config",
+]
+log_format = "%(asctime)s.%(msecs)03d %(levelname)-8s %(threadName)s %(name)s:%(filename)s:%(lineno)s %(message)s"
+log_date_format = "%Y-%m-%d %H:%M:%S"
+asyncio_mode = "auto"
+
+[tool.ruff]
+target-version = "py311"
+
+[tool.ruff.lint]
+select = [
+    "B007", # Loop control variable {name} not used within loop body
+    "B014", # Exception handler is an except clause with an overly broad exception clause
+    "C", # complexity
+    "D", # docstrings
+    "E", # pycodestyle
+    "F", # pyflakes/autoflake
+    "ICN001", # import concentions; {name} should be imported as {asname}
+    "PGH004", # Use specific rule codes when using noqa
+    "PLC0414", # Useless import alias. Import alias does not rename original package.
+    "SIM105", # Use contextlib.suppress({exception}) instead of try-except-pass
+    "SIM117", # Combine multiple with statements
+    "SIM118", # Use {key} in {dict} instead of {key} in {dict}.keys()
+    "SIM201", # Use {left} != {right} instead of not {left} == {right}
+    "SIM212", # Use {a} if {a} else {b} instead of {b} if not {a} else {a}
+    "SIM300", # Yoda conditions. Use 'age == 42' instead of '42 == age'.
+    "SIM401", # Use get from dict with default instead of conditional assignment
+    "T20", # flake8-print
+    "TRY004", # Prefer TypeError exception for invalid type
+    "RUF006", # Store a reference to the return value of asyncio.create_task
+    "UP", # pyupgrade
+    "W", # pycodestyle
+]
+
+ignore = [
+    "D202", # No blank lines allowed after function docstring
+    "D203", # 1 blank line required before class docstring
+    "D213", # Multi-line docstring summary should start at the second line
+    "D406", # Section name should end with a newline
+    "D407", # Section name underlining
+    "E501", # line too long
+    "E731", # do not assign a lambda expression, use a def
+]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 25

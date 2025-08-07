@@ -1,0 +1,55 @@
+{
+    "config": {
+        "step": {
+            "user": {
+                "title": "E-Redes Smart Metering Plus",
+                "description": "Configurar integração E-Redes Smart Metering Plus.\n\nEsta integração criará automaticamente um webhook para receber dados de energia dos seus contadores inteligentes E-Redes.\n\nEstado da nuvem: {cloud_status}",
+                "data": {}
+            }
+        },
+        "error": {
+            "cannot_connect": "Falha na ligação",
+            "invalid_auth": "Autenticação inválida",
+            "unknown": "Erro inesperado"
+        },
+        "abort": {
+            "already_configured": "A integração já está configurada"
+        }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "title": "Opções E-Redes Smart Metering Plus",
+                "description": "Configure a sua integração E-Redes Smart Metering Plus.",
+                "data": {
+                    "webhook_url": "URL do Webhook"
+                }
+            }
+        }
+    },
+    "entity": {
+        "sensor": {
+            "instantaneous_active_power_import": {
+                "name": "Potência Ativa Instantânea Importada"
+            },
+            "max_active_power_import": {
+                "name": "Potência Ativa Máxima Importada"
+            },
+            "active_energy_import": {
+                "name": "Energia Ativa Importada"
+            },
+            "instantaneous_active_power_export": {
+                "name": "Potência Ativa Instantânea Exportada"
+            },
+            "max_active_power_export": {
+                "name": "Potência Ativa Máxima Exportada"
+            },
+            "active_energy_export": {
+                "name": "Energia Ativa Exportada"
+            },
+            "voltage_l1": {
+                "name": "Tensão L1"
+            }
+        }
+    }
+}

@@ -1,0 +1,57 @@
+name: Lint
+
+on:
+  push:
+    branches:
+      - main
+      - master
+      - dev
+  pull_request:
+    branches:
+      - main
+      - master
+      - dev
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    name: Lint
+    steps:
+      - name: Check out code from GitHub
+        uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+      - name: Install requirements
+        run: |
+          pip install -r requirements_dev.txt
+      - name: Run black
+        run: |
+          black --check --diff custom_components/
+      - name: Run isort
+        run: |
+          isort --check-only --diff custom_components/
+      - name: Run ruff
+        run: |
+          ruff check custom_components/
+
+  hacs:
+    runs-on: ubuntu-latest
+    name: HACS
+    steps:
+      - name: Check out code from GitHub
+        uses: actions/checkout@v4
+      - name: HACS validation
+        uses: hacs/action@main
+        with:
+          category: integration
+
+  hassfest:
+    runs-on: ubuntu-latest
+    name: Hassfest
+    steps:
+      - name: Check out code from GitHub
+        uses: actions/checkout@v4
+      - name: Hassfest validation
+        uses: home-assistant/actions/hassfest@master

@@ -1,0 +1,55 @@
+{
+    "config": {
+        "step": {
+            "user": {
+                "title": "E-Redes Smart Metering Plus",
+                "description": "Set up E-Redes Smart Metering Plus integration.\n\nThis integration will automatically create a webhook to receive energy data from your E-Redes smart meters.\n\nCloud status: {cloud_status}",
+                "data": {}
+            }
+        },
+        "error": {
+            "cannot_connect": "Failed to connect",
+            "invalid_auth": "Invalid authentication",
+            "unknown": "Unexpected error"
+        },
+        "abort": {
+            "already_configured": "Integration is already configured"
+        }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "title": "E-Redes Smart Metering Plus Options",
+                "description": "Configure your E-Redes Smart Metering Plus integration.",
+                "data": {
+                    "webhook_url": "Webhook URL"
+                }
+            }
+        }
+    },
+    "entity": {
+        "sensor": {
+            "instantaneous_active_power_import": {
+                "name": "Instantaneous Active Power Import"
+            },
+            "max_active_power_import": {
+                "name": "Max Active Power Import"
+            },
+            "active_energy_import": {
+                "name": "Active Energy Import"
+            },
+            "instantaneous_active_power_export": {
+                "name": "Instantaneous Active Power Export"
+            },
+            "max_active_power_export": {
+                "name": "Max Active Power Export"
+            },
+            "active_energy_export": {
+                "name": "Active Energy Export"
+            },
+            "voltage_l1": {
+                "name": "Voltage L1"
+            }
+        }
+    }
+}
