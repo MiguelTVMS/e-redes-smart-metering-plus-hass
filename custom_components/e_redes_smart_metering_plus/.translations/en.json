@@ -7,6 +7,17 @@
                 "data": {}
             }
         },
+        "options": {
+            "step": {
+                "init": {
+                    "title": "E-Redes Smart Metering Plus Configuration",
+                    "description": "Configure your E-Redes Smart Metering Plus integration.\n\n**Shared Webhook URL for ALL E-Redes Meters:**\n\n{webhook_url}\n\n**Important Notes:**\n- This single webhook URL receives data for **all your E-Redes meters**\n- Each meter (CPE) will automatically become a separate device in Home Assistant\n- Configure this URL **once** in your E-Redes provider dashboard\n\n**Setup Instructions:**\n1. Copy the webhook URL above\n2. Log into your E-Redes energy provider dashboard\n3. Navigate to Smart Metering Plus settings\n4. Configure the webhook endpoint with the copied URL\n5. Enable data transmission for all your meters",
+                    "data": {
+                        "webhook_url": "Webhook URL - Copy this to your E-Redes provider dashboard"
+                    }
+                }
+            }
+        },
         "error": {
             "cannot_connect": "Failed to connect",
             "invalid_auth": "Invalid authentication",
@@ -15,20 +26,6 @@
         "abort": {
             "already_configured": "Integration is already configured",
             "webhook_url_display": "{message}"
-        }
-    },
-    "options": {
-        "step": {
-            "init": {
-                "title": "E-Redes Smart Metering Plus Configuration",
-                "description": "Configure your E-Redes Smart Metering Plus integration.\n\n**Shared Webhook URL for ALL E-Redes Meters:**\n\n{webhook_url}\n\n**Important Notes:**\n- This single webhook URL receives data for **all your E-Redes meters**\n- Each meter (CPE) will automatically become a separate device in Home Assistant\n- Configure this URL **once** in your E-Redes provider dashboard\n\n**Setup Instructions:**\n1. Copy the webhook URL above\n2. Log into your E-Redes energy provider dashboard\n3. Navigate to Smart Metering Plus settings\n4. Configure the webhook endpoint with the copied URL\n5. Enable data transmission for all your meters",
-                "data": {
-                    "webhook_url": "Webhook URL (copy this to your E-Redes dashboard)"
-                }
-            }
-        },
-        "abort": {
-            "webhook_url_info": "Configure your E-Redes Smart Metering Plus integration.\n\n**Shared Webhook URL for ALL E-Redes Meters:**\n\n{webhook_url}\n\nConfigure this URL once in your E-Redes energy provider dashboard to receive data for all your meters."
         }
     }
 }

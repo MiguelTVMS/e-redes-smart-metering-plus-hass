@@ -111,10 +111,12 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         # Log final result
         _LOGGER.info("Options flow showing webhook URL: %s", webhook_url)
         
-        # Use async_show_form with proper translation pattern
+        # Create a simple form with the webhook URL displayed as a default value
         return self.async_show_form(
             step_id="init",
-            data_schema=vol.Schema({}),
+            data_schema=vol.Schema({
+                vol.Required("webhook_url", default=webhook_url): str,
+            }),
             description_placeholders={
                 "webhook_url": webhook_url,
             },

@@ -138,8 +138,8 @@ Support modern Python tooling:
 
 Add translations:
 
-* `.translations/en.json`
-* `.translations/pt.json`
+* `translations/en.json`
+* `translations/pt.json`
 * `strings.json` for config flow
 
 

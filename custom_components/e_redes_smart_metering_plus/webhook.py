@@ -22,13 +22,18 @@ async def async_setup_webhook(hass: HomeAssistant, entry: ConfigEntry) -> str:
     """Set up webhook for receiving E-Redes data."""
     webhook_id = entry.entry_id
     
+    # Create a handler with the config entry bound to it
+    async def webhook_handler(hass: HomeAssistant, webhook_id: str, request: Request) -> Response:
+        """Handle webhook with config entry context."""
+        return await handle_webhook(hass, webhook_id, request, entry)
+    
     # Register the webhook handler
     webhook.async_register(
         hass,
         DOMAIN,
         f"E-Redes Smart Metering Plus ({entry.title})",
         webhook_id,
-        handle_webhook,
+        webhook_handler,
     )
     
     # Try to create a cloud webhook if available
@@ -74,12 +79,14 @@ async def async_unload_webhook(hass: HomeAssistant, webhook_id: str) -> None:
 
 
 async def handle_webhook(
-    hass: HomeAssistant, webhook_id: str, request: Request
+    hass: HomeAssistant, webhook_id: str, request: Request, entry: ConfigEntry
 ) -> Response:
     """Handle incoming webhook data."""
     try:
+        _LOGGER.info("Webhook handler called with webhook_id: %s", webhook_id)
+        
         data = await request.json()
-        _LOGGER.debug("Received webhook data: %s", data)
+        _LOGGER.info("Received webhook data: %s", data)
         
         # Validate required fields
         if "cpe" not in data:
@@ -87,24 +94,30 @@ async def handle_webhook(
             return Response(status=400, text="Missing 'cpe' field")
         
         cpe = data["cpe"]
+        _LOGGER.info("Processing data for CPE: %s", cpe)
         
         # Ensure device exists
-        await async_ensure_device(hass, cpe)
+        _LOGGER.debug("Creating/ensuring device for CPE: %s", cpe)
+        await async_ensure_device(hass, entry, cpe)
+        _LOGGER.debug("Device ensured for CPE: %s", cpe)
         
         # Process sensor data
-        await async_process_sensor_data(hass, cpe, data)
+        _LOGGER.debug("Processing sensor data for CPE: %s", cpe)
+        await async_process_sensor_data(hass, entry, cpe, data)
+        _LOGGER.debug("Sensor data processed for CPE: %s", cpe)
         
+        _LOGGER.info("Webhook processing completed successfully for CPE: %s", cpe)
         return Response(status=200, text="OK")
         
-    except json.JSONDecodeError:
-        _LOGGER.error("Invalid JSON in webhook request")
+    except json.JSONDecodeError as err:
+        _LOGGER.error("Invalid JSON in webhook request: %s", err)
         return Response(status=400, text="Invalid JSON")
     except Exception as err:
-        _LOGGER.error("Error processing webhook: %s", err)
-        return Response(status=500, text="Internal Server Error")
+        _LOGGER.error("Error processing webhook: %s", err, exc_info=True)
+        return Response(status=500, text=f"Internal Server Error: {err}")
 
 
-async def async_ensure_device(hass: HomeAssistant, cpe: str) -> None:
+async def async_ensure_device(hass: HomeAssistant, entry: ConfigEntry, cpe: str) -> None:
     """Ensure device exists for the given CPE."""
     device_registry = dr.async_get(hass)
     
@@ -116,7 +129,7 @@ async def async_ensure_device(hass: HomeAssistant, cpe: str) -> None:
     if not device:
         # Create new device
         device = device_registry.async_get_or_create(
-            config_entry_id=None,  # Will be set by sensor registration
+            config_entry_id=entry.entry_id,  # Use the actual config entry ID
             identifiers={(DOMAIN, cpe)},
             manufacturer=MANUFACTURER,
             model=MODEL,
@@ -127,22 +140,12 @@ async def async_ensure_device(hass: HomeAssistant, cpe: str) -> None:
 
 
 async def async_process_sensor_data(
-    hass: HomeAssistant, cpe: str, data: dict[str, Any]
+    hass: HomeAssistant, entry: ConfigEntry, cpe: str, data: dict[str, Any]
 ) -> None:
     """Process sensor data and update entities."""
-    # Find the config entry for this integration
-    config_entry = None
-    for entry in hass.config_entries.async_entries(DOMAIN):
-        config_entry = entry
-        break
-    
-    if not config_entry:
-        _LOGGER.error("No config entry found for processing sensor data")
-        return
-    
     # Ensure sensors exist for this data
     from .sensor import async_ensure_sensors_for_data
-    await async_ensure_sensors_for_data(hass, config_entry.entry_id, cpe, data)
+    await async_ensure_sensors_for_data(hass, entry.entry_id, cpe, data)
     
     # Send update signal for each sensor type
     for field_name, field_value in data.items():
@@ -151,7 +154,6 @@ async def async_process_sensor_data(
             
         if field_name in SENSOR_MAPPING:
             sensor_key = SENSOR_MAPPING[field_name]["key"]
-            entity_id = f"sensor.e_redes_{cpe}_{sensor_key}"
             
             # Dispatch update to sensor entity
             async_dispatcher_send(
@@ -161,6 +163,6 @@ async def async_process_sensor_data(
                 data.get("clock")  # Include timestamp if available
             )
             
-            _LOGGER.debug("Updated sensor %s with value %s", entity_id, field_value)
+            _LOGGER.debug("Dispatched update for sensor %s_%s with value %s", cpe, sensor_key, field_value)
         else:
             _LOGGER.debug("Unknown field in webhook data: %s", field_name)

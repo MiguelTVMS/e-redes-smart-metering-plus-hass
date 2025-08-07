@@ -1,18 +1,17 @@
 {
     "domain": "e_redes_smart_metering_plus",
     "name": "E-Redes Smart Metering Plus",
+    "version": "1.0.0",
+    "documentation": "https://github.com/migueltvms/e_redes_smart_metering_plus",
+    "issue_tracker": "https://github.com/migueltvms/e_redes_smart_metering_plus/issues",
+    "config_flow": true,
+    "requirements": [],
     "codeowners": [
         "@migueltvms"
     ],
-    "config_flow": true,
-    "single_config_entry": true,
-    "dependencies": [],
-    "documentation": "https://github.com/migueltvms/e-redes-smart-metering-plus-hass",
-    "integration_type": "hub",
     "iot_class": "cloud_push",
-    "issue_tracker": "https://github.com/migueltvms/e-redes-smart-metering-plus-hass/issues",
-    "requirements": [],
-    "version": "0.1.0",
-    "homeassistant": "2025.8.0",
-    "icon": "icons/icon.png"
+    "dependencies": [
+        "webhook",
+        "cloud"
+    ]
 }
