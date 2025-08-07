@@ -2,9 +2,8 @@
 
 _Home Assistant integration for E-Redes Smart Metering Plus energy meters in Portugal._
 
-## ⚠️ Disclaimer
-
-**This is an independent, community-developed project and is not affiliated with, endorsed by, or connected to E-Redes or any of its subsidiaries. This integration is developed and maintained by volunteers and is not an official E-Redes product or service.**
+> [!IMPORTANT]  
+> This is an independent, community-developed project and is not affiliated with, endorsed by, or connected to E-Redes or any of its subsidiaries. This integration is developed and maintained by volunteers and is not an official E-Redes product or service.
 
 **This integration will set up the following platforms.**
 
