@@ -1,0 +1,19 @@
+{
+    "domain": "e_redes_smart_metering_plus",
+    "name": "E-Redes Smart Metering Plus",
+    "version": "0.1.0",
+    "documentation": "https://github.com/migueltvms/e_redes_smart_metering_plus",
+    "issue_tracker": "https://github.com/migueltvms/e_redes_smart_metering_plus/issues",
+    "config_flow": true,
+    "requirements": [],
+    "single_config_entry": true,
+    "codeowners": [
+        "@migueltvms"
+    ],
+    "iot_class": "cloud_push",
+    "dependencies": [
+        "webhook",
+        "cloud"
+    ],
+    "integration_type": "hub"
+}
