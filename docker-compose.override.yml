@@ -1,7 +1,0 @@
-# Simple override to remove the command override from base docker-compose.yml
-version: '3.8'
-
-services:
-  homeassistant:
-    # Remove the debug command override - just use normal Home Assistant startup
-    command: null
