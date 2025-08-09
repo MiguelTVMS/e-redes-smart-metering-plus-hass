@@ -2,22 +2,20 @@
     "config": {
         "step": {
             "user": {
-                "title": "E-Redes Smart Metering Plus",
-                "description": "Set up your E-Redes Smart Metering Plus integration."
+                "description": "Your webhook URL has been generated. Configure this URL in your E-Redes provider dashboard to receive smart meter data:\n\n**{webhook_url}**\n\nCopy this URL and paste it into your E-Redes provider dashboard, then click submit to complete the setup."
             }
         },
         "error": {
-            "base": "Configuration information"
+            "unknown": "[%key:common::config_flow::error::unknown%]"
+        },
+        "abort": {
+            "already_configured": "[%key:common::config_flow::abort::already_configured_device%]"
         }
     },
     "options": {
         "step": {
             "init": {
-                "title": "E-Redes Webhook Configuration",
-                "description": "Copy this webhook URL and paste it in your E-Redes provider dashboard.",
-                "data": {
-                    "webhook_url": "Webhook URL"
-                }
+                "description": "This is your webhook URL that should be configured in your E-Redes provider dashboard:\n\n**{webhook_url}**\n\nCopy this URL and paste it into your E-Redes provider dashboard to receive smart meter data."
             }
         }
     }

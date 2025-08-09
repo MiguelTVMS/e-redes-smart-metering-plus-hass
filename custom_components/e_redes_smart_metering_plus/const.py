@@ -1,6 +1,6 @@
 """Constants for the E-Redes Smart Metering Plus integration."""
 
-DOMAIN = "e_redes_smart_metering_plus"
+DOMAIN = "eredes_smart_metering_plus"
 
 # Webhook constants
 WEBHOOK_PATH = f"/api/webhook/{DOMAIN}"
@@ -21,7 +21,7 @@ SENSOR_MAPPING = {
     },
     "maxActivePowerImport": {
         "name": "Max Active Power Import",
-        "key": "max_active_power_import", 
+        "key": "max_active_power_import",
         "unit": "W",
         "device_class": "power",
         "state_class": "measurement",
@@ -46,7 +46,7 @@ SENSOR_MAPPING = {
     "maxActivePowerExport": {
         "name": "Max Active Power Export",
         "key": "max_active_power_export",
-        "unit": "W", 
+        "unit": "W",
         "device_class": "power",
         "state_class": "measurement",
         "icon": "mdi:transmission-tower-export",

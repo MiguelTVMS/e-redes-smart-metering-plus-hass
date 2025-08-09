@@ -7,12 +7,13 @@
     "config_flow": true,
     "requirements": [],
     "codeowners": [
-        "@migueltvms"
+        "@MiguelTVMS"
     ],
     "iot_class": "cloud_push",
     "dependencies": [
         "webhook",
         "cloud"
     ],
-    "integration_type": "hub"
+    "integration_type": "service",
+    "quality_scale": "bronze"
 }
