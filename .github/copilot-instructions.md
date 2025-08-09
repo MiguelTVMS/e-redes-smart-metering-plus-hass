@@ -101,7 +101,7 @@ Ensure HACS compatibility:
   "name": "E-Redes Smart Metering Plus",
   "content_in_root": false,
   "domains": ["e_redes_smart_metering_plus"],
-  "homeassistant": "2025.8.0"
+  "homeassistant": "2025.6.0"
 }
 ```
 
