@@ -1,0 +1,22 @@
+{
+    "config": {
+        "abort": {
+            "already_configured": "Device is already configured"
+        },
+        "error": {
+            "unknown": "Unexpected error"
+        },
+        "step": {
+            "user": {
+                "description": "Your webhook URL has been generated. Configure this URL in your E-Redes provider dashboard to receive smart meter data:\n\n**{webhook_url}**\n\nCopy this URL and paste it into your E-Redes provider dashboard, then click submit to complete the setup."
+            }
+        }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "description": "This is your webhook URL that should be configured in your E-Redes provider dashboard:\n\n**{webhook_url}**\n\nCopy this URL and paste it into your E-Redes provider dashboard to receive smart meter data."
+            }
+        }
+    }
+}

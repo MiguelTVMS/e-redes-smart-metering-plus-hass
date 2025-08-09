@@ -6,4 +6,4 @@ mypy>=1.8.0
 pytest>=7.4.0
 pytest-asyncio>=0.21.0
 pytest-homeassistant-custom-component>=0.13.0
-homeassistant>=2024.6.0
+homeassistant>=2025.6.0

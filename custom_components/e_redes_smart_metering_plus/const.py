@@ -1,6 +1,6 @@
 """Constants for the E-Redes Smart Metering Plus integration."""
 
-DOMAIN = "eredes_smart_metering_plus"
+DOMAIN = "e_redes_smart_metering_plus"
 
 # Webhook constants
 WEBHOOK_PATH = f"/api/webhook/{DOMAIN}"
