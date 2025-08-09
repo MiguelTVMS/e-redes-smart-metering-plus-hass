@@ -1,21 +1,23 @@
 {
     "config": {
-        "abort": {
-            "already_configured": "Device is already configured"
-        },
         "error": {
-            "unknown": "Unexpected error"
+            "unknown": "[%key:common::config_flow::error::unknown%]"
+        },
+        "abort": {
+            "already_configured": "[%key:common::config_flow::abort::already_configured_device%]"
         },
         "step": {
             "user": {
-                "description": "Your webhook URL has been generated. Configure this URL in your E-Redes provider dashboard to receive smart meter data:\n\n**{webhook_url}**\n\nCopy this URL and paste it into your E-Redes provider dashboard, then click submit to complete the setup."
+                "title": "E-Redes Smart Metering Plus",
+                "description": "Your webhook URL has been generated. Configure this URL in your E-Redes provider dashboard to receive smart meter data:\n\n**{webhook_url}**\n\nCopy this URL and paste it into your E-Redes provider dashboard, then click submit to complete the setup.\n\n💡 **Nabu Casa Subscribers:** If you have Home Assistant Cloud, you can manage your webhooks by going to Settings > Home Assistant Cloud > Webhooks in your Home Assistant."
             }
         }
     },
     "options": {
         "step": {
             "init": {
-                "description": "This is your webhook URL that should be configured in your E-Redes provider dashboard:\n\n**{webhook_url}**\n\nCopy this URL and paste it into your E-Redes provider dashboard to receive smart meter data."
+                "title": "E-Redes Webhook Configuration",
+                "description": "This is your webhook URL that should be configured in your E-Redes provider dashboard:\n\n**{webhook_url}**\n\nCopy this URL and paste it into your E-Redes provider dashboard to receive smart meter data.\n\n💡 **Nabu Casa Subscribers:** You can manage your webhooks by going to Settings > Home Assistant Cloud > Webhooks in your Home Assistant."
             }
         }
     }
