@@ -14,11 +14,11 @@
         "step": {
             "init": {
                 "title": "E-Redes Webhook Configuration",
-                "description": "View your webhook URL for E-Redes configuration."
+                "description": "Copy this webhook URL and paste it in your E-Redes provider dashboard.",
+                "data": {
+                    "webhook_url": "Webhook URL"
+                }
             }
-        },
-        "error": {
-            "base": "Webhook information"
         }
     }
 }

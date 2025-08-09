@@ -1,7 +1,6 @@
 """Config flow for E-Redes Smart Metering Plus integration."""
 from __future__ import annotations
 
-import logging
 from typing import Any
 
 import voluptuous as vol
@@ -9,10 +8,9 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.core import callback
 from homeassistant.data_entry_flow import FlowResult
+from homeassistant.helpers import selector
 
 from .const import DOMAIN
-
-_LOGGER = logging.getLogger(__name__)
 
 
 class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -107,10 +105,15 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             except Exception as err:
                 webhook_url = f"Error generating URL: {err}"
         
-        # Display webhook URL using errors (HA limitation workaround)
-        # Note: Normal descriptions don't render in forms, errors display reliably
+        # Show a copyable, prefilled text field (we ignore edits) and describe via placeholders
+        schema = vol.Schema({
+            vol.Optional("webhook_url", default=webhook_url): selector.TextSelector(
+                selector.TextSelectorConfig(multiline=False)
+            )
+        })
+
         return self.async_show_form(
             step_id="init",
-            data_schema=vol.Schema({}),
-            errors={"base": f"WEBHOOK URL: {webhook_url} | Copy this URL and configure it in your E-Redes provider dashboard to start receiving energy data."},
+            data_schema=schema,
+            description_placeholders={"webhook_url": webhook_url},
         )
