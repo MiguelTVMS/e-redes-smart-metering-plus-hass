@@ -1,3 +1,7 @@
+---
+applyTo: '**'
+---
+
 # E-Redes Smart Metering Plus Home Assistant Integration
 
 ## Project Description

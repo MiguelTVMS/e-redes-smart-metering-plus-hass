@@ -4,7 +4,7 @@ This repository includes a VS Code Dev Container for developing and testing this
 
 What you get:
 
-- Python 3.12 toolchain with Black, Ruff, Pytest installed
+- Python 3.13 toolchain with Black, Ruff, Pytest installed
 - Home Assistant 2025.6.0 running in a sibling container
 - Live-mounted config folder and the custom component to iterate quickly
 
