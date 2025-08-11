@@ -8,7 +8,17 @@
         "gitflow",
         "HACS",
         "hass",
-        "João"
+        "Hassfest",
+        "homeassistant",
+        "htmlcov",
+        "ixin",
+        "João",
+        "junitxml",
+        "levelname",
+        "msecs",
+        "norecursedirs",
+        "nosetests",
+        "testpaths"
     ],
     "cSpell.dictionaries": [
         "python"
