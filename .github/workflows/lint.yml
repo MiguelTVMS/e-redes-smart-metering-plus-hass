@@ -3,12 +3,17 @@ name: Lint
 on:
   push:
     branches:
-      - main
-      - develop
+      - feature/*
+    paths:
+      - '**/*.py'
+      - '.github/workflows/lint.yml'
   pull_request:
     branches:
       - main
       - develop
+    paths:
+      - '**/*.py'
+      - '.github/workflows/lint.yml'
 
 jobs:
   lint:
