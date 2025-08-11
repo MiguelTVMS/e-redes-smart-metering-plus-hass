@@ -8,5 +8,8 @@
         "gitflow",
         "HACS",
         "hass"
+    ],
+    "cSpell.dictionaries": [
+        "python"
     ]
 }
