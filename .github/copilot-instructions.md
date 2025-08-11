@@ -110,6 +110,7 @@ Use `pytest` with mocks for webhook events.
 ### 8. Dev Tools
 
 Support modern Python tooling:
+* All development will be done based on Home Assistant version 2025.6.1.
 * devcontainer.json for VSCode
 * `requirements_dev.txt`
 * GitHub Actions workflow for HACS lint + Tests
