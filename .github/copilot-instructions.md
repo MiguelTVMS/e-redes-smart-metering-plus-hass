@@ -106,6 +106,7 @@ Copilot should assist in writing tests for:
 * Cloudhook registration logic
 
 Use `pytest` with mocks for webhook events.
+All the tests should be in the `tests` directory.
 
 ### 8. Dev Tools
 
