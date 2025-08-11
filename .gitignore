@@ -171,3 +171,7 @@ pip-selfcheck.json
 
 # Built Visual Studio Code Extensions
 *.vsix
+
+# Version files generated at build time
+# setuptools_scm writes a dynamic version module; keep it out of VCS
+custom_components/**/_version.py
