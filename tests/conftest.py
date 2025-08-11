@@ -30,7 +30,7 @@ def _mock_cloud(monkeypatch: pytest.MonkeyPatch) -> None:
 
 @pytest.fixture(autouse=True)
 # type: ignore[reportGeneralTypeIssues]
-def _auto_enable_custom_integrations(enable_custom_integrations) -> None:
+def _auto_enable_custom_integrations(enable_custom_integrations: bool) -> None:
     """Make sure HA can find our integration under custom_components/."""
     # The fixture does all the work; this wrapper just enables it globally.
     return None
