@@ -94,24 +94,7 @@ Allow the user to:
 
 Ensure HACS compatibility:
 
-* Include `.hacs/config.json`:
-
-```json
-{
-  "name": "E-Redes Smart Metering Plus",
-  "content_in_root": false,
-  "domains": ["e_redes_smart_metering_plus"],
-  "homeassistant": "2025.6.0"
-}
-```
-
-* Required files in `custom_components/e_redes_smart_metering_plus/`
-* `manifest.json` must define:
-
-  * `domain`
-  * `version`
-  * `requirements`
-  * `codeowners`
+* Include and keep `./hacs.json` updated based on the specifications in the [HACS documentation](https://www.hacs.xyz/docs/publish/start/#hacsjson).
 
 ### 7. Testing
 
@@ -127,13 +110,11 @@ Use `pytest` with mocks for webhook events.
 ### 8. Dev Tools
 
 Support modern Python tooling:
-
-* `pyproject.toml` with:
-
-  * `black`, `ruff`, `isort`, `mypy`
+* devcontainer.json for VSCode
 * `requirements_dev.txt`
-* GitHub Actions workflow for HACS lint + tests
+* GitHub Actions workflow for HACS lint + Tests
 
 ## Documentation to help Copilot
 
 [Home Assistant Developer Documentation](https://developers.home-assistant.io/docs)
+[HACS Documentation](https://www.hacs.xyz/docs/publish/start).
