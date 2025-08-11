@@ -4,7 +4,9 @@
         "charliermarsh",
         "codezombiech",
         "debugpy",
+        "Devcontainers",
         "gitflow",
+        "HACS",
         "hass"
     ]
 }

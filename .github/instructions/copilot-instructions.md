@@ -116,8 +116,8 @@ All the tests should be in the `tests` directory.
 
 Support modern Python tooling:
 * All development will be done based on Home Assistant version 2025.6.1.
-* devcontainer.json for VSCode
-* `requirements_dev.txt`
+* Devcontainers using `.devcontainer/devcontainer.json` for VSCode with python 3.13 and without virtual environments.
+* All the development requirements should be in `requirements_dev.txt`
 * GitHub Actions workflow for HACS lint + Tests
 
 ## Documentation to help Copilot
