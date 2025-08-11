@@ -1,5 +1,5 @@
 {
-    "name": "E-Redes Smart Metering Plus (HA 2025.6.0)",
+    "name": "E-Redes Smart Metering Plus (HA 2025.6.1)",
     "dockerComposeFile": [
         "docker-compose.yml"
     ],
@@ -27,7 +27,9 @@
                 "ms-python.vscode-pylance",
                 "ms-python.black-formatter",
                 "charliermarsh.ruff",
-                "ms-azuretools.vscode-docker"
+                "ms-azuretools.vscode-docker",
+                "github.copilot",
+                "github.copilot-chat"
             ]
         }
     }
