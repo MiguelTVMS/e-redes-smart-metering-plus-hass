@@ -6,7 +6,7 @@ on:
       - main
       - develop
     push:
-      - release/*
+      - release/**
     paths:
       - '**/*.py'
       - '.github/workflows/lint.yml'
