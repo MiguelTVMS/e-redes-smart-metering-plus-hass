@@ -15,5 +15,6 @@
     "issue_tracker": "https://github.com/migueltvms/e_redes_smart_metering_plus/issues",
     "quality_scale": "bronze",
     "requirements": [],
+    "single_config_entry": true,
     "version": "1.1.1"
 }
