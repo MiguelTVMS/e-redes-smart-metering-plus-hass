@@ -3,7 +3,6 @@ name: Lint
 on:
   pull_request:
     branches:
-      - main
       - develop
     paths:
       - '**/*.py'
@@ -11,6 +10,10 @@ on:
       - 'custom_components/e_redes_smart_metering_plus/manifest.json'
       - 'hacs.json'
       - 'pyproject.toml'
+  push:
+    branches:
+      - release/**
+      - main
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.head.sha || github.sha }}
