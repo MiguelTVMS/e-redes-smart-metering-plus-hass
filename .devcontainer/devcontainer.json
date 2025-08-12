@@ -32,8 +32,7 @@
                 "github.copilot",
                 "github.copilot-chat",
                 "streetsidesoftware.code-spell-checker-cspell-bundled-dictionaries",
-                "codezombiech.gitignore",
-                "ms-python.vscode-python-envs"
+                "codezombiech.gitignore"
             ]
         }
     }
