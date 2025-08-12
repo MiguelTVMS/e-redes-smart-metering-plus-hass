@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - develop
+    push:
       - release/*
     paths:
       - '**/*.py'
