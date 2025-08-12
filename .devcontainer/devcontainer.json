@@ -1,0 +1,40 @@
+{
+    "name": "E-Redes Smart Metering Plus (HA 2025.6.1)",
+    "dockerComposeFile": [
+        "docker-compose.yml"
+    ],
+    "service": "code",
+    "workspaceFolder": "/workspaces/e-redes-smart-metering-plus-hass",
+    "forwardPorts": [
+        8123
+    ],
+    "postCreateCommand": "python -m pip install --upgrade pip && pip install -r requirements_dev.txt",
+    "remoteUser": "vscode",
+    "customizations": {
+        "vscode": {
+            "settings": {
+                "python.testing.pytestEnabled": true,
+                "python.testing.unittestEnabled": false,
+                "python.testing.pytestArgs": [
+                    "-q"
+                ],
+                "python.formatting.provider": "black",
+                "editor.formatOnSave": true,
+                "ruff.enable": true
+            },
+            "extensions": [
+                "ardisaurus.gitflow-actions-sidebar",
+                "ms-python.debugpy",
+                "ms-python.black-formatter",
+                "ms-python.python",
+                "charliermarsh.ruff",
+                "ms-azuretools.vscode-docker",
+                "github.copilot",
+                "github.copilot-chat",
+                "streetsidesoftware.code-spell-checker-cspell-bundled-dictionaries",
+                "codezombiech.gitignore",
+                "ms-python.vscode-python-envs"
+            ]
+        }
+    }
+}

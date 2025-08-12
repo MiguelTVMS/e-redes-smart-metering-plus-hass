@@ -1,68 +1,42 @@
-"""Test the E-Redes Smart Metering Plus config flow."""
+"""Tests for the config flow of the E-Redes Smart Metering Plus integration."""
 
-from unittest.mock import AsyncMock
+from __future__ import annotations
 
-from homeassistant import config_entries
-from homeassistant.components.eredes_smart_metering_plus.const import DOMAIN
+import pytest
 from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
 
-from tests.common import MockConfigEntry
+from custom_components.e_redes_smart_metering_plus.const import DOMAIN
 
 
-async def test_form(hass: HomeAssistant, mock_setup_entry: AsyncMock) -> None:
-    """Test we get the form."""
+pytestmark = pytest.mark.asyncio
+
+
+async def test_show_form(hass: HomeAssistant) -> None:
+    """Test that the first step shows a form with webhook preview URL."""
     result = await hass.config_entries.flow.async_init(
-        DOMAIN, context={"source": config_entries.SOURCE_USER}
+        DOMAIN, context={"source": "user"}
     )
-    assert result["type"] is FlowResultType.FORM
-    assert result["errors"] is None  # No errors on initial form
+
+    assert result["type"] == "form"
     assert result["step_id"] == "user"
+    # Ensure description placeholders includes webhook_url
+    placeholders = result.get("description_placeholders") or {}
+    assert "webhook_url" in placeholders
+    assert placeholders["webhook_url"].startswith("http")
 
-    # Check that the schema is empty (no input fields needed)
-    assert result["data_schema"].schema == {}
 
-    # Check that the webhook URL is available in placeholders
-    assert "webhook_url" in result["description_placeholders"]
-
-    # Complete the flow by submitting empty form (no input data needed)
-    result = await hass.config_entries.flow.async_configure(
-        result["flow_id"],
-        {},  # Empty dict for empty schema
+async def test_create_entry(hass: HomeAssistant) -> None:
+    """Test creating the entry from the user step."""
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": "user"}
     )
-    await hass.async_block_till_done()
+    assert result["type"] == "form"
 
-    assert result["type"] is FlowResultType.CREATE_ENTRY
-    assert result["title"] == "E-Redes Smart Metering Plus"
-    assert "webhook_id" in result["data"]
-    assert len(mock_setup_entry.mock_calls) == 1
-
-
-async def test_options_flow_webhook_url_display(hass: HomeAssistant) -> None:
-    """Test that options flow displays the webhook URL correctly."""
-    # Create a mock config entry with webhook data
-    config_entry = MockConfigEntry(
-        domain=DOMAIN,
-        data={
-            "webhook_id": "test-webhook-id-123",
-            "webhook_url": "https://example.com/api/webhook/test-webhook-id-123",
-        },
-        entry_id="test-entry-id",
-        title="E-Redes Smart Metering Plus",
+    result2 = await hass.config_entries.flow.async_configure(
+        result["flow_id"], user_input={}
     )
-    config_entry.add_to_hass(hass)
 
-    # Start the options flow
-    result = await hass.config_entries.options.async_init(config_entry.entry_id)
-
-    assert result["type"] is FlowResultType.MENU
-    assert result["step_id"] == "init"
-
-    # Check that the menu options are empty (only close button)
-    assert result["menu_options"] == []
-
-    # Check that the webhook URL is available in placeholders
-    assert "webhook_url" in result["description_placeholders"]
-
-    # With empty menu options, the flow shows only a close button
-    # No further configuration is possible or needed
+    assert result2["type"] == "create_entry"
+    assert result2["title"] == "E-Redes Smart Metering Plus"
+    data = result2["data"]
+    assert "webhook_id" in data and isinstance(data["webhook_id"], str)

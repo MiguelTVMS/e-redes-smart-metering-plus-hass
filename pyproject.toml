@@ -6,10 +6,10 @@ build-backend = "setuptools.build_meta"
 name = "e-redes-smart-metering-plus-hass"
 description = "Home Assistant integration for E-Redes Smart Metering Plus"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.13"
 license = { text = "MIT" }
 authors = [
-    { name = "Miguel Silva", email = "miguel@example.com" }
+    { name = "João Miguel Marques Silva", email = "joao@miguel.ms" }
 ]
 keywords = ["home-assistant", "e-redes", "smart-metering", "energy"]
 classifiers = [
@@ -17,8 +17,7 @@ classifiers = [
     "Intended Audience :: End Users/Desktop",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Home Automation"
 ]
 dynamic = ["version"]
@@ -27,7 +26,7 @@ dynamic = ["version"]
 write_to = "custom_components/e_redes_smart_metering_plus/_version.py"
 
 [tool.black]
-target-version = ["py311"]
+target-version = ["py313"]
 line-length = 88
 extend-exclude = "/generated/"
 
@@ -39,7 +38,7 @@ forced_separate = ["tests"]
 combine_as_imports = true
 
 [tool.pylint.MASTER]
-py-version = "3.11"
+py-version = "3.13"
 ignore = ["tests"]
 jobs = 2
 init-hook = """\
@@ -106,7 +105,7 @@ log_date_format = "%Y-%m-%d %H:%M:%S"
 asyncio_mode = "auto"
 
 [tool.ruff]
-target-version = "py311"
+target-version = "py313"
 line-length = 88
 
 [tool.ruff.lint]

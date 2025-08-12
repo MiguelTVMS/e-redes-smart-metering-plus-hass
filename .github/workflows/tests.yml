@@ -1,0 +1,63 @@
+name: Tests
+
+on:
+  pull_request:
+    branches:
+      - main
+      - develop
+    paths:
+      - custom_components/e_redes_smart_metering_plus/**
+      - tests/**
+      - pyproject.toml
+      - requirements_dev.txt
+      - .github/workflows/tests.yml
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    name: Pytest
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      PYTHONPATH: ${{ github.workspace }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: 'pip'
+          cache-dependency-path: |
+            requirements_dev.txt
+            pyproject.toml
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements_dev.txt
+
+      - name: Run tests
+        run: |
+          mkdir -p .reports
+          pytest -q \
+            --junitxml=.reports/pytest-junit.xml
+
+      - name: Ensure test report exists
+        if: always()
+        run: |
+          if [ ! -f .reports/pytest-junit.xml ]; then
+            echo '<testsuite name="empty" tests="0"></testsuite>' > .reports/pytest-junit.xml
+          fi
+
+      - name: Upload test report artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: .reports/**
+          if-no-files-found: ignore

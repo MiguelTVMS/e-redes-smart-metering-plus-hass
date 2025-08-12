@@ -129,7 +129,6 @@ dmypy.json
 .pyre/
 
 # IDE
-.vscode/
 .idea/
 *.swp
 *.swo
@@ -148,3 +147,31 @@ Thumbs.db
 
 # Home Assistant configuration
 config/
+
+# Virtualenv
+# https://realpython.com/python-virtual-environments-a-primer/#the-virtualenv-project
+.Python
+[Bb]in
+[Ii]nclude
+[Ll]ib
+[Ll]ib64
+[Ll]ocal
+[Ss]cripts
+pyvenv.cfg
+.venv
+pip-selfcheck.json
+
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/*.code-snippets
+!*.code-workspace
+
+# Built Visual Studio Code Extensions
+*.vsix
+
+# Version files generated at build time
+# setuptools_scm writes a dynamic version module; keep it out of VCS
+custom_components/**/_version.py
