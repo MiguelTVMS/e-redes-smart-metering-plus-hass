@@ -2,5 +2,8 @@
     "name": "E-Redes Smart Metering Plus",
     "content_in_root": false,
     "homeassistant": "2025.6.0",
-    "render_readme": true
+    "render_readme": true,
+    "country": [
+        "PT"
+    ]
 }
