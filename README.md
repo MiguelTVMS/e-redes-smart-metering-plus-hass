@@ -3,7 +3,7 @@
 _Home Assistant integration for E-Redes Smart Metering Plus energy meters in Portugal._
 
 > [!IMPORTANT]  
-> This is an independent, community-developed project and is not affiliated with, endorsed by, or connected to E-Redes or any of its subsidiaries. This integration is developed and maintained by volunteers and is not an official E-Redes product or service.
+> Not affiliated with, sponsored by, or endorsed by **E-REDES – Distribuição de Eletricidade, S.A.** See the full [Disclaimer](DISCLAIMER.md).
 
 > [!WARNING]  
 > **Smart Metering Plus is required**. The meter is provided by E-Redes and, for now, access is limited to a pilot program. Enrollment appears to be closed as E-Redes moves into final testing. Setup details are being tracked in [issue](https://github.com/MiguelTVMS/e-redes-smart-metering-plus-hass/issues/3). If you don’t have a Smart Metering Plus meter or pilot access, this integration will not receive data.
@@ -96,3 +96,8 @@ The integration automatically handles multiple meters. Each meter (identified by
 ## Contributions are welcome
 
 If you want to contribute to this please read the [Contribution guidelines](CONTRIBUTING.md)
+
+## Legal
+
+[Disclaimer](DISCLAIMER.md)
+[License](LICENSE)
