@@ -5,6 +5,9 @@ _Home Assistant integration for E-Redes Smart Metering Plus energy meters in Por
 > [!IMPORTANT]  
 > This is an independent, community-developed project and is not affiliated with, endorsed by, or connected to E-Redes or any of its subsidiaries. This integration is developed and maintained by volunteers and is not an official E-Redes product or service.
 
+> [!WARNING]  
+> **Smart Metering Plus is required**. The meter is provided by E-Redes and, for now, access is limited to a pilot program. Enrollment appears to be closed as E-Redes moves into final testing. Setup details are being tracked in [issue](#3). If you don’t have a Smart Metering Plus meter or pilot access, this integration will not receive data.
+
 **This integration will set up the following platforms.**
 
 Platform | Description
