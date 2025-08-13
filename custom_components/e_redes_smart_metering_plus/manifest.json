@@ -9,12 +9,12 @@
         "webhook",
         "cloud"
     ],
-    "documentation": "https://github.com/migueltvms/e_redes_smart_metering_plus",
+    "documentation": "https://github.com/MiguelTVMS/e-redes-smart-metering-plus-hass?tab=readme-ov-file#readme",
     "integration_type": "service",
     "iot_class": "cloud_push",
-    "issue_tracker": "https://github.com/migueltvms/e_redes_smart_metering_plus/issues",
+    "issue_tracker": "https://github.com/MiguelTVMS/e-redes-smart-metering-plus-hass/issues",
     "quality_scale": "bronze",
     "requirements": [],
     "single_config_entry": true,
-    "version": "1.1.3"
+    "version": "1.1.4"
 }
