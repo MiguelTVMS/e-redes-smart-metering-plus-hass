@@ -1,22 +1,22 @@
-# E-Redes Smart Metering Plus Home Assistant Integration
+# E-REDES Smart Metering Plus Home Assistant Integration
 
-_Home Assistant integration for E-Redes Smart Metering Plus energy meters in Portugal._
+_Home Assistant integration for E-REDES Smart Metering Plus energy meters in Portugal._
 
 > [!IMPORTANT]  
 > Not affiliated with, sponsored by, or endorsed by **E-REDES – Distribuição de Eletricidade, S.A.** See the full [Disclaimer](DISCLAIMER.md).
 
 > [!WARNING]  
-> **Smart Metering Plus is required**. The meter is provided by E-Redes and, for now, access is limited to a pilot program. Enrollment appears to be closed as E-Redes moves into final testing. Setup details are being tracked in [issue](https://github.com/MiguelTVMS/e-redes-smart-metering-plus-hass/issues/3). If you don’t have a Smart Metering Plus meter or pilot access, this integration will not receive data.
+> **Smart Metering Plus is required**. The meter is provided by E-REDES and, for now, access is limited to a pilot program. Enrollment appears to be closed as E-REDES moves into final testing. Setup details are being tracked in [issue](https://github.com/MiguelTVMS/e-redes-smart-metering-plus-hass/issues/3). If you don’t have a Smart Metering Plus meter or pilot access, this integration will not receive data.
 
 **This integration will set up the following platforms.**
 
 Platform | Description
 -- | --
-`sensor` | Show info from E-Redes Smart Metering Plus API.
+`sensor` | Show info from E-REDES Smart Metering Plus webhook data.
 
 ## Features
 
-- 🔄 **Real-time Energy Monitoring** - Receive live data from your E-Redes smart meters
+- 🔄 **Real-time Energy Monitoring** - Receive live data from your E-REDES smart meters
 - 🌐 **Cloud Webhook Support** - Automatic secure webhook URL generation with Nabu Casa
 - 📊 **Multiple Meter Support** - Handle multiple meters (CPEs) automatically
 - ⚡ **Zero Configuration** - No YAML configuration or automation setup required
@@ -45,8 +45,8 @@ Platform | Description
 
 1. Add the integration through the Home Assistant UI
 2. The integration will automatically create a webhook URL
-3. If you have Nabu Casa, a secure cloud URL will be generated automatically
-4. Configure your E-Redes energy provider with the webhook URL
+3. If you have Nabu Casa, a secure cloud URL will be generated automatically.
+4. Configure your E-REDES account with the webhook URL (self-service configuration is not yet available for general users).
 5. Start receiving real-time energy data!
 
 ## Webhook Data Format
@@ -85,7 +85,7 @@ For each unique CPE (meter), the following sensors are automatically created:
 
 ### Webhook Not Receiving Data
 
-1. Check that your webhook URL is correctly configured with E-Redes
+1. Check that your webhook URL is correctly configured with E-REDES
 2. Verify your Home Assistant is accessible from the internet (if using local webhook)
 3. Check Home Assistant logs for webhook-related errors
 
@@ -95,9 +95,9 @@ The integration automatically handles multiple meters. Each meter (identified by
 
 ## Contributions are welcome
 
-If you want to contribute to this please read the [Contribution guidelines](CONTRIBUTING.md)
+If you want to contribute, please read the [Contribution Guidelines](CONTRIBUTING.md)
 
 ## Legal
 
-[Disclaimer](DISCLAIMER.md)
+[Disclaimer](DISCLAIMER.md)  
 [License](LICENSE)

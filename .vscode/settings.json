@@ -5,6 +5,7 @@
         "codezombiech",
         "debugpy",
         "Devcontainers",
+        "Eletricidade",
         "gitflow",
         "HACS",
         "hass",
@@ -16,6 +17,7 @@
         "junitxml",
         "levelname",
         "msecs",
+        "Nabu",
         "norecursedirs",
         "nosetests",
         "testpaths"
