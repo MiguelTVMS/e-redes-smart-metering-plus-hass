@@ -17,7 +17,8 @@ pytestmark = pytest.mark.asyncio
     "field_name,value",
     [
         ("instantaneousActivePowerImport", 987),
-        ("activeEnergyImport", 12.34),
+        ("activeEnergyImport", 12340),
+        ("activeEnergyExport", 5450),
         ("voltageL1", 230.5),
     ],
 )

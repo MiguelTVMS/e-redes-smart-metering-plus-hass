@@ -34,7 +34,11 @@ class DummyRequest:
         },
         {
             "cpe": "ABCDEF",
-            "activeEnergyImport": 5.25,
+            "activeEnergyImport": 5250,
+        },
+        {
+            "cpe": "TEST123",
+            "activeEnergyExport": 3140,
         },
     ],
 )

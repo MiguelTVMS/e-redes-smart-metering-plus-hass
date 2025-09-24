@@ -21,10 +21,19 @@ def _mock_cloud(monkeypatch: pytest.MonkeyPatch) -> None:
     Force cloud to appear logged out so the integration falls back to local webhook URLs
     and avoids cloudhook API calls.
     """
-
+    # Mock cloud login status
     monkeypatch.setattr(
         "homeassistant.components.cloud.async_is_logged_in", lambda hass: False,
         raising=True,
+    )
+
+    # Mock cloud setup to prevent initialization errors
+    async def mock_cloud_setup(hass, config):
+        return True
+
+    monkeypatch.setattr(
+        "homeassistant.components.cloud.async_setup", mock_cloud_setup,
+        raising=False,
     )
 
 
@@ -37,7 +46,7 @@ def _auto_enable_custom_integrations(enable_custom_integrations: bool) -> None:
 
 
 @pytest.fixture
-async def config_entry(hass: HomeAssistant) -> AsyncGenerator[MockConfigEntry, None]:
+async def config_entry(hass: HomeAssistant) -> AsyncGenerator[MockConfigEntry]:
     """Create and set up a config entry for the integration."""
 
     entry = MockConfigEntry(
