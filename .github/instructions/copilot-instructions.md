@@ -14,19 +14,23 @@ This integration is fully automatic. When the user installs it, it creates a web
 
 ```json
 {
-    "clock": "2025-08-01 12:41:10",
-    "cpe": "PT000XXXXXXXXXXXXXXX",
-    "instantaneousActivePowerImport": 85.85,
-    "maxActivePowerImport": 85.75,
-    "maxActivePowerImportTime": "2024-04-29 12:41:10",
-    "activeEnergyImport": 198114.34,
-    "instantaneousActivePowerExport": 64.93,
-    "maxActivePowerExport": 96.86,
-    "maxActivePowerExportTime": "2024-04-29 12:41:10",
-    "activeEnergyExport": 612865.24,
-    "voltageL1": 231.58
+  "cpe": "PT000XXXXXXXXXXXXXXX",
+  "SourceTimestamp": "2025-09-24 18:33:20",
+  "activeEnergyExport": 0,
+  "activeEnergyImport": 14817930,
+  "instantaneousActivePowerExport": 0,
+  "instantaneousActivePowerImport": 2518,
+  "maxActivePowerExport": 0,
+  "maxActivePowerExportTime": "0000-00-00 00:00:00",
+  "maxActivePowerImportTotalLastAverage": 3680,
+  "maxActivePowerImportTotalTime": "2025-09-09 11:45:00",
+  "voltageL1": 237.1,
+  "clock": "2025-09-24 19:33:20"
 }
 ```
+
+### Attention:
+The fields activeEnergyImport and activeEnergyExport are cumulative values in Wh (Watt-hour). The instantaneousActivePowerImport and instantaneousActivePowerExport fields represent the current power in W (Watt). The voltageL1 field represents the voltage in V (Volts).
 
 **Note:**
 The user may have **multiple meters**, each uniquely identified by the `cpe` field.
