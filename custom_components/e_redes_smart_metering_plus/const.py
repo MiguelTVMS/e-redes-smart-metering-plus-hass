@@ -30,7 +30,7 @@ SENSOR_MAPPING = {
     "activeEnergyImport": {
         "name": "Active Energy Import",
         "key": "active_energy_import",
-        "unit": "kWh",
+        "unit": "Wh",
         "device_class": "energy",
         "state_class": "total_increasing",
         "icon": "mdi:counter",
@@ -54,7 +54,7 @@ SENSOR_MAPPING = {
     "activeEnergyExport": {
         "name": "Active Energy Export",
         "key": "active_energy_export",
-        "unit": "kWh",
+        "unit": "Wh",
         "device_class": "energy",
         "state_class": "total_increasing",
         "icon": "mdi:counter",
