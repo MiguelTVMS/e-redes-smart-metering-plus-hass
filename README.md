@@ -6,7 +6,7 @@ _Home Assistant integration for E-REDES Smart Metering Plus energy meters in Por
 > Not affiliated with, sponsored by, or endorsed by **E-REDES – Distribuição de Eletricidade, S.A.** See the full [Disclaimer](DISCLAIMER.md).
 
 > [!WARNING]  
-> **Smart Metering Plus is required**. The meter is provided by E-REDES and, for now, access is limited to a pilot program. Enrollment appears to be closed as E-REDES moves into final testing. Setup details are being tracked in [issue](https://github.com/MiguelTVMS/e-redes-smart-metering-plus-hass/issues/3). If you don’t have a Smart Metering Plus meter or pilot access, this integration will not receive data.
+> **Smart Metering Plus is required.** The meter is provided by E-REDES, and access is currently limited to a pilot program. Enrollment appears to be closed as E-REDES moves into its final testing phase. Setup details are being tracked in [issue](https://github.com/MiguelTVMS/e-redes-smart-metering-plus-hass/issues/3). If you don’t have a Smart Metering Plus meter or pilot access, this integration will not receive data.
 
 **This integration will set up the following platforms.**
 
@@ -33,13 +33,13 @@ Platform | Description
 
 ### Manual Installation
 
-1. Using the tool of choice open the directory (folder) for your HA configuration (where you find `configuration.yaml`).
+1. Using the tool of choice, open the directory (folder) for your HA configuration (where you find `configuration.yaml`).
 2. If you do not have a `custom_components` directory (folder) there, you need to create it.
-3. In the `custom_components` directory (folder) create a new folder called `e_redes_smart_metering_plus`.
+3. In the `custom_components` directory (folder), create a new folder called `e_redes_smart_metering_plus`.
 4. Download _all_ the files from the `custom_components/e_redes_smart_metering_plus/` directory (folder) in this repository.
 5. Place the files you downloaded in the new directory (folder) you created.
 6. Restart Home Assistant
-7. In the HA UI go to "Configuration" -> "Integrations" click "+" and search for "E-Redes Smart Metering Plus"
+7. In the HA UI, go to "Configuration" -> "Integrations", click "+", and search for "E-Redes Smart Metering Plus"
 
 ## Configuration
 
@@ -75,10 +75,10 @@ For each unique CPE (meter), the following sensors are automatically created:
 
 - **Instantaneous Active Power Import** (W) - Real-time power consumption
 - **Max Active Power Import** (W) - Maximum power imported
-- **Active Energy Import** (kWh) - Total energy consumed
+- **Active Energy Import** (Wh) - Total energy consumed
 - **Instantaneous Active Power Export** (W) - Real-time power generation
 - **Max Active Power Export** (W) - Maximum power exported  
-- **Active Energy Export** (kWh) - Total energy produced
+- **Active Energy Export** (Wh) - Total energy produced
 - **Voltage L1** (V) - Line voltage
 
 ## Troubleshooting
