@@ -15,7 +15,7 @@ from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 
 from .const import DOMAIN, MANUFACTURER, MODEL, SENSOR_MAPPING, WEBHOOK_ID
-from .sensor import async_ensure_sensors_for_data
+from .sensor import async_ensure_calculated_sensors, async_ensure_sensors_for_data
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -175,3 +175,6 @@ async def async_process_sensor_data(
             )
         else:
             _LOGGER.debug("Unknown field in webhook data: %s", field_name)
+
+    # Ensure calculated sensors exist after processing source sensors
+    await async_ensure_calculated_sensors(hass, entry.entry_id, cpe)
