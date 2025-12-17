@@ -6,7 +6,10 @@ _Home Assistant integration for E-REDES Smart Metering Plus energy meters in Por
 > Not affiliated with, sponsored by, or endorsed by **E-REDES – Distribuição de Eletricidade, S.A.** See the full [Disclaimer](DISCLAIMER.md).
 
 > [!WARNING]  
-> **Smart Metering Plus is required**. The meter is provided by E-REDES and, for now, access is limited to a pilot program. Enrollment appears to be closed as E-REDES moves into final testing. Setup details are being tracked in [issue](https://github.com/MiguelTVMS/e-redes-smart-metering-plus-hass/issues/3). If you don’t have a Smart Metering Plus meter or pilot access, this integration will not receive data.
+> **Smart Metering Plus is required**. The meter is provided by E-REDES and, for now, access is limited to a pilot program. Enrollment appears to be closed as E-REDES moves into final testing. Setup details are being tracked in [issue](https://github.com/MiguelTVMS/e-redes-smart-metering-plus-hass/issues/3). If you don't have a Smart Metering Plus meter or pilot access, this integration will not receive data.
+
+> [!NOTE]  
+> **Version 1.2.0+ Breaking Change**: Starting from version 1.2.0, the webhook URL is now **fixed** and uses a predictable path: `/api/webhook/e_redes_smart_metering_plus`. If you're upgrading from an earlier version, you'll need to update the webhook URL configured in your E-REDES account. The new URL will be displayed in the integration configuration panel.
 
 **This integration will set up the following platforms.**
 
