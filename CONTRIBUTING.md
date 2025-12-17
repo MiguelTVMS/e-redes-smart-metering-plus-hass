@@ -8,21 +8,16 @@ Contributions are welcome! Please follow these guidelines:
 2. Clone your fork
 3. **Important:** This repository uses the gitflow branching model. All new development should be done on the `develop` branch, never on `main`. Please base your feature branches and pull requests on `develop`.
 4. Open the project in VS Code. If prompted, reopen in the devcontainer for a pre-configured development environment.
-5. The devcontainer includes Python 3.13 and all required tools. Development dependencies are installed automatically, but you can also run:
+5. The devcontainer includes Python 3.13 and all required tools. Development dependencies and the **pre-commit hook are installed automatically**.
+
+**If not using devcontainers**, manually install dependencies and the pre-commit hook:
 
    ```bash
    pip install -r requirements_dev.txt
-   ```
-
-6. **Install the pre-commit hook** (highly recommended):
-
-   ```bash
    ./scripts/install-hooks.sh
    ```
 
-   This will automatically run linting and tests before each commit, ensuring your code meets quality standards before pushing.
-
-If you are not using VS Code or devcontainers, follow the manual steps above to install dependencies.
+The pre-commit hook automatically runs linting and tests before each commit, ensuring your code meets quality standards before pushing.
 
 ### Branching model (gitflow)
 
