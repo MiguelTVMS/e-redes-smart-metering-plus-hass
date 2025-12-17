@@ -4,11 +4,9 @@ from __future__ import annotations
 
 import pytest
 
+from custom_components.e_redes_smart_metering_plus.const import DOMAIN, SENSOR_MAPPING
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
-
-from custom_components.e_redes_smart_metering_plus.const import DOMAIN, SENSOR_MAPPING
-
 
 pytestmark = pytest.mark.asyncio
 
@@ -51,3 +49,119 @@ async def test_sensor_state_and_unique_id(
 
     # Ensure device info attributes are exposed
     assert state.attributes.get("cpe") == payload["cpe"]
+
+
+async def test_total_increasing_prevents_decreasing_values(
+    hass: HomeAssistant, hass_client, config_entry
+) -> None:
+    """Test that total_increasing sensors reject decreasing values."""
+
+    client = await hass_client()
+    cpe = "CPE_TEST_001"
+
+    # Send initial value
+    initial_value = 10000.0
+    payload = {"cpe": cpe, "activeEnergyImport": initial_value}
+    resp = await client.post(
+        f"/api/webhook/{config_entry.data['webhook_id']}",
+        json=payload,
+    )
+    assert resp.status == 200
+    await hass.async_block_till_done()
+
+    entity_registry = er.async_get(hass)
+    sensor_key = SENSOR_MAPPING["activeEnergyImport"]["key"]
+    unique_id = f"{DOMAIN}_{cpe}_{sensor_key}"
+    ent_id = entity_registry.async_get_entity_id("sensor", DOMAIN, unique_id)
+    assert ent_id is not None
+
+    # Verify initial state
+    state = hass.states.get(ent_id)
+    assert state is not None
+    assert float(state.state) == initial_value
+
+    # Send increasing value - should update
+    increasing_value = 10500.0
+    payload = {"cpe": cpe, "activeEnergyImport": increasing_value}
+    resp = await client.post(
+        f"/api/webhook/{config_entry.data['webhook_id']}",
+        json=payload,
+    )
+    assert resp.status == 200
+    await hass.async_block_till_done()
+
+    state = hass.states.get(ent_id)
+    assert state is not None
+    assert float(state.state) == increasing_value
+
+    # Send decreasing value - should be rejected and state should remain unchanged
+    decreasing_value = 9500.0
+    payload = {"cpe": cpe, "activeEnergyImport": decreasing_value}
+    resp = await client.post(
+        f"/api/webhook/{config_entry.data['webhook_id']}",
+        json=payload,
+    )
+    assert resp.status == 200
+    await hass.async_block_till_done()
+
+    # State should still be the previous increasing value
+    state = hass.states.get(ent_id)
+    assert state is not None
+    assert float(state.state) == increasing_value  # Should not have changed
+
+    # Send another increasing value - should update again
+    next_increasing_value = 11000.0
+    payload = {"cpe": cpe, "activeEnergyImport": next_increasing_value}
+    resp = await client.post(
+        f"/api/webhook/{config_entry.data['webhook_id']}",
+        json=payload,
+    )
+    assert resp.status == 200
+    await hass.async_block_till_done()
+
+    state = hass.states.get(ent_id)
+    assert state is not None
+    assert float(state.state) == next_increasing_value
+
+
+async def test_measurement_sensors_allow_any_values(
+    hass: HomeAssistant, hass_client, config_entry
+) -> None:
+    """Test that measurement sensors (not total_increasing) accept any value changes."""
+
+    client = await hass_client()
+    cpe = "CPE_TEST_002"
+
+    # Send initial value for power sensor (state_class: measurement)
+    initial_value = 5000.0
+    payload = {"cpe": cpe, "instantaneousActivePowerImport": initial_value}
+    resp = await client.post(
+        f"/api/webhook/{config_entry.data['webhook_id']}",
+        json=payload,
+    )
+    assert resp.status == 200
+    await hass.async_block_till_done()
+
+    entity_registry = er.async_get(hass)
+    sensor_key = SENSOR_MAPPING["instantaneousActivePowerImport"]["key"]
+    unique_id = f"{DOMAIN}_{cpe}_{sensor_key}"
+    ent_id = entity_registry.async_get_entity_id("sensor", DOMAIN, unique_id)
+    assert ent_id is not None
+
+    state = hass.states.get(ent_id)
+    assert state is not None
+    assert float(state.state) == initial_value
+
+    # Send decreasing value - should be accepted for measurement sensors
+    decreasing_value = 2000.0
+    payload = {"cpe": cpe, "instantaneousActivePowerImport": decreasing_value}
+    resp = await client.post(
+        f"/api/webhook/{config_entry.data['webhook_id']}",
+        json=payload,
+    )
+    assert resp.status == 200
+    await hass.async_block_till_done()
+
+    state = hass.states.get(ent_id)
+    assert state is not None
+    assert float(state.state) == decreasing_value  # Should have updated

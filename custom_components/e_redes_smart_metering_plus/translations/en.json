@@ -9,7 +9,7 @@
         "step": {
             "user": {
                 "title": "E-Redes Smart Metering Plus",
-                "description": "Your webhook URL has been generated. Configure this URL in your E-Redes provider dashboard to receive smart meter data:\n\n**{webhook_url}**\n\nCopy this URL and paste it into your E-Redes provider dashboard, then click submit to complete the setup.\n\n💡 **Nabu Casa Subscribers:** If you have Home Assistant Cloud, you can manage your webhooks by going to Settings > Home Assistant Cloud > Webhooks in your Home Assistant."
+                "description": "Your webhook URL is ready. This URL uses a fixed path that won't change:\n\n**{webhook_url}**\n\nCopy this URL and configure it in your E-Redes provider dashboard to receive smart meter data, then click submit to complete the setup.\n\n💡 **Note:** The webhook path `/api/webhook/e_redes_smart_metering_plus` is consistent across restarts.\n\n💡 **Nabu Casa Subscribers:** If you have Home Assistant Cloud, a secure cloud URL is automatically generated using the same fixed webhook ID."
             }
         }
     },
@@ -17,7 +17,7 @@
         "step": {
             "init": {
                 "title": "E-Redes Webhook Configuration",
-                "description": "This is your webhook URL that should be configured in your E-Redes provider dashboard:\n\n**{webhook_url}**\n\nCopy this URL and paste it into your E-Redes provider dashboard to receive smart meter data.\n\n💡 **Nabu Casa Subscribers:** You can manage your webhooks by going to Settings > Home Assistant Cloud > Webhooks in your Home Assistant."
+                "description": "This is your webhook URL that should be configured in your E-Redes provider dashboard:\n\n**{webhook_url}**\n\nThe webhook uses a fixed path `/api/webhook/e_redes_smart_metering_plus` that remains consistent.\n\n💡 **Nabu Casa Subscribers:** If you have Home Assistant Cloud, a secure cloud URL is automatically generated using the same fixed webhook ID. You can view all your webhooks by going to Settings > Home Assistant Cloud > Webhooks."
             }
         }
     }
