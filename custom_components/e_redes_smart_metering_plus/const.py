@@ -2,8 +2,11 @@
 
 DOMAIN = "e_redes_smart_metering_plus"
 
+# Fixed webhook ID - creates a predictable URL path
+WEBHOOK_ID = DOMAIN
+
 # Webhook constants
-WEBHOOK_PATH = f"/api/webhook/{DOMAIN}"
+WEBHOOK_PATH = f"/api/webhook/{WEBHOOK_ID}"
 
 # Device info
 MANUFACTURER = "E-Redes"

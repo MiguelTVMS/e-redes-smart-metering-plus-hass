@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 from homeassistant.core import HomeAssistant
 
-from custom_components.e_redes_smart_metering_plus.const import DOMAIN
+from custom_components.e_redes_smart_metering_plus.const import DOMAIN, WEBHOOK_ID
 
 
 pytestmark = pytest.mark.asyncio
@@ -39,4 +39,5 @@ async def test_create_entry(hass: HomeAssistant) -> None:
     assert result2["type"] == "create_entry"
     assert result2["title"] == "E-Redes Smart Metering Plus"
     data = result2["data"]
-    assert "webhook_id" in data and isinstance(data["webhook_id"], str)
+    assert "webhook_id" in data
+    assert data["webhook_id"] == WEBHOOK_ID

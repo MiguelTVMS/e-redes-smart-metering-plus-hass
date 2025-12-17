@@ -11,7 +11,7 @@ from homeassistant.core import HomeAssistant
 
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.e_redes_smart_metering_plus.const import DOMAIN
+from custom_components.e_redes_smart_metering_plus.const import DOMAIN, WEBHOOK_ID
 
 
 @pytest.fixture(autouse=True)
@@ -52,7 +52,7 @@ async def config_entry(hass: HomeAssistant) -> AsyncGenerator[MockConfigEntry]:
     entry = MockConfigEntry(
         domain=DOMAIN,
         title="E-Redes Smart Metering Plus",
-        data={"webhook_id": "test-webhook-id"},
+        data={"webhook_id": WEBHOOK_ID},
     )
     entry.add_to_hass(hass)
 

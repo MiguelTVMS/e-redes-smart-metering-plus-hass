@@ -14,7 +14,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 
-from .const import DOMAIN, MANUFACTURER, MODEL, SENSOR_MAPPING
+from .const import DOMAIN, MANUFACTURER, MODEL, SENSOR_MAPPING, WEBHOOK_ID
 from .sensor import async_ensure_sensors_for_data
 
 _LOGGER = logging.getLogger(__name__)
@@ -22,7 +22,8 @@ _LOGGER = logging.getLogger(__name__)
 
 async def async_setup_webhook(hass: HomeAssistant, entry: ConfigEntry) -> str:
     """Set up webhook for receiving E-Redes data."""
-    webhook_id = entry.data.get("webhook_id", entry.entry_id)
+    # Use fixed webhook ID
+    webhook_id = WEBHOOK_ID
 
     # Create a handler with the config entry bound to it
     async def webhook_handler(
@@ -35,7 +36,7 @@ async def async_setup_webhook(hass: HomeAssistant, entry: ConfigEntry) -> str:
     webhook.async_register(
         hass,
         DOMAIN,
-        f"E-Redes Smart Metering Plus ({entry.title})",
+        "E-Redes Smart Metering Plus",
         webhook_id,
         webhook_handler,
     )
@@ -56,7 +57,8 @@ async def async_setup_webhook(hass: HomeAssistant, entry: ConfigEntry) -> str:
 
     # Store webhook URL in config entry data
     hass.config_entries.async_update_entry(
-        entry, data={**entry.data, "webhook_url": webhook_url}
+        entry, data={**entry.data, "webhook_id": webhook_id,
+                     "webhook_url": webhook_url}
     )
 
     # Also store webhook URL in integration data for easy access
@@ -65,6 +67,7 @@ async def async_setup_webhook(hass: HomeAssistant, entry: ConfigEntry) -> str:
     if entry.entry_id not in hass.data[DOMAIN]:
         hass.data[DOMAIN][entry.entry_id] = {}
     hass.data[DOMAIN][entry.entry_id]["webhook_url"] = webhook_url
+    hass.data[DOMAIN][entry.entry_id]["webhook_id"] = webhook_id
 
     return webhook_id
 
@@ -109,7 +112,8 @@ async def handle_webhook(
         await async_process_sensor_data(hass, entry, cpe, data)
         _LOGGER.debug("Sensor data processed for CPE: %s", cpe)
 
-        _LOGGER.info("Webhook processing completed successfully for CPE: %s", cpe)
+        _LOGGER.info(
+            "Webhook processing completed successfully for CPE: %s", cpe)
         return Response(status=200, text="OK")
 
     except json.JSONDecodeError as err:
