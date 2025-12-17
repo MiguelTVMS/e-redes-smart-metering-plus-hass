@@ -71,3 +71,17 @@ SENSOR_MAPPING = {
         "icon": "mdi:sine-wave",
     },
 }
+
+# Calculated sensors (not directly from webhook data)
+CALCULATED_SENSORS = {
+    "instantaneous_active_current_import": {
+        "name": "Instantaneous Active Current Import",
+        "key": "instantaneous_active_current_import",
+        "unit": "A",
+        "device_class": "current",
+        "state_class": "measurement",
+        "icon": "mdi:current-ac",
+        "calculation": "power_voltage",  # Indicates calculation type
+        "source_sensors": ["instantaneous_active_power_import", "voltage_l1"],
+    },
+}

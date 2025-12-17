@@ -15,7 +15,7 @@ from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 
 from .const import DOMAIN, MANUFACTURER, MODEL, SENSOR_MAPPING, WEBHOOK_ID
-from .sensor import async_ensure_sensors_for_data
+from .sensor import async_ensure_calculated_sensors, async_ensure_sensors_for_data
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -57,7 +57,8 @@ async def async_setup_webhook(hass: HomeAssistant, entry: ConfigEntry) -> str:
 
     # Store webhook URL in config entry data
     hass.config_entries.async_update_entry(
-        entry, data={**entry.data, "webhook_id": webhook_id, "webhook_url": webhook_url}
+        entry, data={**entry.data, "webhook_id": webhook_id,
+                     "webhook_url": webhook_url}
     )
 
     # Also store webhook URL in integration data for easy access
@@ -111,7 +112,8 @@ async def handle_webhook(
         await async_process_sensor_data(hass, entry, cpe, data)
         _LOGGER.debug("Sensor data processed for CPE: %s", cpe)
 
-        _LOGGER.info("Webhook processing completed successfully for CPE: %s", cpe)
+        _LOGGER.info(
+            "Webhook processing completed successfully for CPE: %s", cpe)
         return Response(status=200, text="OK")
 
     except json.JSONDecodeError as err:
@@ -175,3 +177,6 @@ async def async_process_sensor_data(
             )
         else:
             _LOGGER.debug("Unknown field in webhook data: %s", field_name)
+
+    # Ensure calculated sensors exist after processing source sensors
+    await async_ensure_calculated_sensors(hass, entry.entry_id, cpe)

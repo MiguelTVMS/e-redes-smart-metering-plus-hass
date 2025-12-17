@@ -165,3 +165,124 @@ async def test_measurement_sensors_allow_any_values(
     state = hass.states.get(ent_id)
     assert state is not None
     assert float(state.state) == decreasing_value  # Should have updated
+
+
+async def test_calculated_current_sensor(
+    hass: HomeAssistant, hass_client, config_entry
+) -> None:
+    """Test that calculated current sensor is created and calculates correctly."""
+
+    client = await hass_client()
+    cpe = "CPE_TEST_CALC"
+
+    # Send power and voltage data
+    power = 2300.0  # W
+    voltage = 230.0  # V
+    # Expected current: 2300 / 230 = 10.0 A
+
+    payload = {
+        "cpe": cpe,
+        "instantaneousActivePowerImport": power,
+        "voltageL1": voltage,
+    }
+    resp = await client.post(
+        f"/api/webhook/{config_entry.data['webhook_id']}",
+        json=payload,
+    )
+    assert resp.status == 200
+    await hass.async_block_till_done()
+
+    entity_registry = er.async_get(hass)
+
+    # Check that calculated current sensor was created
+    calculated_sensor_key = "instantaneous_active_current_import"
+    unique_id = f"{DOMAIN}_{cpe}_{calculated_sensor_key}"
+    ent_id = entity_registry.async_get_entity_id("sensor", DOMAIN, unique_id)
+    assert ent_id is not None
+
+    # Verify calculated value
+    state = hass.states.get(ent_id)
+    assert state is not None
+    assert float(state.state) == pytest.approx(
+        10.0, rel=0.01)  # 2300W / 230V = 10A
+
+    # Test with different values
+    power = 4600.0  # W
+    voltage = 230.0  # V
+    # Expected current: 4600 / 230 = 20.0 A
+
+    payload = {
+        "cpe": cpe,
+        "instantaneousActivePowerImport": power,
+        "voltageL1": voltage,
+    }
+    resp = await client.post(
+        f"/api/webhook/{config_entry.data['webhook_id']}",
+        json=payload,
+    )
+    assert resp.status == 200
+    await hass.async_block_till_done()
+
+    # Verify updated calculated value
+    state = hass.states.get(ent_id)
+    assert state is not None
+    assert float(state.state) == pytest.approx(
+        20.0, rel=0.01)  # 4600W / 230V = 20A
+
+    # Check attributes
+    assert state.attributes.get("unit_of_measurement") == "A"
+    assert state.attributes.get("device_class") == "current"
+    assert state.attributes.get("cpe") == cpe
+
+
+async def test_calculated_current_sensor_unknown_when_missing_data(
+    hass: HomeAssistant, hass_client, config_entry
+) -> None:
+    """Test that calculated current sensor shows unknown when source data is missing."""
+
+    client = await hass_client()
+    cpe = "CPE_TEST_UNKNOWN"
+
+    # Send only power data (no voltage)
+    payload = {
+        "cpe": cpe,
+        "instantaneousActivePowerImport": 2300.0,
+    }
+    resp = await client.post(
+        f"/api/webhook/{config_entry.data['webhook_id']}",
+        json=payload,
+    )
+    assert resp.status == 200
+    await hass.async_block_till_done()
+
+    entity_registry = er.async_get(hass)
+
+    # Calculated sensor should not be created if voltage is missing
+    calculated_sensor_key = "instantaneous_active_current_import"
+    unique_id = f"{DOMAIN}_{cpe}_{calculated_sensor_key}"
+    ent_id = entity_registry.async_get_entity_id("sensor", DOMAIN, unique_id)
+
+    # Should be None because voltage sensor doesn't exist yet
+    assert ent_id is None
+
+    # Now send voltage data
+    payload = {
+        "cpe": cpe,
+        "voltageL1": 230.0,
+    }
+    resp = await client.post(
+        f"/api/webhook/{config_entry.data['webhook_id']}",
+        json=payload,
+    )
+    assert resp.status == 200
+    await hass.async_block_till_done()
+
+    # Now calculated sensor should be created
+    ent_id = entity_registry.async_get_entity_id("sensor", DOMAIN, unique_id)
+    assert ent_id is not None
+
+    # Verify calculated value
+    state = hass.states.get(ent_id)
+    assert state is not None
+    # Should be calculated now: 2300W / 230V = 10A
+    assert float(state.state) == pytest.approx(10.0, rel=0.01)
