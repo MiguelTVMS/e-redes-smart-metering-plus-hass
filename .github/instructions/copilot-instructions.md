@@ -126,6 +126,36 @@ Support modern Python tooling:
 * All the development requirements should be in `requirements_dev.txt`
 * GitHub Actions workflow for HACS lint + Tests
 
+### 9. Code Quality and Testing Requirements
+
+**CRITICAL:** After implementing any feature or making any code changes, you MUST:
+
+1. **Run linting checks** matching GitHub Actions workflow (`.github/workflows/lint.yml`):
+   ```bash
+   black --check --diff custom_components/
+   isort --check-only --diff custom_components/
+   ruff check custom_components/
+   ```
+
+2. **Run tests** matching GitHub Actions workflow (`.github/workflows/tests.yml`):
+   ```bash
+   pytest tests/ -q --junitxml=.reports/pytest-junit.xml
+   ```
+
+3. **Fix any issues** before considering the implementation complete:
+   - Run `black custom_components/` to auto-fix formatting
+   - Run `isort custom_components/` to fix import ordering
+   - Run `ruff check --fix custom_components/` to auto-fix linting issues
+   - Fix any test failures
+
+**Why this is important:**
+- Ensures code passes CI/CD pipelines
+- Maintains consistent code style across the project
+- Prevents merge conflicts and build failures
+- Validates that changes don't break existing functionality
+
+**Best Practice:** Run these checks frequently during development, not just at the end.
+
 ## Documentation to help Copilot
 
 [Home Assistant Developer Documentation](https://developers.home-assistant.io/docs)
