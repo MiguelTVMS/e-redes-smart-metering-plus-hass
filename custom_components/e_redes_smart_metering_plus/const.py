@@ -1,6 +1,5 @@
 """Constants for the E-Redes Smart Metering Plus integration."""
 
-# Test comment for pre-commit hook validation
 DOMAIN = "e_redes_smart_metering_plus"
 
 # Fixed webhook ID - creates a predictable URL path
