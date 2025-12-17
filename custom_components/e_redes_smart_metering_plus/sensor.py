@@ -124,7 +124,8 @@ class ERedisSensor(SensorEntity):
 
         self._attr_name = f"{sensor_config['name']}"
         self._attr_unique_id = (
-            f"{DOMAIN}_{cpe}_{sensor_key}"  # Keep CPE in unique_id for uniqueness
+            # Keep CPE in unique_id for uniqueness
+            f"{DOMAIN}_{cpe}_{sensor_key}"
         )
         self._attr_device_class = sensor_config.get("device_class")
         self._attr_state_class = sensor_config.get("state_class")
@@ -195,6 +196,27 @@ class ERedisSensor(SensorEntity):
     @callback
     def _handle_update(self, value: float, timestamp: str | None = None) -> None:
         """Handle sensor update."""
+        # For total_increasing sensors, ensure values never decrease
+        if self._attr_state_class == "total_increasing":
+            if self._attr_native_value is not None:
+                try:
+                    # Convert current value to float for comparison
+                    # Energy sensors are always numeric, so this is safe
+                    # type: ignore[arg-type]
+                    current_value = float(self._attr_native_value)
+                    if value < current_value:
+                        _LOGGER.warning(
+                            "Rejected decreasing value for %s: %s -> %s (state_class: total_increasing). "
+                            "This may be due to out-of-order webhook delivery or meter reset.",
+                            self.entity_id,
+                            current_value,
+                            value,
+                        )
+                        return  # Discard the update to prevent state class violation
+                except (ValueError, TypeError):
+                    # If conversion fails, proceed with update
+                    pass
+
         self._attr_native_value = value
 
         if timestamp:

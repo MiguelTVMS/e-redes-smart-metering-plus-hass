@@ -6,7 +6,10 @@ _Home Assistant integration for E-REDES Smart Metering Plus energy meters in Por
 > Not affiliated with, sponsored by, or endorsed by **E-REDES – Distribuição de Eletricidade, S.A.** See the full [Disclaimer](DISCLAIMER.md).
 
 > [!WARNING]  
-> **Smart Metering Plus is required.** The meter is provided by E-REDES, and access is currently limited to a pilot program. Enrollment appears to be closed as E-REDES moves into its final testing phase. Setup details are being tracked in [issue](https://github.com/MiguelTVMS/e-redes-smart-metering-plus-hass/issues/3). If you don’t have a Smart Metering Plus meter or pilot access, this integration will not receive data.
+> **Smart Metering Plus is required**. The meter is provided by E-REDES and, for now, access is limited to a pilot program. Enrollment appears to be closed as E-REDES moves into final testing. Setup details are being tracked in [issue](https://github.com/MiguelTVMS/e-redes-smart-metering-plus-hass/issues/3). If you don't have a Smart Metering Plus meter or pilot access, this integration will not receive data.
+
+> [!NOTE]  
+> **Version 1.2.0+ Breaking Change**: Starting from version 1.2.0, the webhook URL is now **fixed** and uses a predictable path: `/api/webhook/e_redes_smart_metering_plus`. If you're upgrading from an earlier version, you'll need to update the webhook URL configured in your E-REDES account. The new URL will be displayed in the integration configuration panel.
 
 **This integration will set up the following platforms.**
 
@@ -44,10 +47,17 @@ Platform | Description
 ## Configuration
 
 1. Add the integration through the Home Assistant UI
-2. The integration will automatically create a webhook URL
-3. If you have Nabu Casa, a secure cloud URL will be generated automatically.
+2. The integration will automatically create a **fixed webhook URL**: `/api/webhook/e_redes_smart_metering_plus`
+3. If you have Nabu Casa, a secure cloud URL will be generated automatically using the same fixed webhook ID.
 4. Configure your E-REDES account with the webhook URL (self-service configuration is not yet available for general users).
 5. Start receiving real-time energy data!
+
+### Webhook URL Format
+
+- **Local URL**: `http://your-home-assistant:8123/api/webhook/e_redes_smart_metering_plus`
+- **Nabu Casa URL**: `https://your-instance.ui.nabu.casa/api/webhook/e_redes_smart_metering_plus` (generated automatically if you have Home Assistant Cloud)
+
+The webhook URL uses a **fixed path** that doesn't change between restarts, making it easier to configure with E-REDES.
 
 ## Webhook Data Format
 

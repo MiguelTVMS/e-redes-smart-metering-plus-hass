@@ -53,8 +53,9 @@ Implement the following files:
 
 ### 2. Webhook Handling
 
-* Automatically register a webhook using `webhook.async_register()`.
-* If the `cloud` integration is active, generate a public webhook URL with `cloud.async_create_cloudhook()`.
+* Automatically register a webhook using `webhook.async_register()` with a **fixed webhook ID** (`e_redes_smart_metering_plus`).
+* The webhook URL should be **predictable and consistent** across restarts: `/api/webhook/e_redes_smart_metering_plus`
+* If the `cloud` integration is active, generate a public webhook URL with `cloud.async_create_cloudhook()` using the same fixed webhook ID.
 * If not, fall back to a local URL and optionally display instructions to expose it.
 * Each incoming request should:
 
@@ -63,6 +64,7 @@ Implement the following files:
   * Register sensor entities (one per metric)
   * Update the states of those entities with the incoming values
 * No user automation or YAML configuration should be required.
+* Use `WEBHOOK_ID = DOMAIN` constant from `const.py` to ensure consistency.
 
 ### 3. Sensors to Create
 
@@ -123,6 +125,36 @@ Support modern Python tooling:
 * Devcontainers using `.devcontainer/devcontainer.json` for VSCode with python 3.13 and without virtual environments.
 * All the development requirements should be in `requirements_dev.txt`
 * GitHub Actions workflow for HACS lint + Tests
+
+### 9. Code Quality and Testing Requirements
+
+**CRITICAL:** After implementing any feature or making any code changes, you MUST:
+
+1. **Run linting checks** matching GitHub Actions workflow (`.github/workflows/lint.yml`):
+   ```bash
+   black --check --diff custom_components/
+   isort --check-only --diff custom_components/
+   ruff check custom_components/
+   ```
+
+2. **Run tests** matching GitHub Actions workflow (`.github/workflows/tests.yml`):
+   ```bash
+   pytest tests/ -q --junitxml=.reports/pytest-junit.xml
+   ```
+
+3. **Fix any issues** before considering the implementation complete:
+   - Run `black custom_components/` to auto-fix formatting
+   - Run `isort custom_components/` to fix import ordering
+   - Run `ruff check --fix custom_components/` to auto-fix linting issues
+   - Fix any test failures
+
+**Why this is important:**
+- Ensures code passes CI/CD pipelines
+- Maintains consistent code style across the project
+- Prevents merge conflicts and build failures
+- Validates that changes don't break existing functionality
+
+**Best Practice:** Run these checks frequently during development, not just at the end.
 
 ## Documentation to help Copilot
 
