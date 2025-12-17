@@ -58,7 +58,7 @@ async def async_restore_existing_entities(
 
         # Format: e_redes_smart_metering_plus_CPE_sensor_key
         # Remove the domain prefix
-        remainder = unique_id[len(f"{DOMAIN}_"):]
+        remainder = unique_id[len(f"{DOMAIN}_") :]
 
         # Find the sensor_key by matching against known sensor keys
         sensor_key = None
@@ -92,8 +92,7 @@ async def async_restore_existing_entities(
         )
 
         # Create sensor entity
-        sensor = ERedisSensor(
-            cpe, sensor_key, sensor_config, config_entry.entry_id)
+        sensor = ERedisSensor(cpe, sensor_key, sensor_config, config_entry.entry_id)
         entities_to_restore.append(sensor)
 
         # Store in entities dict
@@ -101,8 +100,7 @@ async def async_restore_existing_entities(
         hass.data[DOMAIN][config_entry.entry_id]["entities"][entity_key] = sensor
 
     if entities_to_restore:
-        _LOGGER.info("Restored %d existing sensor entities",
-                     len(entities_to_restore))
+        _LOGGER.info("Restored %d existing sensor entities", len(entities_to_restore))
         async_add_entities(entities_to_restore)
     else:
         _LOGGER.debug("No existing entities found to restore")
@@ -223,8 +221,7 @@ class ERedisSensor(SensorEntity):
 
         if timestamp:
             try:
-                self._last_update = datetime.fromisoformat(
-                    timestamp.replace(" ", "T"))
+                self._last_update = datetime.fromisoformat(timestamp.replace(" ", "T"))
             except (ValueError, TypeError):
                 self._last_update = datetime.now()
         else:
@@ -257,8 +254,7 @@ async def async_create_sensor_for_cpe(
     entity_key = f"{cpe}_{sensor_key}"
 
     if entity_key in entities:
-        _LOGGER.debug(
-            "Entity %s already exists, skipping creation", entity_key)
+        _LOGGER.debug("Entity %s already exists, skipping creation", entity_key)
         return  # Entity already exists
 
     _LOGGER.debug("Creating new sensor entity for %s", entity_key)
@@ -286,8 +282,7 @@ async def async_ensure_sensors_for_data(
 ) -> None:
     """Ensure all required sensors exist for the incoming data."""
     _LOGGER.debug(
-        "Ensuring sensors for CPE %s with data keys: %s", cpe, list(
-            data.keys())
+        "Ensuring sensors for CPE %s with data keys: %s", cpe, list(data.keys())
     )
 
     for field_name in data:
@@ -295,5 +290,4 @@ async def async_ensure_sensors_for_data(
             _LOGGER.debug("Creating sensor for field: %s", field_name)
             await async_create_sensor_for_cpe(hass, config_entry_id, cpe, field_name)
         else:
-            _LOGGER.debug(
-                "Skipping field %s (cpe field or not in mapping)", field_name)
+            _LOGGER.debug("Skipping field %s (cpe field or not in mapping)", field_name)
