@@ -107,6 +107,10 @@ The integration automatically handles multiple meters. Each meter (identified by
 
 If you want to contribute, please read the [Contribution Guidelines](CONTRIBUTING.md)
 
+### Development Tools
+
+- 🪝 **Pre-commit Hook** - Automatic code quality checks before each commit. See [Pre-commit Hook Documentation](docs/PRE_COMMIT_HOOK.md) for details.
+
 ## Legal
 
 [Disclaimer](DISCLAIMER.md)  
