@@ -3,10 +3,9 @@
 from __future__ import annotations
 
 import pytest
-from homeassistant.core import HomeAssistant
 
 from custom_components.e_redes_smart_metering_plus.const import DOMAIN, WEBHOOK_ID
-
+from homeassistant.core import HomeAssistant
 
 pytestmark = pytest.mark.asyncio
 

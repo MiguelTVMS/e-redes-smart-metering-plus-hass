@@ -4,11 +4,9 @@ from __future__ import annotations
 
 import pytest
 
+from custom_components.e_redes_smart_metering_plus.const import DOMAIN, SENSOR_MAPPING
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
-
-from custom_components.e_redes_smart_metering_plus.const import DOMAIN, SENSOR_MAPPING
-
 
 pytestmark = pytest.mark.asyncio
 

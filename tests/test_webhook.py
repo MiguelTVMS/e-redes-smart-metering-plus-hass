@@ -3,13 +3,17 @@
 from __future__ import annotations
 
 import json
+
 import pytest
+
+from custom_components.e_redes_smart_metering_plus.const import (
+    DOMAIN,
+    SENSOR_MAPPING,
+    WEBHOOK_ID,
+)
+from custom_components.e_redes_smart_metering_plus.webhook import handle_webhook
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
-
-from custom_components.e_redes_smart_metering_plus.const import DOMAIN, SENSOR_MAPPING, WEBHOOK_ID
-from custom_components.e_redes_smart_metering_plus.webhook import handle_webhook
-
 
 pytestmark = pytest.mark.asyncio
 
@@ -49,9 +53,7 @@ async def test_webhook_creates_and_updates_sensors(
 ) -> None:
     """Posting webhook data should create entities and update their state."""
 
-    resp = await handle_webhook(
-        hass, WEBHOOK_ID, DummyRequest(payload), config_entry
-    )
+    resp = await handle_webhook(hass, WEBHOOK_ID, DummyRequest(payload), config_entry)
     assert resp.status == 200
     assert resp.text == "OK"
 
@@ -61,13 +63,11 @@ async def test_webhook_creates_and_updates_sensors(
     entity_registry = er.async_get(hass)
 
     # Determine which field maps to a sensor key
-    first_field = next(k for k in payload if k !=
-                       "cpe" and k in SENSOR_MAPPING)
+    first_field = next(k for k in payload if k != "cpe" and k in SENSOR_MAPPING)
     sensor_key = SENSOR_MAPPING[first_field]["key"]
 
     unique_id = f"{DOMAIN}_{payload['cpe']}_{sensor_key}"
-    entity_entry = entity_registry.async_get_entity_id(
-        "sensor", DOMAIN, unique_id)
+    entity_entry = entity_registry.async_get_entity_id("sensor", DOMAIN, unique_id)
     assert entity_entry is not None, "Sensor entity should be created in registry"
 
     state = hass.states.get(entity_entry)
@@ -114,9 +114,7 @@ async def test_webhook_invalid_json_returns_400(
             """Raise JSON decode error."""
             raise json.JSONDecodeError("bad", "{}", 0)
 
-    resp = await handle_webhook(
-        hass, WEBHOOK_ID, BadRequest(), config_entry
-    )
+    resp = await handle_webhook(hass, WEBHOOK_ID, BadRequest(), config_entry)
     assert resp.status == 400
     assert resp.text == "Invalid JSON"
 
@@ -128,15 +126,12 @@ async def test_webhook_ignores_unknown_fields(
 
     payload = {"cpe": "XYZ", "foo": 1, "bar": 2}
 
-    resp = await handle_webhook(
-        hass, WEBHOOK_ID, DummyRequest(payload), config_entry
-    )
+    resp = await handle_webhook(hass, WEBHOOK_ID, DummyRequest(payload), config_entry)
     assert resp.status == 200
 
     # Ensure no entities were created for unknown fields
     entity_registry = er.async_get(hass)
     for key in ("foo", "bar"):
         unique_id = f"{DOMAIN}_{payload['cpe']}_{key}"
-        ent_id = entity_registry.async_get_entity_id(
-            "sensor", DOMAIN, unique_id)
+        ent_id = entity_registry.async_get_entity_id("sensor", DOMAIN, unique_id)
         assert ent_id is None

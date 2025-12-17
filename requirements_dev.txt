@@ -9,5 +9,6 @@ pytest-homeassistant-custom-component>=0.13.0
 homeassistant==2025.6.1
 
 # Python 3.13 compatibility fixes
-pycares>=4.4.0
+# Pin pycares to avoid breaking changes in 4.11.0+
+pycares>=4.4.0,<4.11.0
 aiodns>=3.2.0

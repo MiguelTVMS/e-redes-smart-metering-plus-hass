@@ -5,13 +5,11 @@ from __future__ import annotations
 from collections.abc import AsyncGenerator
 
 import pytest
-
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import HomeAssistant
-
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.e_redes_smart_metering_plus.const import DOMAIN, WEBHOOK_ID
+from homeassistant.config_entries import ConfigEntryState
+from homeassistant.core import HomeAssistant
 
 
 @pytest.fixture(autouse=True)
@@ -23,7 +21,8 @@ def _mock_cloud(monkeypatch: pytest.MonkeyPatch) -> None:
     """
     # Mock cloud login status
     monkeypatch.setattr(
-        "homeassistant.components.cloud.async_is_logged_in", lambda hass: False,
+        "homeassistant.components.cloud.async_is_logged_in",
+        lambda hass: False,
         raising=True,
     )
 
@@ -32,7 +31,8 @@ def _mock_cloud(monkeypatch: pytest.MonkeyPatch) -> None:
         return True
 
     monkeypatch.setattr(
-        "homeassistant.components.cloud.async_setup", mock_cloud_setup,
+        "homeassistant.components.cloud.async_setup",
+        mock_cloud_setup,
         raising=False,
     )
 
