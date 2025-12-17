@@ -14,6 +14,14 @@ Contributions are welcome! Please follow these guidelines:
    pip install -r requirements_dev.txt
    ```
 
+6. **Install the pre-commit hook** (highly recommended):
+
+   ```bash
+   ./scripts/install-hooks.sh
+   ```
+
+   This will automatically run linting and tests before each commit, ensuring your code meets quality standards before pushing.
+
 If you are not using VS Code or devcontainers, follow the manual steps above to install dependencies.
 
 ### Branching model (gitflow)
@@ -25,18 +33,36 @@ If you are not using VS Code or devcontainers, follow the manual steps above to 
 
 ## Code Quality
 
-Before submitting a pull request, ensure your code passes all quality checks:
+### Pre-commit Hook (Recommended)
+
+The easiest way to ensure code quality is to install the pre-commit hook:
 
 ```bash
+./scripts/install-hooks.sh
+```
+
+This hook automatically runs before each commit and validates:
+- ✅ Black formatting
+- ✅ isort import ordering
+- ✅ Ruff linting
+- ✅ Pytest tests
+
+If any check fails, the commit will be blocked until you fix the issues.
+
+### Manual Checks
+
+Alternatively, you can run these checks manually before submitting a pull request:
+
+```bash
+# Format imports then code
+isort custom_components/
+black custom_components/
+
 # Lint code
 ruff check custom_components/
 
 # Auto-fix lint issues (optional)
 ruff check --fix custom_components/
-
-# Format imports then code
-isort custom_components/
-black custom_components/
 
 # Optional static type check
 mypy custom_components/ --ignore-missing-imports
@@ -44,6 +70,8 @@ mypy custom_components/ --ignore-missing-imports
 # Run tests
 pytest tests/
 ```
+
+**Note:** These are the same checks that run in GitHub Actions. Installing the pre-commit hook ensures you catch issues early, before pushing to GitHub.
 
 ## Pull Request Process
 
