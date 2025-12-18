@@ -1,0 +1,103 @@
+#!/bin/bash
+# Pre-commit hook for E-Redes Smart Metering Plus Home Assistant Integration
+# This hook runs the same validations as GitHub Actions
+
+set -e
+
+echo "🔍 Running pre-commit validations..."
+echo ""
+
+# Check if we're in the right directory
+if [ ! -f "custom_components/e_redes_smart_metering_plus/manifest.json" ]; then
+    echo "❌ Error: Not in the correct repository root"
+    exit 1
+fi
+
+# Check if Python files are staged
+PYTHON_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.py$' || true)
+
+if [ -z "$PYTHON_FILES" ]; then
+    echo "ℹ️  No Python files staged for commit, skipping linting checks"
+    exit 0
+fi
+
+echo "📝 Staged Python files:"
+echo "$PYTHON_FILES"
+echo ""
+
+# Check if dependencies are installed
+if ! command -v black &> /dev/null || ! command -v isort &> /dev/null || ! command -v ruff &> /dev/null; then
+    echo "⚠️  Warning: Linting tools not found. Installing dependencies..."
+    pip install -q -r requirements_dev.txt
+    echo ""
+fi
+
+# Flag to track if any checks fail
+CHECKS_FAILED=0
+
+# Run black
+echo "🖤 Running black..."
+if ! black --check --diff custom_components/; then
+    echo ""
+    echo "❌ Black formatting check failed!"
+    echo "💡 Run 'black custom_components/' to fix formatting issues"
+    CHECKS_FAILED=1
+else
+    echo "✅ Black check passed"
+fi
+echo ""
+
+# Run isort
+echo "📦 Running isort..."
+if ! isort --check-only --diff custom_components/; then
+    echo ""
+    echo "❌ isort import sorting check failed!"
+    echo "💡 Run 'isort custom_components/' to fix import ordering"
+    CHECKS_FAILED=1
+else
+    echo "✅ isort check passed"
+fi
+echo ""
+
+# Run ruff
+echo "🔧 Running ruff..."
+if ! ruff check custom_components/; then
+    echo ""
+    echo "❌ Ruff linting check failed!"
+    echo "💡 Run 'ruff check --fix custom_components/' to auto-fix issues"
+    CHECKS_FAILED=1
+else
+    echo "✅ Ruff check passed"
+fi
+echo ""
+
+# Run pytest if test files are staged
+TEST_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '^tests/.*\.py$' || true)
+if [ -n "$TEST_FILES" ] || [ -n "$PYTHON_FILES" ]; then
+    echo "🧪 Running pytest..."
+    if ! pytest tests/ -q --tb=short; then
+        echo ""
+        echo "❌ Tests failed!"
+        CHECKS_FAILED=1
+    else
+        echo "✅ Tests passed"
+    fi
+    echo ""
+fi
+
+# Check results
+if [ $CHECKS_FAILED -eq 1 ]; then
+    echo ""
+    echo "❌ Pre-commit checks failed! Please fix the issues above before committing."
+    echo ""
+    echo "Quick fix commands:"
+    echo "  black custom_components/"
+    echo "  isort custom_components/"
+    echo "  ruff check --fix custom_components/"
+    echo ""
+    exit 1
+fi
+
+echo "✅ All pre-commit checks passed!"
+echo ""
+exit 0

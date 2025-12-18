@@ -143,6 +143,16 @@ async def async_ensure_device(
         )
         _LOGGER.info("Created new device for CPE: %s", cpe)
 
+        # Create breaker limit number entity for this device
+        from .number import async_create_breaker_limit_entity
+
+        async_create_breaker_limit_entity(hass, entry.entry_id, cpe)
+
+        # Create breaker overload binary sensor for this device
+        from .binary_sensor import async_create_breaker_overload_sensor
+
+        async_create_breaker_overload_sensor(hass, entry.entry_id, cpe)
+
 
 async def async_process_sensor_data(
     hass: HomeAssistant, entry: ConfigEntry, cpe: str, data: dict[str, Any]
@@ -178,3 +188,15 @@ async def async_process_sensor_data(
 
     # Ensure calculated sensors exist after processing source sensors
     await async_ensure_calculated_sensors(hass, entry.entry_id, cpe)
+
+    # Ensure diagnostic sensors exist
+    from .sensor import async_ensure_diagnostic_sensors
+
+    await async_ensure_diagnostic_sensors(hass, entry.entry_id, cpe)
+
+    # Send webhook update signal for diagnostic sensors
+    async_dispatcher_send(
+        hass,
+        f"{DOMAIN}_{cpe}_webhook_update",
+        data.get("clock"),  # Include timestamp if available
+    )

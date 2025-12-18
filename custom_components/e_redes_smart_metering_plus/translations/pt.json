@@ -20,5 +20,28 @@
                 "description": "Este é o seu URL de webhook que deve ser configurado no painel da E-Redes:\n\n**{webhook_url}**\n\nO webhook usa um caminho fixo `/api/webhook/e_redes_smart_metering_plus` que permanece consistente.\n\n💡 **Subscritores Nabu Casa:** Se tem o Home Assistant Cloud, um URL seguro na nuvem é gerado automaticamente usando o mesmo ID de webhook fixo. Pode ver todos os seus webhooks indo a Definições > Home Assistant Cloud > Webhooks."
             }
         }
+    },
+    "entity": {
+        "number": {
+            "breaker_limit": {
+                "name": "Limite do disjuntor"
+            }
+        },
+        "sensor": {
+            "breaker_load": {
+                "name": "Carga do disjuntor"
+            },
+            "last_update": {
+                "name": "Última Atualização"
+            },
+            "update_interval": {
+                "name": "Intervalo de Atualização"
+            }
+        },
+        "binary_sensor": {
+            "breaker_overload": {
+                "name": "Sobrecarga do disjuntor"
+            }
+        }
     }
 }

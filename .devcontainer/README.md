@@ -7,6 +7,7 @@ What you get:
 - Python 3.13 toolchain with Black, Ruff, Pytest installed
 - Home Assistant 2025.6.1 running in a sibling container
 - Live-mounted config folder and the custom component to iterate quickly
+- **Pre-commit hook automatically installed** for code quality validation
 
 How to use:
 
