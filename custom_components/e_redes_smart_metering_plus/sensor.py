@@ -13,8 +13,16 @@ from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from homeassistant.util import dt as dt_util
 
-from .const import CALCULATED_SENSORS, DOMAIN, MANUFACTURER, MODEL, SENSOR_MAPPING
+from .const import (
+    CALCULATED_SENSORS,
+    DIAGNOSTIC_SENSORS,
+    DOMAIN,
+    MANUFACTURER,
+    MODEL,
+    SENSOR_MAPPING,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -662,3 +670,116 @@ async def async_ensure_calculated_sensors(
         entities[entity_key] = sensor
 
         _LOGGER.info("Created calculated sensor %s for CPE %s", sensor_key, cpe)
+
+
+class ERedesDiagnosticSensor(SensorEntity):
+    """Representation of an E-Redes diagnostic sensor."""
+
+    _attr_has_entity_name = True
+    _attr_should_poll = False
+
+    def __init__(
+        self,
+        cpe: str,
+        sensor_key: str,
+        sensor_config: dict[str, Any],
+        config_entry_id: str,
+        hass: HomeAssistant,
+    ) -> None:
+        """Initialize the diagnostic sensor."""
+        self._cpe = cpe
+        self._sensor_key = sensor_key
+        self._config = sensor_config
+        self._config_entry_id = config_entry_id
+        self._hass = hass
+        self._attr_unique_id = f"{DOMAIN}_{cpe}_{sensor_key}"
+        self._attr_name = sensor_config["name"]
+        self._attr_icon = sensor_config.get("icon")
+        self._attr_native_unit_of_measurement = sensor_config.get("unit")
+        self._attr_device_class = sensor_config.get("device_class")
+        self._attr_state_class = sensor_config.get("state_class")
+        self._attr_entity_category = sensor_config.get("entity_category")
+        self._attr_entity_registry_enabled_default = sensor_config.get(
+            "enabled_by_default", True
+        )
+        self._attr_native_value = None
+        self._last_update_time: datetime | None = None
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        """Return device information."""
+        return DeviceInfo(
+            identifiers={(DOMAIN, self._cpe)},
+            name=f"E-Redes Smart Meter ({self._cpe})",
+            manufacturer=MANUFACTURER,
+            model=MODEL,
+            serial_number=self._cpe,
+            suggested_area="Energy",
+        )
+
+    async def async_added_to_hass(self) -> None:
+        """Run when entity about to be added to hass."""
+        await super().async_added_to_hass()
+
+        # Subscribe to webhook updates for this CPE
+        self.async_on_remove(
+            async_dispatcher_connect(
+                self.hass,
+                f"{DOMAIN}_{self._cpe}_webhook_update",
+                self._handle_webhook_update,
+            )
+        )
+
+    @callback
+    def _handle_webhook_update(self, timestamp: str | None = None) -> None:
+        """Handle webhook update for diagnostic tracking."""
+        now = dt_util.utcnow()
+
+        if self._sensor_key == "last_update":
+            # Store the actual datetime - Home Assistant will format it
+            self._attr_native_value = now
+
+        elif self._sensor_key == "update_interval":
+            # Calculate interval between updates in seconds
+            if self._last_update_time:
+                interval = (now - self._last_update_time).total_seconds()
+                self._attr_native_value = round(interval, 1)
+            else:
+                self._attr_native_value = None
+
+        self._last_update_time = now
+        self.async_write_ha_state()
+
+
+async def async_ensure_diagnostic_sensors(
+    hass: HomeAssistant,
+    config_entry_id: str,
+    cpe: str,
+) -> None:
+    """Ensure all diagnostic sensors exist for a CPE."""
+    _LOGGER.debug("Ensuring diagnostic sensors for CPE %s", cpe)
+
+    entities = hass.data[DOMAIN][config_entry_id]["entities"]
+
+    for sensor_key, sensor_config in DIAGNOSTIC_SENSORS.items():
+        entity_key = f"{cpe}_{sensor_key}"
+
+        if entity_key in entities:
+            _LOGGER.debug("Diagnostic sensor %s already exists", entity_key)
+            continue
+
+        _LOGGER.debug("Creating diagnostic sensor %s for CPE %s", sensor_key, cpe)
+
+        # Create diagnostic sensor entity
+        sensor = ERedesDiagnosticSensor(
+            cpe, sensor_key, sensor_config, config_entry_id, hass
+        )
+
+        # Add to Home Assistant
+        add_entities = hass.data[DOMAIN][config_entry_id]["add_entities"]
+        add_entities([sensor])
+
+        # Store reference
+        entities[entity_key] = sensor
+
+        _LOGGER.info("Created diagnostic sensor %s for CPE %s", sensor_key, cpe)

@@ -30,6 +30,12 @@
         "sensor": {
             "breaker_load": {
                 "name": "Breaker Load"
+            },
+            "last_update": {
+                "name": "Last Update"
+            },
+            "update_interval": {
+                "name": "Update Interval"
             }
         },
         "binary_sensor": {

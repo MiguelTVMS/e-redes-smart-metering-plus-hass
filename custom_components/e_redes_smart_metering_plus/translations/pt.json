@@ -30,6 +30,12 @@
         "sensor": {
             "breaker_load": {
                 "name": "Carga do disjuntor"
+            },
+            "last_update": {
+                "name": "Última Atualização"
+            },
+            "update_interval": {
+                "name": "Intervalo de Atualização"
             }
         },
         "binary_sensor": {

@@ -1,5 +1,7 @@
 """Constants for the E-Redes Smart Metering Plus integration."""
 
+from homeassistant.helpers.entity import EntityCategory
+
 DOMAIN = "e_redes_smart_metering_plus"
 
 # Fixed webhook ID - creates a predictable URL path
@@ -95,5 +97,27 @@ CALCULATED_SENSORS = {
         "source_sensors": ["instantaneous_active_power_import", "voltage_l1"],
         # Requires breaker limit number entity
         "requires_number_entity": "breaker_limit",
+    },
+}
+
+# Diagnostic sensors
+DIAGNOSTIC_SENSORS = {
+    "last_update": {
+        "name": "Last Update",
+        "key": "last_update",
+        "device_class": "timestamp",
+        "icon": "mdi:clock-outline",
+        "entity_category": EntityCategory.DIAGNOSTIC,
+        "enabled_by_default": False,
+    },
+    "update_interval": {
+        "name": "Update Interval",
+        "key": "update_interval",
+        "unit": "s",
+        "device_class": "duration",
+        "state_class": "measurement",
+        "icon": "mdi:timer-outline",
+        "entity_category": EntityCategory.DIAGNOSTIC,
+        "enabled_by_default": False,
     },
 }

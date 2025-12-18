@@ -188,3 +188,15 @@ async def async_process_sensor_data(
 
     # Ensure calculated sensors exist after processing source sensors
     await async_ensure_calculated_sensors(hass, entry.entry_id, cpe)
+
+    # Ensure diagnostic sensors exist
+    from .sensor import async_ensure_diagnostic_sensors
+
+    await async_ensure_diagnostic_sensors(hass, entry.entry_id, cpe)
+
+    # Send webhook update signal for diagnostic sensors
+    async_dispatcher_send(
+        hass,
+        f"{DOMAIN}_{cpe}_webhook_update",
+        data.get("clock"),  # Include timestamp if available
+    )
