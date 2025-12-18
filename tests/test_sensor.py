@@ -203,8 +203,7 @@ async def test_calculated_current_sensor(
     # Verify calculated value
     state = hass.states.get(ent_id)
     assert state is not None
-    assert float(state.state) == pytest.approx(
-        10.0, rel=0.01)  # 2300W / 230V = 10A
+    assert float(state.state) == pytest.approx(10.0, rel=0.01)  # 2300W / 230V = 10A
 
     # Test with different values
     power = 4600.0  # W
@@ -226,8 +225,7 @@ async def test_calculated_current_sensor(
     # Verify updated calculated value
     state = hass.states.get(ent_id)
     assert state is not None
-    assert float(state.state) == pytest.approx(
-        20.0, rel=0.01)  # 4600W / 230V = 20A
+    assert float(state.state) == pytest.approx(20.0, rel=0.01)  # 4600W / 230V = 20A
 
     # Check attributes
     assert state.attributes.get("unit_of_measurement") == "A"
@@ -332,9 +330,7 @@ async def test_breaker_load_sensor(
     assert state.attributes.get("calculation_type") == "current_breaker_limit"
 
     # Now update breaker limit to 40A
-    breaker_limit_entity_id = (
-        f"number.e_redes_smart_meter_{cpe.lower()}_breaker_limit"
-    )
+    breaker_limit_entity_id = f"number.e_redes_smart_meter_{cpe.lower()}_breaker_limit"
     await hass.services.async_call(
         "number",
         "set_value",

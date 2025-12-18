@@ -16,6 +16,8 @@ _Home Assistant integration for E-REDES Smart Metering Plus energy meters in Por
 Platform | Description
 -- | --
 `sensor` | Show info from E-REDES Smart Metering Plus webhook data.
+`number` | Configure breaker limit for monitoring.
+`binary_sensor` | Alert when breaker is overloaded.
 
 ## Features
 
@@ -24,6 +26,9 @@ Platform | Description
 - 📊 **Multiple Meter Support** - Handle multiple meters (CPEs) automatically
 - ⚡ **Zero Configuration** - No YAML configuration or automation setup required
 - 🏠 **Automatic Device Creation** - Devices and sensors created dynamically as data arrives
+- ⚙️ **Breaker Limit Configuration** - Set your breaker capacity per device
+- 🔋 **Breaker Load Monitoring** - Real-time monitoring of breaker load percentage
+- ⚠️ **Overload Alerts** - Automatic problem sensor when breaker load exceeds 100%
 
 ## Installation
 
@@ -79,9 +84,11 @@ The integration expects webhook data in the following JSON format:
 }
 ```
 
-## Sensors Created
+## Entities Created
 
-For each unique CPE (meter), the following sensors are automatically created:
+For each unique CPE (meter), the following entities are automatically created:
+
+### Sensors
 
 - **Instantaneous Active Power Import** (W) - Real-time power consumption
 - **Max Active Power Import** (W) - Maximum power imported
@@ -90,6 +97,16 @@ For each unique CPE (meter), the following sensors are automatically created:
 - **Max Active Power Export** (W) - Maximum power exported  
 - **Active Energy Export** (kWh) - Total energy produced
 - **Voltage L1** (V) - Line voltage
+- **Instantaneous Active Current Import** (A) - Calculated current (Power / Voltage)
+- **Breaker Load** (%) - Current load relative to breaker limit
+
+### Configuration
+
+- **Breaker Limit** (A) - Configurable breaker capacity (default: 20A, range: 1-200A)
+
+### Binary Sensors
+
+- **Breaker Overload** - Problem sensor that alerts when breaker load exceeds 100%
 
 ## Troubleshooting
 

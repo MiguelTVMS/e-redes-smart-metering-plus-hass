@@ -327,6 +327,17 @@ class ERedesCalculatedSensor(SensorEntity):
         # Perform initial calculation
         self._calculate_value()
 
+        # If this is the breaker load sensor, notify binary sensor after initial calculation
+        if self._sensor_key == "breaker_load":
+            from homeassistant.helpers.dispatcher import async_dispatcher_send
+
+            signal_name = f"{DOMAIN}_{self._cpe}_breaker_load_update"
+            _LOGGER.info("Sending initial dispatcher signal: %s", signal_name)
+            async_dispatcher_send(
+                self.hass,
+                signal_name,
+            )
+
     @callback
     def _handle_source_update(self, value: float, timestamp: str | None = None) -> None:
         """Handle updates from source sensors."""
@@ -343,12 +354,30 @@ class ERedesCalculatedSensor(SensorEntity):
 
         self.async_write_ha_state()
 
+        # If this is the breaker load sensor, notify binary sensor
+        if self._sensor_key == "breaker_load":
+            from homeassistant.helpers.dispatcher import async_dispatcher_send
+
+            async_dispatcher_send(
+                self.hass,
+                f"{DOMAIN}_{self._cpe}_breaker_load_update",
+            )
+
     @callback
     def _handle_number_entity_update(self, value: float) -> None:
         """Handle updates from number entities (like breaker limit)."""
         # Recalculate when number entity updates
         self._calculate_value()
         self.async_write_ha_state()
+
+        # If this is the breaker load sensor, notify binary sensor
+        if self._sensor_key == "breaker_load":
+            from homeassistant.helpers.dispatcher import async_dispatcher_send
+
+            async_dispatcher_send(
+                self.hass,
+                f"{DOMAIN}_{self._cpe}_breaker_load_update",
+            )
 
     def _calculate_value(self) -> None:
         """Calculate the sensor value based on source sensors."""

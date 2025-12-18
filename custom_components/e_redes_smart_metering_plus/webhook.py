@@ -148,6 +148,11 @@ async def async_ensure_device(
 
         async_create_breaker_limit_entity(hass, entry.entry_id, cpe)
 
+        # Create breaker overload binary sensor for this device
+        from .binary_sensor import async_create_breaker_overload_sensor
+
+        async_create_breaker_overload_sensor(hass, entry.entry_id, cpe)
+
 
 async def async_process_sensor_data(
     hass: HomeAssistant, entry: ConfigEntry, cpe: str, data: dict[str, Any]

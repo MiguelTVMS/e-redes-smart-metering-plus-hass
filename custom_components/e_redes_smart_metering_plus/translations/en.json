@@ -24,12 +24,17 @@
     "entity": {
         "number": {
             "breaker_limit": {
-                "name": "Breaker limit"
+                "name": "Breaker Limit"
             }
         },
         "sensor": {
             "breaker_load": {
-                "name": "Breaker load"
+                "name": "Breaker Load"
+            }
+        },
+        "binary_sensor": {
+            "breaker_overload": {
+                "name": "Breaker Overload"
             }
         }
     }

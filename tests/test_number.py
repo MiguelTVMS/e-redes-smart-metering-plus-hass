@@ -222,6 +222,5 @@ async def test_number_entity_custom_value_persists(
     state = hass.states.get(entity_id)
     assert state is not None
     assert float(state.state) == custom_value, (
-        f"Custom value {custom_value} was not persisted. "
-        f"Got {state.state} instead."
+        f"Custom value {custom_value} was not persisted. " f"Got {state.state} instead."
     )
