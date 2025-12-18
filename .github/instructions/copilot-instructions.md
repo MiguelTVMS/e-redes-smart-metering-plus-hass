@@ -128,33 +128,37 @@ Support modern Python tooling:
 
 ### 9. Code Quality and Testing Requirements
 
-**CRITICAL:** After implementing any feature or making any code changes, you MUST:
+**CRITICAL:** After implementing any feature or making any code changes, you MUST run the **exact same validation commands as the pre-commit hook** (`scripts/pre-commit`):
 
-1. **Run linting checks** matching GitHub Actions workflow (`.github/workflows/lint.yml`):
-   ```bash
-   black --check --diff custom_components/
-   isort --check-only --diff custom_components/
-   ruff check custom_components/
-   ```
+**ALWAYS RUN THESE COMMANDS AFTER EVERY IMPLEMENTATION:**
 
-2. **Run tests** matching GitHub Actions workflow (`.github/workflows/tests.yml`):
-   ```bash
-   pytest tests/ -q --junitxml=.reports/pytest-junit.xml
-   ```
+```bash
+# 1. Format the code first
+black custom_components/
+isort custom_components/
+ruff check --fix custom_components/
 
-3. **Fix any issues** before considering the implementation complete:
-   - Run `black custom_components/` to auto-fix formatting
-   - Run `isort custom_components/` to fix import ordering
-   - Run `ruff check --fix custom_components/` to auto-fix linting issues
-   - Fix any test failures
+# 2. Validate with exact pre-commit commands
+black --check --diff custom_components/ && \
+isort --check-only --diff custom_components/ && \
+ruff check custom_components/ && \
+pytest tests/ -q --tb=short
+```
 
-**Why this is important:**
-- Ensures code passes CI/CD pipelines
+**If validation fails:**
+- Re-run formatters: `black custom_components/` and `isort custom_components/`
+- Fix ruff issues: `ruff check --fix custom_components/`
+- Fix any test failures in `tests/`
+- Run validation commands again until all pass
+
+**Why this is critical:**
+- Ensures code passes the pre-commit hook before user attempts to commit
+- Matches exactly what CI/CD pipelines will check
+- Prevents commit failures and saves developer time
 - Maintains consistent code style across the project
-- Prevents merge conflicts and build failures
 - Validates that changes don't break existing functionality
 
-**Best Practice:** Run these checks frequently during development, not just at the end.
+**Note:** The pre-commit hook (`.git/hooks/pre-commit` symlinked from `scripts/pre-commit`) runs these exact commands on staged files. By running them during development, you catch issues early.
 
 ## Documentation to help Copilot
 
