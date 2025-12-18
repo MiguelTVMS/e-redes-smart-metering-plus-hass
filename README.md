@@ -92,21 +92,28 @@ For each unique CPE (meter), the following entities are automatically created:
 
 - **Instantaneous Active Power Import** (W) - Real-time power consumption
 - **Max Active Power Import** (W) - Maximum power imported
-- **Active Energy Import** (kWh) - Total energy consumed
+- **Active Energy Import** (Wh) - Total energy consumed (Home Assistant converts to kWh automatically)
 - **Instantaneous Active Power Export** (W) - Real-time power generation
 - **Max Active Power Export** (W) - Maximum power exported  
-- **Active Energy Export** (kWh) - Total energy produced
+- **Active Energy Export** (Wh) - Total energy produced (Home Assistant converts to kWh automatically)
 - **Voltage L1** (V) - Line voltage
 - **Instantaneous Active Current Import** (A) - Calculated current (Power / Voltage)
 - **Breaker Load** (%) - Current load relative to breaker limit
+- **Breaker Overload** - Problem sensor that alerts when breaker load exceeds 100%
 
 ### Configuration
 
 - **Breaker Limit** (A) - Configurable breaker capacity (default: 20A, range: 1-200A)
 
-### Binary Sensors
+### Diagnostic Sensors
 
-- **Breaker Overload** - Problem sensor that alerts when breaker load exceeds 100%
+> [!NOTE]
+> Diagnostic sensors are **disabled by default**. Enable them in the device page if you need to monitor webhook activity.
+
+- **Last Update** - Timestamp of the last webhook received (displays as "X seconds/minutes/hours ago")
+- **Update Interval** (s) - Time between consecutive webhook updates in seconds
+
+These sensors help you monitor the health of your webhook connection and identify any issues with data delivery.
 
 ## Troubleshooting
 
