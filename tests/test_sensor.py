@@ -203,8 +203,7 @@ async def test_calculated_current_sensor(
     # Verify calculated value
     state = hass.states.get(ent_id)
     assert state is not None
-    assert float(state.state) == pytest.approx(
-        10.0, rel=0.01)  # 2300W / 230V = 10A
+    assert float(state.state) == pytest.approx(10.0, rel=0.01)  # 2300W / 230V = 10A
 
     # Test with different values
     power = 4600.0  # W
@@ -226,8 +225,7 @@ async def test_calculated_current_sensor(
     # Verify updated calculated value
     state = hass.states.get(ent_id)
     assert state is not None
-    assert float(state.state) == pytest.approx(
-        20.0, rel=0.01)  # 4600W / 230V = 20A
+    assert float(state.state) == pytest.approx(20.0, rel=0.01)  # 4600W / 230V = 20A
 
     # Check attributes
     assert state.attributes.get("unit_of_measurement") == "A"

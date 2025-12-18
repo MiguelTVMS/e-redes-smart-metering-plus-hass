@@ -143,6 +143,11 @@ async def async_ensure_device(
         )
         _LOGGER.info("Created new device for CPE: %s", cpe)
 
+        # Create breaker limit number entity for this device
+        from .number import async_create_breaker_limit_entity
+
+        async_create_breaker_limit_entity(hass, entry.entry_id, cpe)
+
 
 async def async_process_sensor_data(
     hass: HomeAssistant, entry: ConfigEntry, cpe: str, data: dict[str, Any]

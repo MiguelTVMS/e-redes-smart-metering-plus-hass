@@ -11,7 +11,7 @@ from .webhook import async_setup_webhook, async_unload_webhook
 
 # List the platforms that you want to support.
 # For your initial PR, limit it to 1 platform.
-_PLATFORMS: list[Platform] = [Platform.SENSOR]
+_PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.NUMBER]
 
 
 # Create ConfigEntry type alias for webhook integration
