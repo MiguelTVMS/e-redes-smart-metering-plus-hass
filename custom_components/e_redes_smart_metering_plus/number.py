@@ -63,7 +63,7 @@ async def async_restore_existing_number_entities(
 
         # Format: e_redes_smart_metering_plus_CPE_breaker_limit
         # Remove the domain prefix and _breaker_limit suffix
-        remainder = unique_id[len(f"{DOMAIN}_"):]
+        remainder = unique_id[len(f"{DOMAIN}_") :]
         if not remainder.endswith("_breaker_limit"):
             continue
 
@@ -85,12 +85,10 @@ async def async_restore_existing_number_entities(
     if entities_to_restore:
         async_add_entities(entities_to_restore)
         _LOGGER.info(
-            "Restored %d breaker limit number entities", len(
-                entities_to_restore)
+            "Restored %d breaker limit number entities", len(entities_to_restore)
         )
     else:
-        _LOGGER.debug(
-            "No existing breaker limit number entities found to restore")
+        _LOGGER.debug("No existing breaker limit number entities found to restore")
 
 
 @callback
@@ -105,8 +103,7 @@ def async_create_breaker_limit_entity(
         return
 
     # Get the add_entities callback
-    add_entities = hass.data[DOMAIN][config_entry_id].get(
-        "number_add_entities")
+    add_entities = hass.data[DOMAIN][config_entry_id].get("number_add_entities")
     if not add_entities:
         _LOGGER.warning(
             "Cannot create breaker limit entity for %s: add_entities not available", cpe
