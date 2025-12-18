@@ -26,6 +26,11 @@
             "breaker_limit": {
                 "name": "Breaker limit"
             }
+        },
+        "sensor": {
+            "breaker_load": {
+                "name": "Breaker load"
+            }
         }
     }
 }

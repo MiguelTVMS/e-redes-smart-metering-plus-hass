@@ -11,6 +11,7 @@ from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.device_registry import DeviceInfo
+from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
 
@@ -206,6 +207,13 @@ class ERedisBreakerLimitNumber(NumberEntity, RestoreEntity):
         self._native_value = value
         self.async_write_ha_state()
         _LOGGER.info("Breaker limit for %s set to: %s A", self._cpe, value)
+
+        # Notify calculated sensors that depend on breaker limit
+        async_dispatcher_send(
+            self.hass,
+            f"{DOMAIN}_{self._cpe}_breaker_limit_update",
+            value,
+        )
 
     @property
     # type: ignore[override]

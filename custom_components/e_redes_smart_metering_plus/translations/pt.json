@@ -26,6 +26,11 @@
             "breaker_limit": {
                 "name": "Limite do disjuntor"
             }
+        },
+        "sensor": {
+            "breaker_load": {
+                "name": "Carga do disjuntor"
+            }
         }
     }
 }

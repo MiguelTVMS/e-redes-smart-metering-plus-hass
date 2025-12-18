@@ -84,4 +84,16 @@ CALCULATED_SENSORS = {
         "calculation": "power_voltage",  # Indicates calculation type
         "source_sensors": ["instantaneous_active_power_import", "voltage_l1"],
     },
+    "breaker_load": {
+        "name": "Breaker Load",
+        "key": "breaker_load",
+        "unit": "%",
+        "device_class": "power_factor",
+        "state_class": "measurement",
+        "icon": "mdi:gauge",
+        "calculation": "current_breaker_limit",  # Indicates calculation type
+        "source_sensors": ["instantaneous_active_power_import", "voltage_l1"],
+        # Requires breaker limit number entity
+        "requires_number_entity": "breaker_limit",
+    },
 }
