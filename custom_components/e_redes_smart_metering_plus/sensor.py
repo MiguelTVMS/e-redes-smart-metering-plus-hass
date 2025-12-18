@@ -66,7 +66,7 @@ async def async_restore_existing_entities(
 
         # Format: e_redes_smart_metering_plus_CPE_sensor_key
         # Remove the domain prefix
-        remainder = unique_id[len(f"{DOMAIN}_"):]
+        remainder = unique_id[len(f"{DOMAIN}_") :]
 
         # Find the sensor_key by matching against known sensor keys
         sensor_key = None
@@ -110,8 +110,7 @@ async def async_restore_existing_entities(
                 cpe, sensor_key, sensor_config, config_entry.entry_id, hass
             )
         else:
-            sensor = ERedisSensor(
-                cpe, sensor_key, sensor_config, config_entry.entry_id)
+            sensor = ERedisSensor(cpe, sensor_key, sensor_config, config_entry.entry_id)
         entities_to_restore.append(sensor)
 
         # Store in entities dict
@@ -119,8 +118,7 @@ async def async_restore_existing_entities(
         hass.data[DOMAIN][config_entry.entry_id]["entities"][entity_key] = sensor
 
     if entities_to_restore:
-        _LOGGER.info("Restored %d existing sensor entities",
-                     len(entities_to_restore))
+        _LOGGER.info("Restored %d existing sensor entities", len(entities_to_restore))
         async_add_entities(entities_to_restore)
     else:
         _LOGGER.debug("No existing entities found to restore")
@@ -241,8 +239,7 @@ class ERedisSensor(SensorEntity):
 
         if timestamp:
             try:
-                self._last_update = datetime.fromisoformat(
-                    timestamp.replace(" ", "T"))
+                self._last_update = datetime.fromisoformat(timestamp.replace(" ", "T"))
             except (ValueError, TypeError):
                 self._last_update = datetime.now()
         else:
@@ -357,8 +354,7 @@ class ERedesCalculatedSensor(SensorEntity):
 
         if timestamp:
             try:
-                self._last_update = datetime.fromisoformat(
-                    timestamp.replace(" ", "T"))
+                self._last_update = datetime.fromisoformat(timestamp.replace(" ", "T"))
             except (ValueError, TypeError):
                 self._last_update = datetime.now()
         else:
@@ -479,8 +475,7 @@ class ERedesCalculatedSensor(SensorEntity):
             )
 
         except (ValueError, TypeError, KeyError) as err:
-            _LOGGER.debug("Error calculating current for %s: %s",
-                          self._cpe, err)
+            _LOGGER.debug("Error calculating current for %s: %s", self._cpe, err)
             self._attr_native_value = None
 
     def _calculate_breaker_load(self) -> None:
@@ -532,8 +527,7 @@ class ERedesCalculatedSensor(SensorEntity):
             breaker_limit_entity = number_entities.get(self._cpe)
 
             if not breaker_limit_entity:
-                _LOGGER.debug(
-                    "Breaker limit entity not available for %s", self._cpe)
+                _LOGGER.debug("Breaker limit entity not available for %s", self._cpe)
                 self._attr_native_value = None
                 return
 
@@ -562,8 +556,7 @@ class ERedesCalculatedSensor(SensorEntity):
             )
 
         except (ValueError, TypeError, KeyError) as err:
-            _LOGGER.debug(
-                "Error calculating breaker load for %s: %s", self._cpe, err)
+            _LOGGER.debug("Error calculating breaker load for %s: %s", self._cpe, err)
             self._attr_native_value = None
 
 
@@ -590,8 +583,7 @@ async def async_create_sensor_for_cpe(
     entity_key = f"{cpe}_{sensor_key}"
 
     if entity_key in entities:
-        _LOGGER.debug(
-            "Entity %s already exists, skipping creation", entity_key)
+        _LOGGER.debug("Entity %s already exists, skipping creation", entity_key)
         return  # Entity already exists
 
     _LOGGER.debug("Creating new sensor entity for %s", entity_key)
@@ -619,8 +611,7 @@ async def async_ensure_sensors_for_data(
 ) -> None:
     """Ensure all required sensors exist for the incoming data."""
     _LOGGER.debug(
-        "Ensuring sensors for CPE %s with data keys: %s", cpe, list(
-            data.keys())
+        "Ensuring sensors for CPE %s with data keys: %s", cpe, list(data.keys())
     )
 
     for field_name in data:
@@ -628,8 +619,7 @@ async def async_ensure_sensors_for_data(
             _LOGGER.debug("Creating sensor for field: %s", field_name)
             await async_create_sensor_for_cpe(hass, config_entry_id, cpe, field_name)
         else:
-            _LOGGER.debug(
-                "Skipping field %s (cpe field or not in mapping)", field_name)
+            _LOGGER.debug("Skipping field %s (cpe field or not in mapping)", field_name)
 
 
 async def async_ensure_calculated_sensors(
@@ -685,8 +675,7 @@ async def async_ensure_calculated_sensors(
                 )
                 continue
 
-        _LOGGER.debug("Creating calculated sensor %s for CPE %s",
-                      sensor_key, cpe)
+        _LOGGER.debug("Creating calculated sensor %s for CPE %s", sensor_key, cpe)
 
         # Create calculated sensor entity
         sensor = ERedesCalculatedSensor(
@@ -700,8 +689,7 @@ async def async_ensure_calculated_sensors(
         # Store reference
         entities[entity_key] = sensor
 
-        _LOGGER.info("Created calculated sensor %s for CPE %s",
-                     sensor_key, cpe)
+        _LOGGER.info("Created calculated sensor %s for CPE %s", sensor_key, cpe)
 
 
 class ERedesDiagnosticSensor(SensorEntity):
@@ -800,8 +788,7 @@ async def async_ensure_diagnostic_sensors(
             _LOGGER.debug("Diagnostic sensor %s already exists", entity_key)
             continue
 
-        _LOGGER.debug("Creating diagnostic sensor %s for CPE %s",
-                      sensor_key, cpe)
+        _LOGGER.debug("Creating diagnostic sensor %s for CPE %s", sensor_key, cpe)
 
         # Create diagnostic sensor entity
         sensor = ERedesDiagnosticSensor(
@@ -815,5 +802,4 @@ async def async_ensure_diagnostic_sensors(
         # Store reference
         entities[entity_key] = sensor
 
-        _LOGGER.info("Created diagnostic sensor %s for CPE %s",
-                     sensor_key, cpe)
+        _LOGGER.info("Created diagnostic sensor %s for CPE %s", sensor_key, cpe)
