@@ -16,6 +16,8 @@ _Home Assistant integration for E-REDES Smart Metering Plus energy meters in Por
 Platform | Description
 -- | --
 `sensor` | Show info from E-REDES Smart Metering Plus webhook data.
+`number` | Configure breaker limit for monitoring.
+`binary_sensor` | Alert when breaker is overloaded.
 
 ## Features
 
@@ -24,6 +26,9 @@ Platform | Description
 - 📊 **Multiple Meter Support** - Handle multiple meters (CPEs) automatically
 - ⚡ **Zero Configuration** - No YAML configuration or automation setup required
 - 🏠 **Automatic Device Creation** - Devices and sensors created dynamically as data arrives
+- ⚙️ **Breaker Limit Configuration** - Set your breaker capacity per device
+- 🔋 **Breaker Load Monitoring** - Real-time monitoring of breaker load percentage
+- ⚠️ **Overload Alerts** - Automatic problem sensor when breaker load exceeds 100%
 
 ## Installation
 
@@ -79,17 +84,36 @@ The integration expects webhook data in the following JSON format:
 }
 ```
 
-## Sensors Created
+## Entities Created
 
-For each unique CPE (meter), the following sensors are automatically created:
+For each unique CPE (meter), the following entities are automatically created:
+
+### Sensors
 
 - **Instantaneous Active Power Import** (W) - Real-time power consumption
 - **Max Active Power Import** (W) - Maximum power imported
-- **Active Energy Import** (kWh) - Total energy consumed
+- **Active Energy Import** (Wh) - Total energy consumed (Home Assistant converts to kWh automatically)
 - **Instantaneous Active Power Export** (W) - Real-time power generation
 - **Max Active Power Export** (W) - Maximum power exported  
-- **Active Energy Export** (kWh) - Total energy produced
+- **Active Energy Export** (Wh) - Total energy produced (Home Assistant converts to kWh automatically)
 - **Voltage L1** (V) - Line voltage
+- **Instantaneous Active Current Import** (A) - Calculated current (Power / Voltage)
+- **Breaker Load** (%) - Current load relative to breaker limit
+- **Breaker Overload** - Problem sensor that alerts when breaker load exceeds 100%
+
+### Configuration
+
+- **Breaker Limit** (A) - Configurable breaker capacity (default: 20A, range: 1-200A)
+
+### Diagnostic Sensors
+
+> [!NOTE]
+> Diagnostic sensors are **disabled by default**. Enable them in the device page if you need to monitor webhook activity.
+
+- **Last Update** - Timestamp of the last webhook received (displays as "X seconds/minutes/hours ago")
+- **Update Interval** (s) - Time between consecutive webhook updates in seconds
+
+These sensors help you monitor the health of your webhook connection and identify any issues with data delivery.
 
 ## Troubleshooting
 
@@ -106,6 +130,10 @@ The integration automatically handles multiple meters. Each meter (identified by
 ## Contributions are welcome
 
 If you want to contribute, please read the [Contribution Guidelines](CONTRIBUTING.md)
+
+### Development Tools
+
+- 🪝 **Pre-commit Hook** - Automatic code quality checks before each commit. See [Pre-commit Hook Documentation](docs/PRE_COMMIT_HOOK.md) for details.
 
 ## Legal
 

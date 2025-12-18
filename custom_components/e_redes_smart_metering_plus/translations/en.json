@@ -20,5 +20,28 @@
                 "description": "This is your webhook URL that should be configured in your E-Redes provider dashboard:\n\n**{webhook_url}**\n\nThe webhook uses a fixed path `/api/webhook/e_redes_smart_metering_plus` that remains consistent.\n\n💡 **Nabu Casa Subscribers:** If you have Home Assistant Cloud, a secure cloud URL is automatically generated using the same fixed webhook ID. You can view all your webhooks by going to Settings > Home Assistant Cloud > Webhooks."
             }
         }
+    },
+    "entity": {
+        "number": {
+            "breaker_limit": {
+                "name": "Breaker Limit"
+            }
+        },
+        "sensor": {
+            "breaker_load": {
+                "name": "Breaker Load"
+            },
+            "last_update": {
+                "name": "Last Update"
+            },
+            "update_interval": {
+                "name": "Update Interval"
+            }
+        },
+        "binary_sensor": {
+            "breaker_overload": {
+                "name": "Breaker Overload"
+            }
+        }
     }
 }

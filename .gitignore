@@ -156,7 +156,8 @@ config/
 [Ll]ib
 [Ll]ib64
 [Ll]ocal
-[Ss]cripts
+# Note: Allowing project scripts/ folder for git hooks and utilities
+# [Ss]cripts - virtualenv scripts are typically in env/Scripts or venv/Scripts which are already ignored
 pyvenv.cfg
 .venv
 pip-selfcheck.json

@@ -8,13 +8,16 @@ Contributions are welcome! Please follow these guidelines:
 2. Clone your fork
 3. **Important:** This repository uses the gitflow branching model. All new development should be done on the `develop` branch, never on `main`. Please base your feature branches and pull requests on `develop`.
 4. Open the project in VS Code. If prompted, reopen in the devcontainer for a pre-configured development environment.
-5. The devcontainer includes Python 3.13 and all required tools. Development dependencies are installed automatically, but you can also run:
+5. The devcontainer includes Python 3.13 and all required tools. Development dependencies and the **pre-commit hook are installed automatically**.
+
+**If not using devcontainers**, manually install dependencies and the pre-commit hook:
 
    ```bash
    pip install -r requirements_dev.txt
+   ./scripts/install-hooks.sh
    ```
 
-If you are not using VS Code or devcontainers, follow the manual steps above to install dependencies.
+The pre-commit hook automatically runs linting and tests before each commit, ensuring your code meets quality standards before pushing.
 
 ### Branching model (gitflow)
 
@@ -25,18 +28,36 @@ If you are not using VS Code or devcontainers, follow the manual steps above to 
 
 ## Code Quality
 
-Before submitting a pull request, ensure your code passes all quality checks:
+### Pre-commit Hook (Recommended)
+
+The easiest way to ensure code quality is to install the pre-commit hook:
 
 ```bash
+./scripts/install-hooks.sh
+```
+
+This hook automatically runs before each commit and validates:
+- ✅ Black formatting
+- ✅ isort import ordering
+- ✅ Ruff linting
+- ✅ Pytest tests
+
+If any check fails, the commit will be blocked until you fix the issues.
+
+### Manual Checks
+
+Alternatively, you can run these checks manually before submitting a pull request:
+
+```bash
+# Format imports then code
+isort custom_components/
+black custom_components/
+
 # Lint code
 ruff check custom_components/
 
 # Auto-fix lint issues (optional)
 ruff check --fix custom_components/
-
-# Format imports then code
-isort custom_components/
-black custom_components/
 
 # Optional static type check
 mypy custom_components/ --ignore-missing-imports
@@ -44,6 +65,8 @@ mypy custom_components/ --ignore-missing-imports
 # Run tests
 pytest tests/
 ```
+
+**Note:** These are the same checks that run in GitHub Actions. Installing the pre-commit hook ensures you catch issues early, before pushing to GitHub.
 
 ## Pull Request Process
 

@@ -203,8 +203,7 @@ async def test_calculated_current_sensor(
     # Verify calculated value
     state = hass.states.get(ent_id)
     assert state is not None
-    assert float(state.state) == pytest.approx(
-        10.0, rel=0.01)  # 2300W / 230V = 10A
+    assert float(state.state) == pytest.approx(10.0, rel=0.01)  # 2300W / 230V = 10A
 
     # Test with different values
     power = 4600.0  # W
@@ -226,8 +225,7 @@ async def test_calculated_current_sensor(
     # Verify updated calculated value
     state = hass.states.get(ent_id)
     assert state is not None
-    assert float(state.state) == pytest.approx(
-        20.0, rel=0.01)  # 4600W / 230V = 20A
+    assert float(state.state) == pytest.approx(20.0, rel=0.01)  # 4600W / 230V = 20A
 
     # Check attributes
     assert state.attributes.get("unit_of_measurement") == "A"
@@ -286,3 +284,82 @@ async def test_calculated_current_sensor_unknown_when_missing_data(
     assert state is not None
     # Should be calculated now: 2300W / 230V = 10A
     assert float(state.state) == pytest.approx(10.0, rel=0.01)
+
+
+async def test_breaker_load_sensor(
+    hass: HomeAssistant, hass_client, config_entry
+) -> None:
+    """Test that breaker load sensor calculates percentage correctly."""
+
+    client = await hass_client()
+    cpe = "CPE_BREAKER_TEST"
+
+    # Send complete webhook data (power and voltage)
+    payload = {
+        "cpe": cpe,
+        "instantaneousActivePowerImport": 4600.0,  # 4600W
+        "voltageL1": 230.0,  # 230V -> 20A current
+    }
+    resp = await client.post(
+        f"/api/webhook/{config_entry.data['webhook_id']}",
+        json=payload,
+    )
+    assert resp.status == 200
+    await hass.async_block_till_done()
+
+    entity_registry = er.async_get(hass)
+
+    # Check that breaker load sensor was created
+    breaker_load_sensor_key = "breaker_load"
+    unique_id = f"{DOMAIN}_{cpe}_{breaker_load_sensor_key}"
+    ent_id = entity_registry.async_get_entity_id("sensor", DOMAIN, unique_id)
+    assert ent_id is not None
+
+    # Get the state
+    state = hass.states.get(ent_id)
+    assert state is not None
+
+    # With default breaker limit of 20A and current of 20A (4600W / 230V)
+    # Load should be 100% (no decimals)
+    expected_load = 100
+    assert int(float(state.state)) == expected_load
+
+    # Check attributes
+    assert state.attributes.get("unit_of_measurement") == "%"
+    assert state.attributes.get("cpe") == cpe
+    assert state.attributes.get("calculation_type") == "current_breaker_limit"
+
+    # Now update breaker limit to 40A
+    breaker_limit_entity_id = f"number.e_redes_smart_meter_{cpe.lower()}_breaker_limit"
+    await hass.services.async_call(
+        "number",
+        "set_value",
+        {"entity_id": breaker_limit_entity_id, "value": 40.0},
+        blocking=True,
+    )
+    await hass.async_block_till_done()
+
+    # Check that breaker load updated to 50% (20A / 40A * 100, no decimals)
+    state = hass.states.get(ent_id)
+    assert state is not None
+    expected_load = 50
+    assert int(float(state.state)) == expected_load
+
+    # Send new power data: 2300W -> 10A current
+    payload = {
+        "cpe": cpe,
+        "instantaneousActivePowerImport": 2300.0,
+        "voltageL1": 230.0,
+    }
+    resp = await client.post(
+        f"/api/webhook/{config_entry.data['webhook_id']}",
+        json=payload,
+    )
+    assert resp.status == 200
+    await hass.async_block_till_done()
+
+    # Check that breaker load updated to 25% (10A / 40A * 100, no decimals)
+    state = hass.states.get(ent_id)
+    assert state is not None
+    expected_load = 25
+    assert int(float(state.state)) == expected_load

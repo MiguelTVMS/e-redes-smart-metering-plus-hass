@@ -1,0 +1,47 @@
+{
+    "config": {
+        "error": {
+            "unknown": "[%key:common::config_flow::error::unknown%]"
+        },
+        "abort": {
+            "already_configured": "[%key:common::config_flow::abort::already_configured_device%]"
+        },
+        "step": {
+            "user": {
+                "title": "E-Redes Smart Metering Plus",
+                "description": "Tu URL de webhook está lista. Esta URL usa una ruta fija que no cambiará:\n\n**{webhook_url}**\n\nCopia esta URL y configúrala en el panel de E-Redes para recibir datos del contador inteligente, luego haz clic en enviar para completar la configuración.\n\n💡 **Nota:** La ruta del webhook `/api/webhook/e_redes_smart_metering_plus` es consistente entre reinicios.\n\n💡 **Suscriptores de Nabu Casa:** Si tienes Home Assistant Cloud, se genera automáticamente una URL segura en la nube usando el mismo ID de webhook fijo."
+            }
+        }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "title": "Configuración de Webhook E-Redes",
+                "description": "Esta es tu URL de webhook que debe configurarse en el panel de E-Redes:\n\n**{webhook_url}**\n\nEl webhook usa una ruta fija `/api/webhook/e_redes_smart_metering_plus` que permanece consistente.\n\n💡 **Suscriptores de Nabu Casa:** Si tienes Home Assistant Cloud, se genera automáticamente una URL segura en la nube usando el mismo ID de webhook fijo. Puedes ver todos tus webhooks yendo a Ajustes > Home Assistant Cloud > Webhooks."
+            }
+        }
+    },
+    "entity": {
+        "number": {
+            "breaker_limit": {
+                "name": "Límite del interruptor"
+            }
+        },
+        "sensor": {
+            "breaker_load": {
+                "name": "Carga del interruptor"
+            },
+            "last_update": {
+                "name": "Última actualización"
+            },
+            "update_interval": {
+                "name": "Intervalo de actualización"
+            }
+        },
+        "binary_sensor": {
+            "breaker_overload": {
+                "name": "Sobrecarga del interruptor"
+            }
+        }
+    }
+}
