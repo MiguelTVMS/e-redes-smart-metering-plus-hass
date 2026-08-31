@@ -6,6 +6,9 @@ services:
     container_name: devcontainer-code
     volumes:
       - ..:/workspaces/e-redes-smart-metering-plus-hass:cached
+      - ${HOME}/.codex:/home/vscode/.codex
+    environment:
+      - CODEX_HOME=/home/vscode/.codex
     command: sleep infinity
     networks:
       - devnet

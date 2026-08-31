@@ -131,6 +131,7 @@ dmypy.json
 # IDE
 .idea/
 *.swp
+.codex/
 *.swo
 *~
 
