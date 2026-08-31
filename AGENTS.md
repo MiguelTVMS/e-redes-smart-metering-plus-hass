@@ -118,7 +118,7 @@ All the tests should be in the `tests` directory.
 
 Support modern Python tooling:
 * All development will be done based on Home Assistant version 2025.6.1.
-* Devcontainers using `.devcontainer/devcontainer.json` for VSCode with python 3.13 and without virtual environments.
+* Local development using Python 3.13 managed by `uv`, with Home Assistant running through Docker Compose.
 * All the development requirements should be in `requirements_dev.txt`
 * GitHub Actions workflow for HACS lint + Tests
 

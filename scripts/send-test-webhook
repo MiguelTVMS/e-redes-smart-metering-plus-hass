@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+WEBHOOK_URL="${WEBHOOK_URL:-http://localhost:8123/api/webhook/e_redes_smart_metering_plus}"
+TEST_CPE="${TEST_CPE:-PT0000000000000000000}"
+
+curl --fail-with-body \
+    --request POST \
+    --header "Content-Type: application/json" \
+    --data "{
+        \"cpe\": \"${TEST_CPE}\",
+        \"SourceTimestamp\": \"2025-09-24 18:33:20\",
+        \"activeEnergyExport\": 0,
+        \"activeEnergyImport\": 14817930,
+        \"instantaneousActivePowerExport\": 0,
+        \"instantaneousActivePowerImport\": 2518,
+        \"maxActivePowerExport\": 0,
+        \"maxActivePowerExportTime\": \"0000-00-00 00:00:00\",
+        \"maxActivePowerImportTotalLastAverage\": 3680,
+        \"maxActivePowerImportTotalTime\": \"2025-09-09 11:45:00\",
+        \"voltageL1\": 237.1,
+        \"clock\": \"2025-09-24 19:33:20\"
+    }" \
+    "$WEBHOOK_URL"
+
+echo
+echo "Test webhook sent to $WEBHOOK_URL"

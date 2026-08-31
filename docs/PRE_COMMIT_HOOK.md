@@ -4,13 +4,13 @@ This repository includes a pre-commit hook that automatically validates your cod
 
 ## Installation
 
-Run the installation script from the repository root:
+Bootstrap the local development environment from the repository root:
 
 ```bash
-./scripts/install-hooks.sh
+make bootstrap
 ```
 
-This will copy the pre-commit hook to `.git/hooks/pre-commit` and make it executable.
+This installs the Python 3.13 development dependencies and copies the pre-commit hook to `.git/hooks/pre-commit`.
 
 ## What It Does
 
@@ -80,17 +80,7 @@ Quick fix commands:
 If the pre-commit hook blocks your commit, run the suggested fix commands:
 
 ```bash
-# Auto-fix formatting
-black custom_components/
-
-# Auto-fix imports
-isort custom_components/
-
-# Auto-fix linting issues
-ruff check --fix custom_components/
-
-# Run tests to see what's failing
-pytest tests/ -v
+make validate
 ```
 
 Then stage the fixed files and commit again:
@@ -114,10 +104,10 @@ git commit --no-verify -m "Your commit message"
 
 ### "Linting tools not found"
 
-The hook will automatically install dependencies if needed. However, you can manually install them:
+Create or refresh the repository-local environment:
 
 ```bash
-pip install -r requirements_dev.txt
+make bootstrap
 ```
 
 ### Hook Not Running
@@ -139,8 +129,8 @@ Or reinstall it:
 Make sure you're in the correct Python environment:
 
 ```bash
-python --version  # Should be Python 3.13
-pip install -r requirements_dev.txt
+.venv/bin/python --version  # Should be Python 3.13
+make bootstrap
 ```
 
 ## Benefits

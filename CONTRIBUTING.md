@@ -7,15 +7,43 @@ Contributions are welcome! Please follow these guidelines:
 1. Fork the repository
 2. Clone your fork
 3. **Important:** This repository uses the gitflow branching model. All new development should be done on the `develop` branch, never on `main`. Please base your feature branches and pull requests on `develop`.
-4. Open the project in VS Code. If prompted, reopen in the devcontainer for a pre-configured development environment.
-5. The devcontainer includes Python 3.13 and all required tools. Development dependencies and the **pre-commit hook are installed automatically**.
-
-**If not using devcontainers**, manually install dependencies and the pre-commit hook:
+4. Install [uv](https://docs.astral.sh/uv/) and Docker Desktop.
+5. Bootstrap the local Python 3.13 environment:
 
    ```bash
-   pip install -r requirements_dev.txt
-   ./scripts/install-hooks.sh
+   make bootstrap
    ```
+
+6. Start the development Home Assistant instance:
+
+   ```bash
+   make ha-up
+   ```
+
+7. Open `http://localhost:8123` and complete Home Assistant onboarding if this is the first run.
+
+The integration source is mounted directly into Home Assistant. Restart Home Assistant after changing Python code:
+
+```bash
+make ha-restart
+```
+
+The Home Assistant configuration is stored in the ignored `config/` directory and persists between container restarts.
+
+### Local development commands
+
+Command | Purpose
+-- | --
+`make bootstrap` | Install Python 3.13, dependencies, and the Git hook
+`make validate` | Format, lint, and run the complete test suite
+`make test` | Run the test suite only
+`make ha-up` | Start Home Assistant in the background
+`make ha-down` | Stop Home Assistant
+`make ha-restart` | Restart Home Assistant after integration changes
+`make ha-logs` | Follow Home Assistant logs
+`make webhook` | Send a representative payload to the local webhook
+
+The same commands are available from **Terminal > Run Task** in VS Code.
 
 The pre-commit hook automatically runs linting and tests before each commit, ensuring your code meets quality standards before pushing.
 
@@ -46,24 +74,10 @@ If any check fails, the commit will be blocked until you fix the issues.
 
 ### Manual Checks
 
-Alternatively, you can run these checks manually before submitting a pull request:
+Run the same formatting and validation sequence used by the repository instructions:
 
 ```bash
-# Format imports then code
-isort custom_components/
-black custom_components/
-
-# Lint code
-ruff check custom_components/
-
-# Auto-fix lint issues (optional)
-ruff check --fix custom_components/
-
-# Optional static type check
-mypy custom_components/ --ignore-missing-imports
-
-# Run tests
-pytest tests/
+make validate
 ```
 
 **Note:** These are the same checks that run in GitHub Actions. Installing the pre-commit hook ensures you catch issues early, before pushing to GitHub.
@@ -72,10 +86,10 @@ pytest tests/
 
 1. Ensure all tests pass
 2. Target branch: open pull requests against `develop` (not `main`)
-2. Update documentation if needed
-3. Follow the existing code style
-4. Write clear commit messages
-5. Submit a pull request with a clear description
+3. Update documentation if needed
+4. Follow the existing code style
+5. Write clear commit messages
+6. Submit a pull request with a clear description
 
 ## Reporting Issues
 

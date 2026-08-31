@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$PROJECT_DIR"
+
+if [ ! -x ".venv/bin/python" ]; then
+    echo "Error: local Python environment not found. Run 'make bootstrap' first."
+    exit 1
+fi
+
+export PATH="$PROJECT_DIR/.venv/bin:$PATH"
+
+black custom_components/
+isort custom_components/
+ruff check --fix custom_components/
+
+black --check --diff custom_components/ && \
+    isort --check-only --diff custom_components/ && \
+    ruff check custom_components/ && \
+    pytest tests/ -q --tb=short

@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$PROJECT_DIR"
+
+if ! command -v uv >/dev/null 2>&1; then
+    echo "Error: uv is required. Install it with: brew install uv"
+    exit 1
+fi
+
+if ! command -v docker >/dev/null 2>&1; then
+    echo "Error: Docker Desktop is required."
+    exit 1
+fi
+
+echo "Installing Python 3.13..."
+uv python install 3.13
+
+echo "Creating the local Python environment..."
+uv venv --python 3.13 .venv
+
+echo "Installing development dependencies..."
+uv pip install --python .venv/bin/python -r requirements_dev.txt
+
+echo "Installing the Git pre-commit hook..."
+./scripts/install-hooks.sh
+
+echo
+echo "Local development environment is ready."
+echo "Run 'make ha-up' to start Home Assistant."
+echo "Open http://localhost:8123 after it starts."

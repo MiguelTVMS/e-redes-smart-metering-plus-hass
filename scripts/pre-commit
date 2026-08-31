@@ -25,11 +25,15 @@ echo "📝 Staged Python files:"
 echo "$PYTHON_FILES"
 echo ""
 
+# Prefer the repository-local development environment.
+if [ -d ".venv/bin" ]; then
+    export PATH="$PWD/.venv/bin:$PATH"
+fi
+
 # Check if dependencies are installed
 if ! command -v black &> /dev/null || ! command -v isort &> /dev/null || ! command -v ruff &> /dev/null; then
-    echo "⚠️  Warning: Linting tools not found. Installing dependencies..."
-    pip install -q -r requirements_dev.txt
-    echo ""
+    echo "❌ Error: development tools not found. Run 'make bootstrap' first."
+    exit 1
 fi
 
 # Flag to track if any checks fail
