@@ -32,6 +32,7 @@ async def test_cloudhook_waits_for_cloud_connection(
     hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Logged-in but disconnected Cloud must not attempt cloudhook creation."""
+    hass.config.external_url = None
     get_or_create = AsyncMock(return_value="https://hooks.nabu.casa/test")
     fake_cloud = SimpleNamespace(
         async_active_subscription=lambda hass_instance: True,
@@ -85,6 +86,7 @@ async def test_active_webhook_url_falls_back_when_cloudhook_fails(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Configure must remain available when Home Assistant Cloud fails."""
+    hass.config.external_url = None
     config_entry.runtime_data.webhook_url = None
     monkeypatch.setattr(
         webhook_module,
@@ -105,6 +107,46 @@ async def test_active_webhook_url_falls_back_when_cloudhook_fails(
     assert await async_get_active_webhook_url(hass, config_entry) == (
         f"/api/webhook/{WEBHOOK_ID}"
     )
+
+
+async def test_configured_external_url_takes_priority_over_cloudhook(
+    hass: HomeAssistant,
+    config_entry,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The Home Assistant URL preference must override a cached Cloudhook."""
+    hass.config.external_url = "https://home.example.com"
+    config_entry.runtime_data.webhook_url = "https://hooks.nabu.casa/old"
+    create_cloudhook = AsyncMock(return_value="https://hooks.nabu.casa/new")
+    monkeypatch.setattr(webhook_module, "_async_create_cloudhook", create_cloudhook)
+
+    assert await async_get_active_webhook_url(hass, config_entry) == (
+        f"https://home.example.com/api/webhook/{WEBHOOK_ID}"
+    )
+    assert config_entry.runtime_data.webhook_url == (
+        f"https://home.example.com/api/webhook/{WEBHOOK_ID}"
+    )
+    create_cloudhook.assert_not_awaited()
+
+
+async def test_configured_external_url_prevents_cloudhook_creation(
+    hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Do not create a Cloudhook when a custom external URL is selected."""
+    hass.config.external_url = "https://home.example.com"
+    get_or_create = AsyncMock(return_value="https://hooks.nabu.casa/test")
+    fake_cloud = SimpleNamespace(
+        async_active_subscription=lambda hass_instance: True,
+        async_is_connected=lambda hass_instance: True,
+        async_get_or_create_cloudhook=get_or_create,
+    )
+    monkeypatch.setitem(sys.modules, "homeassistant.components.cloud", fake_cloud)
+    monkeypatch.setattr(
+        homeassistant_components, "cloud", fake_cloud, raising=False
+    )
+
+    assert await _async_create_cloudhook(hass, WEBHOOK_ID) is None
+    get_or_create.assert_not_awaited()
 
 
 async def test_cloud_connection_refreshes_stored_webhook_url(

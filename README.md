@@ -54,12 +54,13 @@ Platform | Description
 1. Add the integration through the Home Assistant UI
 2. Add every complete CPE that should be accepted. You can edit this list later without removing existing CPEs.
 3. The integration creates the fixed webhook path `/api/webhook/e_redes_smart_metering_plus`.
-4. Open **Settings > Devices & services**, select the integration, then **Configure** to copy the active URL. With Home Assistant Cloud connected, this shows the Cloudhook URL.
+4. Open **Settings > Devices & services**, select the integration, then **Configure** to copy the active URL. The integration respects **Settings > System > Network > Home Assistant URL**: a configured external URL is used when Home Assistant Cloud is disabled there, otherwise the Cloudhook URL is shown.
 5. Configure E-REDES with that URL and start receiving data.
 
 ### Webhook URL Format
 
 - **Local URL**: `http://your-home-assistant:8123/api/webhook/e_redes_smart_metering_plus`
+- **Configured external URL**: `https://your-home-assistant.example/api/webhook/e_redes_smart_metering_plus`
 - **Home Assistant Cloud URL**: `https://hooks.nabu.casa/...` (generated automatically when Home Assistant Cloud is connected)
 
 Reloading or restarting the integration reuses the existing Cloudhook. The Cloudhook is deleted only when the integration entry is removed.
