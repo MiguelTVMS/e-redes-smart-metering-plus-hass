@@ -25,7 +25,7 @@ async def test_number_entity_created_for_device(
     cpe = TEST_CPE
 
     # Create the breaker limit entity
-    async_create_breaker_limit_entity(hass, config_entry.entry_id, cpe)
+    async_create_breaker_limit_entity(config_entry, cpe)
     await hass.async_block_till_done()
 
     # Check that the number entity exists
@@ -45,7 +45,7 @@ async def test_number_entity_default_value(hass: HomeAssistant, config_entry) ->
     cpe = TEST_CPE
 
     # Create the breaker limit entity
-    async_create_breaker_limit_entity(hass, config_entry.entry_id, cpe)
+    async_create_breaker_limit_entity(config_entry, cpe)
     await hass.async_block_till_done()
 
     # Get the state
@@ -61,7 +61,7 @@ async def test_number_entity_set_value(hass: HomeAssistant, config_entry) -> Non
     cpe = TEST_CPE
 
     # Create the breaker limit entity
-    async_create_breaker_limit_entity(hass, config_entry.entry_id, cpe)
+    async_create_breaker_limit_entity(config_entry, cpe)
     await hass.async_block_till_done()
 
     # Set a new value
@@ -85,7 +85,7 @@ async def test_number_entity_restore_state(hass: HomeAssistant, config_entry) ->
     cpe = TEST_CPE
 
     # Create the breaker limit entity
-    async_create_breaker_limit_entity(hass, config_entry.entry_id, cpe)
+    async_create_breaker_limit_entity(config_entry, cpe)
     await hass.async_block_till_done()
 
     # Set a custom value
@@ -112,7 +112,7 @@ async def test_number_entity_restore_state(hass: HomeAssistant, config_entry) ->
     await hass.async_block_till_done()
 
     # Recreate the entity (simulating device discovery)
-    async_create_breaker_limit_entity(hass, config_entry.entry_id, cpe)
+    async_create_breaker_limit_entity(config_entry, cpe)
     await hass.async_block_till_done()
 
     # Check that the value was restored
@@ -126,7 +126,7 @@ async def test_number_entity_attributes(hass: HomeAssistant, config_entry) -> No
     cpe = TEST_CPE
 
     # Create the breaker limit entity
-    async_create_breaker_limit_entity(hass, config_entry.entry_id, cpe)
+    async_create_breaker_limit_entity(config_entry, cpe)
     await hass.async_block_till_done()
 
     # Get the state
@@ -148,7 +148,7 @@ async def test_number_entity_restored_from_registry(
     cpe = TEST_CPE
 
     # Create the breaker limit entity
-    async_create_breaker_limit_entity(hass, config_entry.entry_id, cpe)
+    async_create_breaker_limit_entity(config_entry, cpe)
     await hass.async_block_till_done()
 
     # Verify it was created
@@ -185,7 +185,7 @@ async def test_number_entity_custom_value_persists(
     cpe = TEST_CPE
 
     # Create the breaker limit entity
-    async_create_breaker_limit_entity(hass, config_entry.entry_id, cpe)
+    async_create_breaker_limit_entity(config_entry, cpe)
     await hass.async_block_till_done()
 
     entity_id = f"number.e_redes_smart_meter_{cpe.lower()}_breaker_limit"

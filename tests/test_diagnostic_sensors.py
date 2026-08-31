@@ -3,7 +3,7 @@
 import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.e_redes_smart_metering_plus.const import DOMAIN
+from custom_components.e_redes_smart_metering_plus.const import CONF_CPES, DOMAIN
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity import EntityCategory
@@ -16,8 +16,15 @@ async def config_entry(hass: HomeAssistant):
         domain=DOMAIN,
         data={
             "webhook_id": DOMAIN,
+            CONF_CPES: [
+                "CPE_DIAGNOSTIC_TEST_1",
+                "CPE_DIAGNOSTIC_TEST_2",
+                "CPE_DIAGNOSTIC_TEST_3",
+                "CPE_DIAGNOSTIC_TEST_4",
+            ],
         },
         entry_id="test_entry_diagnostic",
+        version=2,
     )
     entry.add_to_hass(hass)
     await hass.config_entries.async_setup(entry.entry_id)

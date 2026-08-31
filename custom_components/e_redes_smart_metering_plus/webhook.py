@@ -5,19 +5,30 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
+from http import HTTPStatus
 import json
 import logging
+import math
 from typing import Any
 
+from aiohttp.hdrs import METH_POST
 from aiohttp.web import Request, Response
 
 from homeassistant.components import webhook
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 
-from .const import DOMAIN, MANUFACTURER, MODEL, SENSOR_MAPPING, WEBHOOK_ID
+from .const import (
+    DOMAIN,
+    KNOWN_PAYLOAD_FIELDS,
+    MANUFACTURER,
+    MODEL,
+    SENSOR_MAPPING,
+    TIMESTAMP_FIELDS,
+    WEBHOOK_ID,
+)
+from .models import ERedesConfigEntry
 from .sensor import async_ensure_calculated_sensors, async_ensure_sensors_for_data
 
 _LOGGER = logging.getLogger(__name__)
@@ -27,7 +38,7 @@ def _get_measurement_timestamp(
     data: dict[str, Any],
 ) -> tuple[str | None, datetime | None]:
     """Return the best available normalized measurement timestamp."""
-    for field_name in ("SourceTimestamp", "clock"):
+    for field_name in TIMESTAMP_FIELDS:
         raw_timestamp = data.get(field_name)
         if not isinstance(raw_timestamp, str):
             continue
@@ -51,7 +62,7 @@ async def _async_create_cloudhook(hass: HomeAssistant, webhook_id: str) -> str |
     """Create a cloudhook when Home Assistant Cloud is available."""
     from homeassistant.components import cloud
 
-    if not cloud.async_is_logged_in(hass) or not cloud.async_is_connected(hass):
+    if not cloud.async_active_subscription(hass) or not cloud.async_is_connected(hass):
         return None
 
     return await cloud.async_get_or_create_cloudhook(hass, webhook_id)
@@ -68,26 +79,15 @@ def _listen_for_cloud_connection(
 
 
 def _store_webhook_url(
-    hass: HomeAssistant, entry: ConfigEntry, webhook_id: str, webhook_url: str
+    entry: ERedesConfigEntry, webhook_id: str, webhook_url: str
 ) -> None:
-    """Store the active webhook URL in the config entry and runtime data."""
-    if entry.data.get("webhook_url") != webhook_url:
-        hass.config_entries.async_update_entry(
-            entry,
-            data={
-                **entry.data,
-                "webhook_id": webhook_id,
-                "webhook_url": webhook_url,
-            },
-        )
-
-    entry_data = hass.data[DOMAIN][entry.entry_id]
-    entry_data["webhook_url"] = webhook_url
-    entry_data["webhook_id"] = webhook_id
+    """Store the active webhook URL in runtime data."""
+    entry.runtime_data.webhook_url = webhook_url
+    entry.runtime_data.webhook_id = webhook_id
 
 
 async def _async_refresh_cloudhook(
-    hass: HomeAssistant, entry: ConfigEntry, webhook_id: str
+    hass: HomeAssistant, entry: ERedesConfigEntry, webhook_id: str
 ) -> str | None:
     """Create or retrieve and store the cloudhook when Cloud is connected."""
     try:
@@ -101,21 +101,26 @@ async def _async_refresh_cloudhook(
         return None
 
     if webhook_url:
-        _store_webhook_url(hass, entry, webhook_id, webhook_url)
-        _LOGGER.info("Using cloud webhook: %s", webhook_url)
+        _store_webhook_url(entry, webhook_id, webhook_url)
+        _LOGGER.info("Using the Home Assistant Cloud webhook")
 
     return webhook_url
 
 
-async def _async_delete_cloudhook(hass: HomeAssistant, webhook_id: str) -> None:
-    """Delete a cloudhook when Home Assistant Cloud is available."""
-    from homeassistant.components import cloud
+async def async_get_active_webhook_url(
+    hass: HomeAssistant, entry: ERedesConfigEntry
+) -> str:
+    """Return the active webhook URL for display in integration settings."""
+    if hasattr(entry, "runtime_data") and entry.runtime_data.webhook_url:
+        return entry.runtime_data.webhook_url
 
-    if cloud.async_is_logged_in(hass) and cloud.async_is_connected(hass):
-        await cloud.async_delete_cloudhook(hass, webhook_id)
+    cloudhook_url = await _async_refresh_cloudhook(hass, entry, WEBHOOK_ID)
+    if cloudhook_url:
+        return cloudhook_url
+    return webhook.async_generate_url(hass, WEBHOOK_ID)
 
 
-async def async_setup_webhook(hass: HomeAssistant, entry: ConfigEntry) -> str:
+async def async_setup_webhook(hass: HomeAssistant, entry: ERedesConfigEntry) -> str:
     """Set up webhook for receiving E-Redes data."""
     # Use fixed webhook ID
     webhook_id = WEBHOOK_ID
@@ -134,6 +139,7 @@ async def async_setup_webhook(hass: HomeAssistant, entry: ConfigEntry) -> str:
         "E-Redes Smart Metering Plus",
         webhook_id,
         webhook_handler,
+        allowed_methods={METH_POST},
     )
 
     # Use a cloudhook immediately when Cloud is already connected.
@@ -142,60 +148,78 @@ async def async_setup_webhook(hass: HomeAssistant, entry: ConfigEntry) -> str:
     if not webhook_url:
         # Fall back to local webhook
         webhook_url = webhook.async_generate_url(hass, webhook_id)
-        _LOGGER.info("Using local webhook: %s", webhook_url)
+        _LOGGER.info("Using the local E-Redes webhook")
 
-    _store_webhook_url(hass, entry, webhook_id, webhook_url)
+    _store_webhook_url(entry, webhook_id, webhook_url)
 
     async def async_handle_cloud_connection_change(_state: Any) -> None:
-        """Create the cloudhook when Home Assistant Cloud connects."""
-        await _async_refresh_cloudhook(hass, entry, webhook_id)
+        """Refresh the displayed URL when Home Assistant Cloud changes."""
+        if not await _async_refresh_cloudhook(hass, entry, webhook_id):
+            _store_webhook_url(
+                entry, webhook_id, webhook.async_generate_url(hass, webhook_id)
+            )
 
     unsubscribe = _listen_for_cloud_connection(
         hass, async_handle_cloud_connection_change
     )
-    hass.data[DOMAIN][entry.entry_id]["cloud_connection_unsubscribe"] = unsubscribe
+    entry.async_on_unload(unsubscribe)
 
     return webhook_id
 
 
-async def async_unload_webhook(
-    hass: HomeAssistant, webhook_id: str, entry_id: str
-) -> None:
+def async_unload_webhook(hass: HomeAssistant, webhook_id: str) -> None:
     """Unload webhook."""
     webhook.async_unregister(hass, webhook_id)
 
-    entry_data = hass.data.get(DOMAIN, {}).get(entry_id, {})
-    if unsubscribe := entry_data.pop("cloud_connection_unsubscribe", None):
-        unsubscribe()
 
-    # Remove cloud webhook if it exists
+async def async_remove_cloudhook(hass: HomeAssistant, webhook_id: str) -> None:
+    """Delete a cloudhook only when the config entry is permanently removed."""
     try:
-        await _async_delete_cloudhook(hass, webhook_id)
+        from homeassistant.components import cloud
+
+        await cloud.async_delete_cloudhook(hass, webhook_id)
     except Exception as err:  # noqa: BLE001
-        _LOGGER.warning(
-            "Failed to delete cloud webhook (%s): %s",
+        _LOGGER.debug(
+            "Cloud webhook did not require removal (%s): %s",
             type(err).__name__,
             str(err) or "no details",
         )
 
 
 async def handle_webhook(
-    hass: HomeAssistant, webhook_id: str, request: Request, entry: ConfigEntry
+    hass: HomeAssistant, webhook_id: str, request: Request, entry: ERedesConfigEntry
 ) -> Response:
     """Handle incoming webhook data."""
     try:
-        _LOGGER.info("Webhook handler called with webhook_id: %s", webhook_id)
-
         data = await request.json()
-        _LOGGER.info("Received webhook data: %s", data)
+
+        if not isinstance(data, dict):
+            return Response(
+                status=HTTPStatus.BAD_REQUEST, text="JSON body must be an object"
+            )
 
         # Validate required fields
-        if "cpe" not in data:
-            _LOGGER.error("Missing 'cpe' field in webhook data")
-            return Response(status=400, text="Missing 'cpe' field")
+        raw_cpe = data.get("cpe")
+        if not isinstance(raw_cpe, str) or not raw_cpe.strip():
+            return Response(status=HTTPStatus.BAD_REQUEST, text="Missing 'cpe' field")
 
-        cpe = data["cpe"]
-        _LOGGER.info("Processing data for CPE: %s", cpe)
+        cpe = raw_cpe.strip().upper()
+        if cpe not in entry.runtime_data.allowed_cpes:
+            if not entry.runtime_data.rejected_cpe_warning_logged:
+                _LOGGER.warning(
+                    "Rejected webhook data for an unconfigured CPE; add the CPE in the integration options if it belongs to this Home Assistant instance"
+                )
+                entry.runtime_data.rejected_cpe_warning_logged = True
+            return Response(status=HTTPStatus.FORBIDDEN, text="CPE not configured")
+
+        data["cpe"] = cpe
+        _log_payload_shape(entry, cpe, data)
+        validated_data = _validated_sensor_data(data)
+        if not any(field in SENSOR_MAPPING for field in validated_data):
+            return Response(
+                status=HTTPStatus.UNPROCESSABLE_ENTITY,
+                text="No valid supported measurements",
+            )
 
         # Ensure device exists
         _LOGGER.debug("Creating/ensuring device for CPE: %s", cpe)
@@ -204,22 +228,76 @@ async def handle_webhook(
 
         # Process sensor data
         _LOGGER.debug("Processing sensor data for CPE: %s", cpe)
-        await async_process_sensor_data(hass, entry, cpe, data)
+        await async_process_sensor_data(hass, entry, cpe, validated_data)
         _LOGGER.debug("Sensor data processed for CPE: %s", cpe)
 
-        _LOGGER.info("Webhook processing completed successfully for CPE: %s", cpe)
-        return Response(status=200, text="OK")
+        return Response(status=HTTPStatus.OK, text="OK")
 
     except json.JSONDecodeError as err:
         _LOGGER.error("Invalid JSON in webhook request: %s", err)
-        return Response(status=400, text="Invalid JSON")
-    except Exception as err:
+        return Response(status=HTTPStatus.BAD_REQUEST, text="Invalid JSON")
+    except Exception:
         _LOGGER.exception("Error processing webhook")
-        return Response(status=500, text=f"Internal Server Error: {err}")
+        return Response(
+            status=HTTPStatus.INTERNAL_SERVER_ERROR, text="Internal Server Error"
+        )
+
+
+def _validated_sensor_data(data: dict[str, Any]) -> dict[str, Any]:
+    """Return known valid measurements while preserving supported metadata."""
+    validated = {
+        field_name: field_value
+        for field_name, field_value in data.items()
+        if field_name in KNOWN_PAYLOAD_FIELDS and field_name not in SENSOR_MAPPING
+    }
+
+    for field_name, field_value in data.items():
+        if field_name not in SENSOR_MAPPING:
+            continue
+        if isinstance(field_value, bool):
+            _LOGGER.warning("Ignored invalid value for payload field %s", field_name)
+            continue
+        try:
+            numeric_value = float(field_value)
+            if not math.isfinite(numeric_value):
+                raise ValueError
+        except (TypeError, ValueError):
+            _LOGGER.warning("Ignored invalid value for payload field %s", field_name)
+            continue
+        validated[field_name] = numeric_value
+
+    return validated
+
+
+def _log_payload_shape(
+    entry: ERedesConfigEntry, cpe: str, data: dict[str, Any]
+) -> None:
+    """Log first payloads and warn when their set of fields changes."""
+    current_fields = frozenset(data)
+    previous_fields = entry.runtime_data.payload_fields.get(cpe)
+
+    if previous_fields is None:
+        _LOGGER.debug("First webhook payload after startup for CPE %s: %s", cpe, data)
+        unsupported_fields = current_fields - KNOWN_PAYLOAD_FIELDS
+        if unsupported_fields:
+            _LOGGER.warning(
+                "Webhook payload for CPE %s contains unsupported fields: %s; supported values will still be processed",
+                cpe,
+                ", ".join(sorted(unsupported_fields)),
+            )
+    elif current_fields != previous_fields:
+        _LOGGER.warning(
+            "Webhook payload fields changed for CPE %s; added: %s; removed: %s. Available supported values will still be processed",
+            cpe,
+            ", ".join(sorted(current_fields - previous_fields)) or "none",
+            ", ".join(sorted(previous_fields - current_fields)) or "none",
+        )
+
+    entry.runtime_data.payload_fields[cpe] = current_fields
 
 
 async def async_ensure_device(
-    hass: HomeAssistant, entry: ConfigEntry, cpe: str
+    hass: HomeAssistant, entry: ERedesConfigEntry, cpe: str
 ) -> None:
     """Ensure device exists for the given CPE."""
     device_registry = dr.async_get(hass)
@@ -235,42 +313,36 @@ async def async_ensure_device(
             manufacturer=MANUFACTURER,
             model=MODEL,
             name=f"E-Redes Smart Meter {cpe}",
-            sw_version=None,
+            serial_number=cpe,
         )
         _LOGGER.info("Created new device for CPE: %s", cpe)
 
-        # Create breaker limit number entity for this device
-        from .number import async_create_breaker_limit_entity
+    # Ensure companion entities even when the device predates those platforms.
+    from .number import async_create_breaker_limit_entity
 
-        async_create_breaker_limit_entity(hass, entry.entry_id, cpe)
+    async_create_breaker_limit_entity(entry, cpe)
 
-        # Create breaker overload binary sensor for this device
-        from .binary_sensor import async_create_breaker_overload_sensor
+    from .binary_sensor import async_create_breaker_overload_sensor
 
-        async_create_breaker_overload_sensor(hass, entry.entry_id, cpe)
+    async_create_breaker_overload_sensor(entry, cpe)
 
 
 async def async_process_sensor_data(
-    hass: HomeAssistant, entry: ConfigEntry, cpe: str, data: dict[str, Any]
+    hass: HomeAssistant, entry: ERedesConfigEntry, cpe: str, data: dict[str, Any]
 ) -> None:
     """Process sensor data and update entities."""
-    entry_data = hass.data[DOMAIN][entry.entry_id]
-    webhook_locks: dict[str, asyncio.Lock] = entry_data.setdefault("webhook_locks", {})
-    webhook_lock = webhook_locks.setdefault(cpe, asyncio.Lock())
+    webhook_lock = entry.runtime_data.webhook_locks.setdefault(cpe, asyncio.Lock())
 
     async with webhook_lock:
         await _async_process_ordered_sensor_data(hass, entry, cpe, data)
 
 
 async def _async_process_ordered_sensor_data(
-    hass: HomeAssistant, entry: ConfigEntry, cpe: str, data: dict[str, Any]
+    hass: HomeAssistant, entry: ERedesConfigEntry, cpe: str, data: dict[str, Any]
 ) -> None:
     """Process sensor data in measurement timestamp order for one CPE."""
-    entry_data = hass.data[DOMAIN][entry.entry_id]
     raw_timestamp, source_timestamp = _get_measurement_timestamp(data)
-    last_source_timestamps: dict[str, datetime] = entry_data.setdefault(
-        "last_source_timestamps", {}
-    )
+    last_source_timestamps = entry.runtime_data.last_source_timestamps
     last_source_timestamp = last_source_timestamps.get(cpe)
 
     if (
@@ -287,7 +359,7 @@ async def _async_process_ordered_sensor_data(
         return
 
     # Ensure sensors exist for this data
-    await async_ensure_sensors_for_data(hass, entry.entry_id, cpe, data)
+    await async_ensure_sensors_for_data(entry, cpe, data, raw_timestamp)
 
     # Send update signal for each sensor type
     for field_name, field_value in data.items():
@@ -295,7 +367,7 @@ async def _async_process_ordered_sensor_data(
             continue
 
         if field_name in SENSOR_MAPPING:
-            sensor_key = SENSOR_MAPPING[field_name]["key"]
+            sensor_key = SENSOR_MAPPING[field_name].key
 
             # Dispatch update to sensor entity
             async_dispatcher_send(
@@ -315,12 +387,12 @@ async def _async_process_ordered_sensor_data(
             _LOGGER.debug("Unknown field in webhook data: %s", field_name)
 
     # Ensure calculated sensors exist after processing source sensors
-    await async_ensure_calculated_sensors(hass, entry.entry_id, cpe)
+    await async_ensure_calculated_sensors(entry, cpe)
 
     # Ensure diagnostic sensors exist
     from .sensor import async_ensure_diagnostic_sensors
 
-    await async_ensure_diagnostic_sensors(hass, entry.entry_id, cpe)
+    await async_ensure_diagnostic_sensors(entry, cpe)
 
     # Send webhook update signal for diagnostic sensors
     async_dispatcher_send(

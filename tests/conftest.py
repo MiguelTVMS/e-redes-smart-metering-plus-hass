@@ -7,7 +7,11 @@ from collections.abc import AsyncGenerator
 import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.e_redes_smart_metering_plus.const import DOMAIN, WEBHOOK_ID
+from custom_components.e_redes_smart_metering_plus.const import (
+    CONF_CPES,
+    DOMAIN,
+    WEBHOOK_ID,
+)
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import HomeAssistant
 
@@ -22,16 +26,9 @@ def _mock_cloud(monkeypatch: pytest.MonkeyPatch) -> None:
     async def mock_refresh_cloudhook(hass, entry, webhook_id):
         return None
 
-    async def mock_delete_cloudhook(hass, webhook_id):
-        return None
-
     monkeypatch.setattr(
         "custom_components.e_redes_smart_metering_plus.webhook._async_refresh_cloudhook",
         mock_refresh_cloudhook,
-    )
-    monkeypatch.setattr(
-        "custom_components.e_redes_smart_metering_plus.webhook._async_delete_cloudhook",
-        mock_delete_cloudhook,
     )
     monkeypatch.setattr(
         "custom_components.e_redes_smart_metering_plus.webhook._listen_for_cloud_connection",
@@ -54,7 +51,27 @@ async def config_entry(hass: HomeAssistant) -> AsyncGenerator[MockConfigEntry]:
     entry = MockConfigEntry(
         domain=DOMAIN,
         title="E-Redes Smart Metering Plus",
-        data={"webhook_id": WEBHOOK_ID},
+        data={
+            "webhook_id": WEBHOOK_ID,
+            CONF_CPES: [
+                "1234567890",
+                "ABCDEF",
+                "TEST123",
+                "XYZ",
+                "CPE001",
+                "CPE_TEST_001",
+                "CPE_TEST_002",
+                "CPE_TEST_CALC",
+                "CPE_TEST_UNKNOWN",
+                "CPE_BREAKER_TEST",
+                "CPE_OVERLOAD_TEST_1",
+                "CPE_OVERLOAD_TEST_2",
+                "CPE_OVERLOAD_TEST_3",
+                "CPE_OVERLOAD_TEST_4",
+                "PT0002000012345678900",
+            ],
+        },
+        version=2,
     )
     entry.add_to_hass(hass)
 

@@ -1,17 +1,23 @@
-"""Sensor platform for E-Redes Smart Metering Plus integration."""
+"""Sensor platform for E-Redes Smart Metering Plus."""
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 import logging
 from typing import Any
 
-from homeassistant.components.sensor import SensorEntity
-from homeassistant.config_entries import ConfigEntry
+from homeassistant.components.sensor import (
+    RestoreSensor,
+    SensorEntity,
+    SensorEntityDescription,
+)
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
+from homeassistant.helpers.dispatcher import (
+    async_dispatcher_connect,
+    async_dispatcher_send,
+)
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.util import dt as dt_util
 
@@ -19,279 +25,199 @@ from .const import (
     CALCULATED_SENSORS,
     DIAGNOSTIC_SENSORS,
     DOMAIN,
-    MANUFACTURER,
-    MODEL,
+    SENSOR_DESCRIPTIONS_BY_KEY,
     SENSOR_MAPPING,
+    ERedesCalculatedSensorEntityDescription,
+    ERedesSensorEntityDescription,
 )
+from .models import ERedesConfigEntry, device_info_for_cpe
 
 _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: ConfigEntry,
+    config_entry: ERedesConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
-    """Set up E-Redes Smart Metering Plus sensors from config entry."""
-    # Store the add_entities callback for later use
-    hass.data[DOMAIN][config_entry.entry_id]["add_entities"] = async_add_entities
-    hass.data[DOMAIN][config_entry.entry_id]["entities"] = {}
-
-    # Restore existing entities from entity registry
+    """Set up sensors from a config entry."""
+    config_entry.runtime_data.sensor_add_entities = async_add_entities
     await async_restore_existing_entities(hass, config_entry, async_add_entities)
 
 
 async def async_restore_existing_entities(
     hass: HomeAssistant,
-    config_entry: ConfigEntry,
+    config_entry: ERedesConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
-    """Restore existing entities from entity registry."""
+    """Restore sensors which are already present in the entity registry."""
     entity_registry = er.async_get(hass)
-    entities_to_restore = []
+    entities_to_restore: list[SensorEntity] = []
 
-    # Find all entities for this integration
-    for entity_entry in entity_registry.entities.values():
-        if not (
-            entity_entry.config_entry_id == config_entry.entry_id
-            and entity_entry.domain == "sensor"
-            and entity_entry.platform == DOMAIN
-        ):
+    for entity_entry in er.async_entries_for_config_entry(
+        entity_registry, config_entry.entry_id
+    ):
+        if entity_entry.domain != "sensor" or entity_entry.platform != DOMAIN:
             continue
 
-        # Parse the unique_id to extract CPE and sensor_key
-        unique_id = entity_entry.unique_id
-        if not unique_id.startswith(f"{DOMAIN}_"):
+        parsed = _description_from_unique_id(entity_entry.unique_id)
+        if parsed is None:
             continue
+        cpe, description = parsed
 
-        # Format: e_redes_smart_metering_plus_CPE_sensor_key
-        # Remove the domain prefix
-        remainder = unique_id[len(f"{DOMAIN}_") :]
-
-        # Find the sensor_key by matching against known sensor keys
-        sensor_key = None
-        cpe = None
-        sensor_config = None
-        is_calculated = False
-
-        # First check regular sensors
-        for config in SENSOR_MAPPING.values():
-            key = config["key"]
-            if remainder.endswith(f"_{key}"):
-                sensor_key = key
-                cpe = remainder[: -len(f"_{key}")]
-                sensor_config = config
-                break
-
-        # If not found, check calculated sensors
-        if not sensor_key:
-            for key, config in CALCULATED_SENSORS.items():
-                if remainder.endswith(f"_{key}"):
-                    sensor_key = key
-                    cpe = remainder[: -len(f"_{key}")]
-                    sensor_config = config
-                    is_calculated = True
-                    break
-
-        if not (sensor_key and cpe and sensor_config):
-            continue
-
-        _LOGGER.debug(
-            "Restoring entity: %s for CPE: %s, sensor: %s (calculated: %s)",
-            entity_entry.entity_id,
-            cpe,
-            sensor_key,
-            is_calculated,
-        )
-
-        # Create sensor entity
-        if is_calculated:
-            sensor = ERedesCalculatedSensor(
-                cpe, sensor_key, sensor_config, config_entry.entry_id, hass
+        if isinstance(description, ERedesCalculatedSensorEntityDescription):
+            sensor: SensorEntity = ERedesCalculatedSensor(
+                cpe, description, config_entry
             )
+        elif isinstance(description, ERedesSensorEntityDescription):
+            sensor = ERedesSensor(cpe, description, config_entry)
         else:
-            sensor = ERedisSensor(cpe, sensor_key, sensor_config, config_entry.entry_id)
+            sensor = ERedesDiagnosticSensor(cpe, description, config_entry)
+
+        config_entry.runtime_data.sensor_entities[f"{cpe}_{description.key}"] = sensor
         entities_to_restore.append(sensor)
 
-        # Store in entities dict
-        entity_key = f"{cpe}_{sensor_key}"
-        hass.data[DOMAIN][config_entry.entry_id]["entities"][entity_key] = sensor
-
     if entities_to_restore:
-        _LOGGER.info("Restored %d existing sensor entities", len(entities_to_restore))
         async_add_entities(entities_to_restore)
-    else:
-        _LOGGER.debug("No existing entities found to restore")
+        _LOGGER.debug("Restored %d sensor entities", len(entities_to_restore))
 
 
-class ERedisSensor(SensorEntity):
-    """Representation of an E-Redes Smart Metering Plus sensor."""
+def _description_from_unique_id(
+    unique_id: str,
+) -> tuple[str, SensorEntityDescription] | None:
+    """Extract the CPE and entity description from an existing unique ID."""
+    prefix = f"{DOMAIN}_"
+    if not unique_id.startswith(prefix):
+        return None
+
+    remainder = unique_id[len(prefix) :]
+    descriptions = (
+        *SENSOR_DESCRIPTIONS_BY_KEY.values(),
+        *CALCULATED_SENSORS.values(),
+        *DIAGNOSTIC_SENSORS.values(),
+    )
+    for description in descriptions:
+        suffix = f"_{description.key}"
+        if remainder.endswith(suffix):
+            cpe = remainder[: -len(suffix)]
+            if cpe:
+                return cpe, description
+    return None
+
+
+def _timestamp_value(timestamp: str | None) -> datetime:
+    """Parse an E-REDES timestamp as an aware UTC datetime."""
+    if timestamp:
+        try:
+            parsed = datetime.fromisoformat(timestamp.replace(" ", "T"))
+            if parsed.tzinfo is None:
+                return parsed.replace(tzinfo=UTC)
+            return parsed.astimezone(UTC)
+        except (TypeError, ValueError):
+            pass
+    return dt_util.utcnow()
+
+
+class ERedesSensor(RestoreSensor):
+    """Represent a measurement supplied directly by E-REDES."""
+
+    entity_description: ERedesSensorEntityDescription
+    _attr_has_entity_name = True
+    _attr_should_poll = False
 
     def __init__(
         self,
         cpe: str,
-        sensor_key: str,
-        sensor_config: dict[str, Any],
-        config_entry_id: str,
+        description: ERedesSensorEntityDescription,
+        config_entry: ERedesConfigEntry,
+        initial_value: float | None = None,
+        initial_timestamp: str | None = None,
     ) -> None:
         """Initialize the sensor."""
+        self.entity_description = description
         self._cpe = cpe
-        self._sensor_key = sensor_key
-        self._config = sensor_config
-        self._config_entry_id = config_entry_id
-
-        self._attr_name = f"{sensor_config['name']}"
-        self._attr_unique_id = (
-            # Keep CPE in unique_id for uniqueness
-            f"{DOMAIN}_{cpe}_{sensor_key}"
+        self._config_entry = config_entry
+        self._attr_unique_id = f"{DOMAIN}_{cpe}_{description.key}"
+        self._attr_native_value = initial_value
+        self._last_update = (
+            _timestamp_value(initial_timestamp) if initial_value is not None else None
         )
-        self._attr_device_class = sensor_config.get("device_class")
-        self._attr_state_class = sensor_config.get("state_class")
-        self._attr_native_unit_of_measurement = sensor_config.get("unit")
-        self._attr_icon = sensor_config.get("icon")
-
-        # Initialize state - will be restored from Home Assistant's state machine
-        self._attr_native_value = None
-        self._last_update: datetime | None = None
-
-        # Enable state restoration
-        self._attr_should_poll = False
 
     @property
     def device_info(self) -> DeviceInfo:
         """Return device information."""
-        return DeviceInfo(
-            identifiers={(DOMAIN, self._cpe)},
-            name=f"E-Redes Smart Meter ({self._cpe})",
-            manufacturer=MANUFACTURER,
-            model=MODEL,
-            serial_number=self._cpe,
-            suggested_area="Energy",
-        )
+        return device_info_for_cpe(self._cpe)
 
     @property
-    def extra_state_attributes(self) -> dict[str, Any] | None:
-        """Return extra state attributes."""
-        attrs: dict[str, Any] = {}
-        if self._last_update:
-            attrs["last_update"] = self._last_update
-        attrs["cpe"] = self._cpe
-
-        # Add webhook URL info to the first sensor of each device for easy access
-        if self._sensor_key == "instantaneous_active_power_import":
-            webhook_url = None
-            if (
-                DOMAIN in self.hass.data
-                and self._config_entry_id in self.hass.data[DOMAIN]
-                and "webhook_url" in self.hass.data[DOMAIN][self._config_entry_id]
-            ):
-                webhook_url = self.hass.data[DOMAIN][self._config_entry_id][
-                    "webhook_url"
-                ]
-
-            if webhook_url:
-                attrs["integration_webhook_url"] = webhook_url
-                attrs["webhook_info"] = "This URL receives data for ALL E-Redes meters"
-                attrs["configuration_note"] = (
-                    "Configure this URL once in your E-Redes provider dashboard - it will handle all your meters"
-                )
-
-        return attrs
+    def extra_state_attributes(self) -> dict[str, str]:
+        """Return stable meter metadata."""
+        return {"cpe": self._cpe}
 
     async def async_added_to_hass(self) -> None:
-        """Run when entity about to be added to hass."""
+        """Restore state and subscribe to webhook updates."""
         await super().async_added_to_hass()
+        if self._attr_native_value is None and (
+            restored := await self.async_get_last_sensor_data()
+        ):
+            self._attr_native_value = restored.native_value
 
-        # Connect to dispatcher for updates
         self.async_on_remove(
             async_dispatcher_connect(
                 self.hass,
-                f"{DOMAIN}_{self._cpe}_{self._sensor_key}_update",
+                f"{DOMAIN}_{self._cpe}_{self.entity_description.key}_update",
                 self._handle_update,
             )
         )
 
     @callback
     def _handle_update(self, value: float, timestamp: str | None = None) -> None:
-        """Handle sensor update."""
+        """Handle a validated webhook measurement."""
         self._attr_native_value = value
-
-        if timestamp:
-            try:
-                self._last_update = datetime.fromisoformat(timestamp.replace(" ", "T"))
-            except (ValueError, TypeError):
-                self._last_update = datetime.now()
-        else:
-            self._last_update = datetime.now()
-
+        self._last_update = _timestamp_value(timestamp)
         self.async_write_ha_state()
-        _LOGGER.debug("Updated sensor %s with value %s", self.entity_id, value)
 
 
-class ERedesCalculatedSensor(SensorEntity):
-    """Representation of a calculated E-Redes sensor."""
+class ERedesCalculatedSensor(RestoreSensor):
+    """Represent a value calculated from E-REDES measurements."""
+
+    entity_description: ERedesCalculatedSensorEntityDescription
+    _attr_has_entity_name = True
+    _attr_should_poll = False
 
     def __init__(
         self,
         cpe: str,
-        sensor_key: str,
-        sensor_config: dict[str, Any],
-        config_entry_id: str,
-        hass: HomeAssistant,
+        description: ERedesCalculatedSensorEntityDescription,
+        config_entry: ERedesConfigEntry,
     ) -> None:
         """Initialize the calculated sensor."""
+        self.entity_description = description
         self._cpe = cpe
-        self._sensor_key = sensor_key
-        self._config = sensor_config
-        self._config_entry_id = config_entry_id
-        self._hass = hass
-
-        self._attr_name = f"{sensor_config['name']}"
-        self._attr_unique_id = f"{DOMAIN}_{cpe}_{sensor_key}"
-        self._attr_device_class = sensor_config.get("device_class")
-        self._attr_state_class = sensor_config.get("state_class")
-        self._attr_native_unit_of_measurement = sensor_config.get("unit")
-        self._attr_icon = sensor_config.get("icon")
-
-        # Initialize state
+        self._config_entry = config_entry
+        self._attr_unique_id = f"{DOMAIN}_{cpe}_{description.key}"
         self._attr_native_value = None
-        self._last_update: datetime | None = None
-
-        # Enable state restoration
-        self._attr_should_poll = False
-
-        # Store source sensor keys
-        self._source_sensors = sensor_config.get("source_sensors", [])
 
     @property
     def device_info(self) -> DeviceInfo:
         """Return device information."""
-        return DeviceInfo(
-            identifiers={(DOMAIN, self._cpe)},
-            name=f"E-Redes Smart Meter ({self._cpe})",
-            manufacturer=MANUFACTURER,
-            model=MODEL,
-            serial_number=self._cpe,
-            suggested_area="Energy",
-        )
+        return device_info_for_cpe(self._cpe)
 
     @property
-    def extra_state_attributes(self) -> dict[str, Any] | None:
-        """Return extra state attributes."""
-        attrs: dict[str, Any] = {}
-        if self._last_update:
-            attrs["last_update"] = self._last_update
-        attrs["cpe"] = self._cpe
-        attrs["calculation_type"] = self._config.get("calculation", "unknown")
-        attrs["source_sensors"] = self._source_sensors
-        return attrs
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return stable calculation metadata."""
+        return {
+            "cpe": self._cpe,
+            "calculation_type": self.entity_description.calculation,
+            "source_sensors": self.entity_description.source_sensors,
+        }
 
     async def async_added_to_hass(self) -> None:
-        """Run when entity about to be added to hass."""
+        """Restore state and subscribe to source updates."""
         await super().async_added_to_hass()
+        if restored := await self.async_get_last_sensor_data():
+            self._attr_native_value = restored.native_value
 
-        # Connect to dispatcher for updates from source sensors
-        for source_sensor in self._source_sensors:
+        for source_sensor in self.entity_description.source_sensors:
             self.async_on_remove(
                 async_dispatcher_connect(
                     self.hass,
@@ -300,379 +226,166 @@ class ERedesCalculatedSensor(SensorEntity):
                 )
             )
 
-        # If this sensor requires a number entity (like breaker_limit), listen to it
-        if self._config.get("requires_number_entity"):
-            number_entity_key = self._config["requires_number_entity"]
+        if number_key := self.entity_description.requires_number_entity:
             self.async_on_remove(
                 async_dispatcher_connect(
                     self.hass,
-                    f"{DOMAIN}_{self._cpe}_{number_entity_key}_update",
+                    f"{DOMAIN}_{self._cpe}_{number_key}_update",
                     self._handle_number_entity_update,
                 )
             )
 
-        # Perform initial calculation
-        self._calculate_value()
-
-        # If this is the breaker load sensor, notify binary sensor after initial calculation
-        if self._sensor_key == "breaker_load":
-            from homeassistant.helpers.dispatcher import async_dispatcher_send
-
-            signal_name = f"{DOMAIN}_{self._cpe}_breaker_load_update"
-            _LOGGER.info("Sending initial dispatcher signal: %s", signal_name)
-            async_dispatcher_send(
-                self.hass,
-                signal_name,
-            )
+        calculated = self._calculate_value()
+        if calculated is not None:
+            self._attr_native_value = calculated
+        self._notify_breaker_load_update()
 
     @callback
-    def _handle_source_update(self, value: float, timestamp: str | None = None) -> None:
-        """Handle updates from source sensors."""
-        # Recalculate when any source sensor updates
-        self._calculate_value()
-
-        if timestamp:
-            try:
-                self._last_update = datetime.fromisoformat(timestamp.replace(" ", "T"))
-            except (ValueError, TypeError):
-                self._last_update = datetime.now()
-        else:
-            self._last_update = datetime.now()
-
+    def _handle_source_update(
+        self, _value: float, _timestamp: str | None = None
+    ) -> None:
+        """Recalculate after a source sensor update."""
+        self._attr_native_value = self._calculate_value()
         self.async_write_ha_state()
-
-        # If this is the breaker load sensor, notify binary sensor
-        if self._sensor_key == "breaker_load":
-            from homeassistant.helpers.dispatcher import async_dispatcher_send
-
-            async_dispatcher_send(
-                self.hass,
-                f"{DOMAIN}_{self._cpe}_breaker_load_update",
-            )
+        self._notify_breaker_load_update()
 
     @callback
-    def _handle_number_entity_update(self, value: float) -> None:
-        """Handle updates from number entities (like breaker limit)."""
-        # Recalculate when number entity updates
-        self._calculate_value()
+    def _handle_number_entity_update(self, _value: float) -> None:
+        """Recalculate after the breaker limit changes."""
+        self._attr_native_value = self._calculate_value()
         self.async_write_ha_state()
+        self._notify_breaker_load_update()
 
-        # If this is the breaker load sensor, notify binary sensor
-        if self._sensor_key == "breaker_load":
-            from homeassistant.helpers.dispatcher import async_dispatcher_send
-
+    def _notify_breaker_load_update(self) -> None:
+        """Notify the overload binary sensor when breaker load changes."""
+        if self.entity_description.key == "breaker_load":
             async_dispatcher_send(
-                self.hass,
-                f"{DOMAIN}_{self._cpe}_breaker_load_update",
+                self.hass, f"{DOMAIN}_{self._cpe}_breaker_load_update"
             )
 
-    def _calculate_value(self) -> None:
-        """Calculate the sensor value based on source sensors."""
-        calculation_type = self._config.get("calculation")
+    def _calculate_value(self) -> float | None:
+        """Calculate the current value from runtime entities."""
+        if self.entity_description.calculation == "power_voltage":
+            return self._calculate_current_from_power_voltage()
+        if self.entity_description.calculation == "current_breaker_limit":
+            return self._calculate_breaker_load()
+        _LOGGER.warning(
+            "Unknown calculation type: %s", self.entity_description.calculation
+        )
+        return None
 
-        if calculation_type == "power_voltage":
-            # Current (A) = Power (W) / Voltage (V)
-            self._calculate_current_from_power_voltage()
-        elif calculation_type == "current_breaker_limit":
-            # Breaker Load (%) = (Current / Breaker Limit) * 100
-            self._calculate_breaker_load()
-        else:
-            _LOGGER.warning("Unknown calculation type: %s", calculation_type)
-            self._attr_native_value = None
-
-    def _calculate_current_from_power_voltage(self) -> None:
-        """Calculate current from power and voltage."""
+    def _power_and_voltage(self) -> tuple[float, float] | None:
+        """Return current power and voltage source values."""
+        entities = self._config_entry.runtime_data.sensor_entities
+        power_sensor = entities.get(f"{self._cpe}_instantaneous_active_power_import")
+        voltage_sensor = entities.get(f"{self._cpe}_voltage_l1")
+        if (
+            power_sensor is None
+            or power_sensor.native_value is None
+            or voltage_sensor is None
+            or voltage_sensor.native_value is None
+        ):
+            return None
         try:
-            # Get the source sensor entities
-            entities = self._hass.data[DOMAIN][self._config_entry_id]["entities"]
+            power = float(str(power_sensor.native_value))
+            voltage = float(str(voltage_sensor.native_value))
+        except (TypeError, ValueError):
+            return None
+        if voltage == 0:
+            return None
+        return power, voltage
 
-            power_key = f"{self._cpe}_instantaneous_active_power_import"
-            voltage_key = f"{self._cpe}_voltage_l1"
+    def _calculate_current_from_power_voltage(self) -> float | None:
+        """Calculate single-phase current from power and voltage."""
+        if (values := self._power_and_voltage()) is None:
+            return None
+        power, voltage = values
+        return power / voltage
 
-            # Get power sensor
-            power_sensor = entities.get(power_key)
-            if not power_sensor or power_sensor.native_value is None:
-                _LOGGER.debug(
-                    "Power sensor not available or has no value for %s", self._cpe
-                )
-                self._attr_native_value = None
-                return
-
-            # Get voltage sensor
-            voltage_sensor = entities.get(voltage_key)
-            if not voltage_sensor or voltage_sensor.native_value is None:
-                _LOGGER.debug(
-                    "Voltage sensor not available or has no value for %s", self._cpe
-                )
-                self._attr_native_value = None
-                return
-
-            # Get values
-            power = float(power_sensor.native_value)
-            voltage = float(voltage_sensor.native_value)
-
-            # Home Assistant auto-converts power sensors with device_class="power" to kW
-            # when displaying, but stores native_value in the configured unit (W).
-            # However, we need to check what unit we're actually getting.
-            power_unit = power_sensor.native_unit_of_measurement
-
-            # If power is in kW, convert to W for calculation
-            if power_unit == "kW":
-                power_in_watts = power * 1000
-            else:
-                power_in_watts = power
-
-            _LOGGER.debug(
-                "Current calculation for %s: power=%.3f %s (%.3f W), voltage=%.2f V",
-                self._cpe,
-                power,
-                power_unit,
-                power_in_watts,
-                voltage,
-            )
-
-            # Check for zero voltage to avoid division by zero
-            if voltage == 0:
-                _LOGGER.warning(
-                    "Voltage is zero for %s, cannot calculate current", self._cpe
-                )
-                self._attr_native_value = None
-                return
-
-            # Calculate current: I = P / V (using power in watts)
-            current = power_in_watts / voltage
-
-            # Round to 2 decimal places
-            self._attr_native_value = round(current, 2)
-
-            _LOGGER.debug(
-                "Calculated current for %s: %.2f A (P=%.2f W, V=%.2f V)",
-                self._cpe,
-                current,
-                power_in_watts,
-                voltage,
-            )
-
-        except (ValueError, TypeError, KeyError) as err:
-            _LOGGER.debug("Error calculating current for %s: %s", self._cpe, err)
-            self._attr_native_value = None
-
-    def _calculate_breaker_load(self) -> None:
-        """Calculate breaker load percentage from current and breaker limit."""
+    def _calculate_breaker_load(self) -> float | None:
+        """Calculate breaker load percentage."""
+        if (values := self._power_and_voltage()) is None:
+            return None
+        power, voltage = values
+        breaker_limit_entity = self._config_entry.runtime_data.number_entities.get(
+            self._cpe
+        )
+        if breaker_limit_entity is None or breaker_limit_entity.native_value is None:
+            return None
         try:
-            # Get the source sensor entities
-            entities = self._hass.data[DOMAIN][self._config_entry_id]["entities"]
-
-            power_key = f"{self._cpe}_instantaneous_active_power_import"
-            voltage_key = f"{self._cpe}_voltage_l1"
-
-            # Get power sensor
-            power_sensor = entities.get(power_key)
-            if not power_sensor or power_sensor.native_value is None:
-                _LOGGER.debug(
-                    "Power sensor not available or has no value for %s", self._cpe
-                )
-                self._attr_native_value = None
-                return
-
-            # Get voltage sensor
-            voltage_sensor = entities.get(voltage_key)
-            if not voltage_sensor or voltage_sensor.native_value is None:
-                _LOGGER.debug(
-                    "Voltage sensor not available or has no value for %s", self._cpe
-                )
-                self._attr_native_value = None
-                return
-
-            # Get values
-            power = float(power_sensor.native_value)
-            voltage = float(voltage_sensor.native_value)
-
-            # Check for zero voltage to avoid division by zero
-            if voltage == 0:
-                _LOGGER.warning(
-                    "Voltage is zero for %s, cannot calculate breaker load", self._cpe
-                )
-                self._attr_native_value = None
-                return
-
-            # Calculate current: I = P / V
-            current = power / voltage
-
-            # Get breaker limit from number entity
-            number_entities = self._hass.data[DOMAIN][self._config_entry_id].get(
-                "number_entities", {}
-            )
-            breaker_limit_entity = number_entities.get(self._cpe)
-
-            if not breaker_limit_entity:
-                _LOGGER.debug("Breaker limit entity not available for %s", self._cpe)
-                self._attr_native_value = None
-                return
-
             breaker_limit = float(breaker_limit_entity.native_value)
-
-            # Check for zero breaker limit to avoid division by zero
-            if breaker_limit == 0:
-                _LOGGER.warning(
-                    "Breaker limit is zero for %s, cannot calculate load", self._cpe
-                )
-                self._attr_native_value = None
-                return
-
-            # Calculate load percentage: Load (%) = (Current / Breaker Limit) * 100
-            load_percentage = (current / breaker_limit) * 100
-
-            # Round to integer (no decimals)
-            self._attr_native_value = int(round(load_percentage))
-
-            _LOGGER.debug(
-                "Calculated breaker load for %s: %d%% (I=%.2f A, Limit=%.1f A)",
-                self._cpe,
-                int(load_percentage),
-                current,
-                breaker_limit,
-            )
-
-        except (ValueError, TypeError, KeyError) as err:
-            _LOGGER.debug("Error calculating breaker load for %s: %s", self._cpe, err)
-            self._attr_native_value = None
+        except (TypeError, ValueError):
+            return None
+        if breaker_limit <= 0:
+            return None
+        return (power / voltage) / breaker_limit * 100
 
 
 async def async_create_sensor_for_cpe(
-    hass: HomeAssistant,
-    config_entry_id: str,
+    config_entry: ERedesConfigEntry,
     cpe: str,
     field_name: str,
+    value: float,
+    timestamp: str | None,
 ) -> None:
-    """Create a sensor entity for a specific CPE and field."""
-    _LOGGER.debug("Creating sensor for CPE %s, field %s", cpe, field_name)
-
-    if field_name not in SENSOR_MAPPING:
-        _LOGGER.debug("Field %s not in sensor mapping, skipping", field_name)
+    """Create a sensor entity for a specific CPE and payload field."""
+    if (description := SENSOR_MAPPING.get(field_name)) is None:
         return
 
-    sensor_config = SENSOR_MAPPING[field_name]
-    sensor_key = sensor_config["key"]
+    entity_key = f"{cpe}_{description.key}"
+    if entity_key in config_entry.runtime_data.sensor_entities:
+        return
 
-    _LOGGER.debug("Sensor config for %s: %s", field_name, sensor_config)
-
-    # Check if entity already exists
-    entities = hass.data[DOMAIN][config_entry_id]["entities"]
-    entity_key = f"{cpe}_{sensor_key}"
-
-    if entity_key in entities:
-        _LOGGER.debug("Entity %s already exists, skipping creation", entity_key)
-        return  # Entity already exists
-
-    _LOGGER.debug("Creating new sensor entity for %s", entity_key)
-
-    # Create new sensor entity
-    sensor = ERedisSensor(cpe, sensor_key, sensor_config, config_entry_id)
-
-    # Add to Home Assistant
-    add_entities = hass.data[DOMAIN][config_entry_id]["add_entities"]
-    _LOGGER.debug("Adding entities using callback: %s", add_entities)
-    add_entities([sensor])
-
-    # Store reference
-    entities[entity_key] = sensor
-
-    _LOGGER.info("Created sensor %s for CPE %s", sensor_key, cpe)
+    sensor = ERedesSensor(cpe, description, config_entry, value, timestamp)
+    config_entry.runtime_data.sensor_entities[entity_key] = sensor
+    if add_entities := config_entry.runtime_data.sensor_add_entities:
+        add_entities([sensor])
 
 
-# Function to be called from webhook handler to ensure sensors exist
 async def async_ensure_sensors_for_data(
-    hass: HomeAssistant,
-    config_entry_id: str,
+    config_entry: ERedesConfigEntry,
     cpe: str,
     data: dict[str, Any],
+    timestamp: str | None = None,
 ) -> None:
-    """Ensure all required sensors exist for the incoming data."""
-    _LOGGER.debug(
-        "Ensuring sensors for CPE %s with data keys: %s", cpe, list(data.keys())
-    )
-
-    for field_name in data:
-        if field_name != "cpe" and field_name in SENSOR_MAPPING:
-            _LOGGER.debug("Creating sensor for field: %s", field_name)
-            await async_create_sensor_for_cpe(hass, config_entry_id, cpe, field_name)
-        else:
-            _LOGGER.debug("Skipping field %s (cpe field or not in mapping)", field_name)
+    """Ensure sensors exist for all supported measurements in a payload."""
+    for field_name, value in data.items():
+        if field_name in SENSOR_MAPPING:
+            await async_create_sensor_for_cpe(
+                config_entry, cpe, field_name, float(value), timestamp
+            )
 
 
 async def async_ensure_calculated_sensors(
-    hass: HomeAssistant,
-    config_entry_id: str,
+    config_entry: ERedesConfigEntry,
     cpe: str,
 ) -> None:
-    """Ensure all calculated sensors exist for a CPE."""
-    _LOGGER.debug("Ensuring calculated sensors for CPE %s", cpe)
+    """Ensure calculated sensors exist when all their dependencies are present."""
+    entities = config_entry.runtime_data.sensor_entities
 
-    entities = hass.data[DOMAIN][config_entry_id]["entities"]
-
-    for sensor_key, sensor_config in CALCULATED_SENSORS.items():
+    for sensor_key, description in CALCULATED_SENSORS.items():
         entity_key = f"{cpe}_{sensor_key}"
-
         if entity_key in entities:
-            _LOGGER.debug("Calculated sensor %s already exists", entity_key)
+            continue
+        if any(
+            f"{cpe}_{source_sensor}" not in entities
+            for source_sensor in description.source_sensors
+        ):
+            continue
+        if (
+            description.requires_number_entity
+            and cpe not in config_entry.runtime_data.number_entities
+        ):
             continue
 
-        # Check if all source sensors exist before creating calculated sensor
-        source_sensors = sensor_config.get("source_sensors", [])
-        all_sources_exist = True
-
-        for source_sensor in source_sensors:
-            source_key = f"{cpe}_{source_sensor}"
-            if source_key not in entities:
-                all_sources_exist = False
-                _LOGGER.debug(
-                    "Source sensor %s not available for calculated sensor %s",
-                    source_sensor,
-                    sensor_key,
-                )
-                break
-
-        if not all_sources_exist:
-            _LOGGER.debug(
-                "Not creating calculated sensor %s - source sensors not available",
-                sensor_key,
-            )
-            continue
-
-        # Check if required number entity exists (e.g., breaker_limit)
-        if sensor_config.get("requires_number_entity"):
-            number_entity_key = sensor_config["requires_number_entity"]
-            number_entities = hass.data[DOMAIN][config_entry_id].get(
-                "number_entities", {}
-            )
-            if cpe not in number_entities:
-                _LOGGER.debug(
-                    "Required number entity %s not available for calculated sensor %s",
-                    number_entity_key,
-                    sensor_key,
-                )
-                continue
-
-        _LOGGER.debug("Creating calculated sensor %s for CPE %s", sensor_key, cpe)
-
-        # Create calculated sensor entity
-        sensor = ERedesCalculatedSensor(
-            cpe, sensor_key, sensor_config, config_entry_id, hass
-        )
-
-        # Add to Home Assistant
-        add_entities = hass.data[DOMAIN][config_entry_id]["add_entities"]
-        add_entities([sensor])
-
-        # Store reference
+        sensor = ERedesCalculatedSensor(cpe, description, config_entry)
         entities[entity_key] = sensor
-
-        _LOGGER.info("Created calculated sensor %s for CPE %s", sensor_key, cpe)
+        if add_entities := config_entry.runtime_data.sensor_add_entities:
+            add_entities([sensor])
 
 
 class ERedesDiagnosticSensor(SensorEntity):
-    """Representation of an E-Redes diagnostic sensor."""
+    """Represent webhook diagnostics for one meter."""
 
     _attr_has_entity_name = True
     _attr_should_poll = False
@@ -680,47 +393,24 @@ class ERedesDiagnosticSensor(SensorEntity):
     def __init__(
         self,
         cpe: str,
-        sensor_key: str,
-        sensor_config: dict[str, Any],
-        config_entry_id: str,
-        hass: HomeAssistant,
+        description: SensorEntityDescription,
+        config_entry: ERedesConfigEntry,
     ) -> None:
         """Initialize the diagnostic sensor."""
+        self.entity_description = description
         self._cpe = cpe
-        self._sensor_key = sensor_key
-        self._config = sensor_config
-        self._config_entry_id = config_entry_id
-        self._hass = hass
-        self._attr_unique_id = f"{DOMAIN}_{cpe}_{sensor_key}"
-        self._attr_name = sensor_config["name"]
-        self._attr_icon = sensor_config.get("icon")
-        self._attr_native_unit_of_measurement = sensor_config.get("unit")
-        self._attr_device_class = sensor_config.get("device_class")
-        self._attr_state_class = sensor_config.get("state_class")
-        self._attr_entity_category = sensor_config.get("entity_category")
-        self._attr_entity_registry_enabled_default = sensor_config.get(
-            "enabled_by_default", True
-        )
+        self._attr_unique_id = f"{DOMAIN}_{cpe}_{description.key}"
         self._attr_native_value = None
         self._last_update_time: datetime | None = None
 
     @property
     def device_info(self) -> DeviceInfo:
         """Return device information."""
-        return DeviceInfo(
-            identifiers={(DOMAIN, self._cpe)},
-            name=f"E-Redes Smart Meter ({self._cpe})",
-            manufacturer=MANUFACTURER,
-            model=MODEL,
-            serial_number=self._cpe,
-            suggested_area="Energy",
-        )
+        return device_info_for_cpe(self._cpe)
 
     async def async_added_to_hass(self) -> None:
-        """Run when entity about to be added to hass."""
+        """Subscribe to webhook receipt events."""
         await super().async_added_to_hass()
-
-        # Subscribe to webhook updates for this CPE
         self.async_on_remove(
             async_dispatcher_connect(
                 self.hass,
@@ -730,55 +420,32 @@ class ERedesDiagnosticSensor(SensorEntity):
         )
 
     @callback
-    def _handle_webhook_update(self, timestamp: str | None = None) -> None:
-        """Handle webhook update for diagnostic tracking."""
+    def _handle_webhook_update(self, _timestamp: str | None = None) -> None:
+        """Update receipt time diagnostics."""
         now = dt_util.utcnow()
-
-        if self._sensor_key == "last_update":
-            # Store the actual datetime - Home Assistant will format it
+        if self.entity_description.key == "last_update":
             self._attr_native_value = now
-
-        elif self._sensor_key == "update_interval":
-            # Calculate interval between updates in seconds
-            if self._last_update_time:
-                interval = (now - self._last_update_time).total_seconds()
-                self._attr_native_value = round(interval, 1)
-            else:
-                self._attr_native_value = None
-
+        elif self.entity_description.key == "update_interval":
+            self._attr_native_value = (
+                (now - self._last_update_time).total_seconds()
+                if self._last_update_time
+                else None
+            )
         self._last_update_time = now
         self.async_write_ha_state()
 
 
 async def async_ensure_diagnostic_sensors(
-    hass: HomeAssistant,
-    config_entry_id: str,
+    config_entry: ERedesConfigEntry,
     cpe: str,
 ) -> None:
-    """Ensure all diagnostic sensors exist for a CPE."""
-    _LOGGER.debug("Ensuring diagnostic sensors for CPE %s", cpe)
-
-    entities = hass.data[DOMAIN][config_entry_id]["entities"]
-
-    for sensor_key, sensor_config in DIAGNOSTIC_SENSORS.items():
+    """Ensure diagnostic sensors exist for a CPE."""
+    entities = config_entry.runtime_data.sensor_entities
+    for sensor_key, description in DIAGNOSTIC_SENSORS.items():
         entity_key = f"{cpe}_{sensor_key}"
-
         if entity_key in entities:
-            _LOGGER.debug("Diagnostic sensor %s already exists", entity_key)
             continue
-
-        _LOGGER.debug("Creating diagnostic sensor %s for CPE %s", sensor_key, cpe)
-
-        # Create diagnostic sensor entity
-        sensor = ERedesDiagnosticSensor(
-            cpe, sensor_key, sensor_config, config_entry_id, hass
-        )
-
-        # Add to Home Assistant
-        add_entities = hass.data[DOMAIN][config_entry_id]["add_entities"]
-        add_entities([sensor])
-
-        # Store reference
+        sensor = ERedesDiagnosticSensor(cpe, description, config_entry)
         entities[entity_key] = sensor
-
-        _LOGGER.info("Created diagnostic sensor %s for CPE %s", sensor_key, cpe)
+        if add_entities := config_entry.runtime_data.sensor_add_entities:
+            add_entities([sensor])

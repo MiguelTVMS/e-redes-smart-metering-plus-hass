@@ -8,29 +8,25 @@ from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
 )
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
-from .const import DOMAIN, MANUFACTURER, MODEL
+from .const import DOMAIN
+from .models import ERedesConfigEntry, device_info_for_cpe
 
 _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: ConfigEntry,
+    config_entry: ERedesConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up E-Redes Smart Metering Plus binary sensors from config entry."""
-    # Store the add_entities callback for later use
-    hass.data[DOMAIN][config_entry.entry_id][
-        "binary_sensor_add_entities"
-    ] = async_add_entities
-    hass.data[DOMAIN][config_entry.entry_id]["binary_sensor_entities"] = {}
+    config_entry.runtime_data.binary_sensor_add_entities = async_add_entities
 
     # Restore existing entities from entity registry
     await async_restore_existing_binary_sensors(hass, config_entry, async_add_entities)
@@ -38,7 +34,7 @@ async def async_setup_entry(
 
 async def async_restore_existing_binary_sensors(
     hass: HomeAssistant,
-    config_entry: ConfigEntry,
+    config_entry: ERedesConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Restore existing binary sensor entities from entity registry."""
@@ -46,7 +42,9 @@ async def async_restore_existing_binary_sensors(
     entities_to_restore = []
 
     # Find all binary sensor entities for this integration
-    for entity_entry in entity_registry.entities.values():
+    for entity_entry in er.async_entries_for_config_entry(
+        entity_registry, config_entry.entry_id
+    ):
         if not (
             entity_entry.config_entry_id == config_entry.entry_id
             and entity_entry.domain == "binary_sensor"
@@ -74,11 +72,11 @@ async def async_restore_existing_binary_sensors(
         )
 
         # Create binary sensor entity
-        entity = ERedesBreakerOverloadSensor(cpe, config_entry.entry_id, hass)
+        entity = ERedesBreakerOverloadSensor(cpe, config_entry)
         entities_to_restore.append(entity)
 
         # Store reference
-        hass.data[DOMAIN][config_entry.entry_id]["binary_sensor_entities"][cpe] = entity
+        config_entry.runtime_data.binary_sensor_entities[cpe] = entity
 
     if entities_to_restore:
         async_add_entities(entities_to_restore)
@@ -91,17 +89,16 @@ async def async_restore_existing_binary_sensors(
 
 @callback
 def async_create_breaker_overload_sensor(
-    hass: HomeAssistant,
-    config_entry_id: str,
+    config_entry: ERedesConfigEntry,
     cpe: str,
 ) -> None:
     """Create a breaker overload binary sensor for a CPE device."""
     # Check if entity already exists
-    if cpe in hass.data[DOMAIN][config_entry_id].get("binary_sensor_entities", {}):
+    if cpe in config_entry.runtime_data.binary_sensor_entities:
         return
 
     # Get the add_entities callback
-    add_entities = hass.data[DOMAIN][config_entry_id].get("binary_sensor_add_entities")
+    add_entities = config_entry.runtime_data.binary_sensor_add_entities
     if not add_entities:
         _LOGGER.warning(
             "Cannot create breaker overload sensor for %s: add_entities not available",
@@ -110,13 +107,11 @@ def async_create_breaker_overload_sensor(
         return
 
     # Create the entity
-    entity = ERedesBreakerOverloadSensor(cpe, config_entry_id, hass)
+    entity = ERedesBreakerOverloadSensor(cpe, config_entry)
 
     # Add it to Home Assistant
+    config_entry.runtime_data.binary_sensor_entities[cpe] = entity
     add_entities([entity])
-
-    # Store reference
-    hass.data[DOMAIN][config_entry_id]["binary_sensor_entities"][cpe] = entity
 
     _LOGGER.info("Created breaker overload binary sensor for CPE: %s", cpe)
 
@@ -125,35 +120,26 @@ class ERedesBreakerOverloadSensor(BinarySensorEntity):
     """Representation of the E-Redes Breaker Overload binary sensor."""
 
     _attr_has_entity_name = True
+    _attr_translation_key = "breaker_overload"
     _attr_device_class = BinarySensorDeviceClass.PROBLEM
     _attr_icon = "mdi:alert-circle"
 
     def __init__(
         self,
         cpe: str,
-        config_entry_id: str,
-        hass: HomeAssistant,
+        config_entry: ERedesConfigEntry,
     ) -> None:
         """Initialize the breaker overload binary sensor."""
         self._cpe = cpe
-        self._config_entry_id = config_entry_id
-        self._hass = hass
+        self._config_entry = config_entry
         self._attr_unique_id = f"{DOMAIN}_{cpe}_breaker_overload"
-        self._attr_name = "Breaker overload"
         self._attr_should_poll = False
         self._attr_is_on = False
 
-    @property  # type: ignore[misc]
+    @property
     def device_info(self) -> DeviceInfo:
         """Return device information."""
-        return DeviceInfo(
-            identifiers={(DOMAIN, self._cpe)},
-            name=f"E-Redes Smart Meter ({self._cpe})",
-            manufacturer=MANUFACTURER,
-            model=MODEL,
-            serial_number=self._cpe,
-            suggested_area="Energy",
-        )
+        return device_info_for_cpe(self._cpe)
 
     async def async_added_to_hass(self) -> None:
         """Run when entity about to be added to hass."""
@@ -168,16 +154,7 @@ class ERedesBreakerOverloadSensor(BinarySensorEntity):
             )
         )
 
-        # Schedule initial check after a short delay to ensure breaker load sensor exists
-        import asyncio
-
-        async def _delayed_check():
-            # Short delay to let other entities initialize
-            await asyncio.sleep(0.1)
-            self._check_overload()
-            self.async_write_ha_state()
-
-        self.hass.async_create_task(_delayed_check())
+        self._check_overload()
 
     @callback
     def _handle_breaker_load_update(self) -> None:
@@ -189,9 +166,7 @@ class ERedesBreakerOverloadSensor(BinarySensorEntity):
         """Check if breaker is overloaded (load > 100%)."""
         try:
             # Get the breaker load sensor
-            entities = self._hass.data[DOMAIN][self._config_entry_id].get(
-                "entities", {}
-            )
+            entities = self._config_entry.runtime_data.sensor_entities
             breaker_load_key = f"{self._cpe}_breaker_load"
             breaker_load_sensor = entities.get(breaker_load_key)
 
@@ -204,7 +179,7 @@ class ERedesBreakerOverloadSensor(BinarySensorEntity):
                 return
 
             # Get the load percentage
-            load_percentage = float(breaker_load_sensor.native_value)
+            load_percentage = float(str(breaker_load_sensor.native_value))
 
             # Check if overloaded (> 100%)
             self._attr_is_on = load_percentage > 100

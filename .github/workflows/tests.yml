@@ -22,6 +22,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.head.sha || github.sha }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   tests:
     name: Pytest
@@ -31,10 +34,10 @@ jobs:
       PYTHONPATH: ${{ github.workspace }}
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.13'
           cache: 'pip'
