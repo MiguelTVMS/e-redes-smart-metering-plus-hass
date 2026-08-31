@@ -1,47 +1,40 @@
 {
-    "config": {
-        "error": {
-            "unknown": "[%key:common::config_flow::error::unknown%]"
-        },
-        "abort": {
-            "already_configured": "[%key:common::config_flow::abort::already_configured_device%]"
-        },
-        "step": {
-            "user": {
-                "title": "E-Redes Smart Metering Plus",
-                "description": "Tu URL de webhook está lista. Esta URL usa una ruta fija que no cambiará:\n\n**{webhook_url}**\n\nCopia esta URL y configúrala en el panel de E-Redes para recibir datos del contador inteligente, luego haz clic en enviar para completar la configuración.\n\n💡 **Nota:** La ruta del webhook `/api/webhook/e_redes_smart_metering_plus` es consistente entre reinicios.\n\n💡 **Suscriptores de Nabu Casa:** Si tienes Home Assistant Cloud, se genera automáticamente una URL segura en la nube usando el mismo ID de webhook fijo."
-            }
-        }
+  "config": {
+    "step": { "user": {
+      "title": "E-Redes Smart Metering Plus",
+      "description": "Introduce todos los CPE autorizados para enviar datos a esta integración. Añade uno o más identificadores CPE completos. Se rechazarán los datos de otros CPE.\n\nLa URL local fija del webhook es:\n\n**{webhook_url}**\n\nDespués de configurar, abre Configurar para ver la URL activa, incluida la URL de Home Assistant Cloud cuando esté disponible.",
+      "data": { "cpes": "CPE autorizado" }
+    } },
+    "error": {
+      "invalid_cpe": "Introduce al menos un CPE válido de 20 caracteres que comience por PT",
+      "unknown": "[%key:common::config_flow::error::unknown%]"
     },
-    "options": {
-        "step": {
-            "init": {
-                "title": "Configuración de Webhook E-Redes",
-                "description": "Esta es tu URL de webhook que debe configurarse en el panel de E-Redes:\n\n**{webhook_url}**\n\nEl webhook usa una ruta fija `/api/webhook/e_redes_smart_metering_plus` que permanece consistente.\n\n💡 **Suscriptores de Nabu Casa:** Si tienes Home Assistant Cloud, se genera automáticamente una URL segura en la nube usando el mismo ID de webhook fijo. Puedes ver todos tus webhooks yendo a Ajustes > Home Assistant Cloud > Webhooks."
-            }
-        }
-    },
-    "entity": {
-        "number": {
-            "breaker_limit": {
-                "name": "Límite del interruptor"
-            }
-        },
-        "sensor": {
-            "breaker_load": {
-                "name": "Carga del interruptor"
-            },
-            "last_update": {
-                "name": "Última actualización"
-            },
-            "update_interval": {
-                "name": "Intervalo de actualización"
-            }
-        },
-        "binary_sensor": {
-            "breaker_overload": {
-                "name": "Sobrecarga del interruptor"
-            }
-        }
+    "abort": { "already_configured": "[%key:common::config_flow::abort::already_configured_device%]" }
+  },
+  "options": { "step": { "init": {
+    "title": "Configuración del webhook E-Redes",
+    "description": "La URL activa del webhook es:\n\n**{webhook_url}**\n\nLos usuarios de Home Assistant Cloud también pueden encontrar la URL externa del webhook en [Ajustes > Home Assistant Cloud > Webhooks](/config/cloud/webhooks).\n\nMantén en la lista todos los CPE que deban seguir recibiendo actualizaciones, ya que se rechazarán los datos de CPE que no estén en esta lista.",
+    "data": { "cpes": "CPE autorizado" }
+  } } },
+  "entity": {
+    "number": { "breaker_limit": { "name": "Límite del interruptor" } },
+    "binary_sensor": { "breaker_overload": { "name": "Sobrecarga del interruptor" } },
+    "sensor": {
+      "instantaneous_active_power_import": { "name": "Potencia activa importada instantánea" },
+      "max_active_power_import": { "name": "Potencia activa importada máxima" },
+      "active_energy_import": { "name": "Energía activa importada" },
+      "instantaneous_active_power_export": { "name": "Potencia activa exportada instantánea" },
+      "max_active_power_export": { "name": "Potencia activa exportada máxima" },
+      "active_energy_export": { "name": "Energía activa exportada" },
+      "voltage_l1": { "name": "Tensión L1" }, "voltage_l2": { "name": "Tensión L2" }, "voltage_l3": { "name": "Tensión L3" },
+      "instantaneous_active_power_import_l1": { "name": "Potencia activa importada instantánea L1" },
+      "instantaneous_active_power_import_l2": { "name": "Potencia activa importada instantánea L2" },
+      "instantaneous_active_power_import_l3": { "name": "Potencia activa importada instantánea L3" },
+      "instantaneous_active_power_export_l1": { "name": "Potencia activa exportada instantánea L1" },
+      "instantaneous_active_power_export_l2": { "name": "Potencia activa exportada instantánea L2" },
+      "instantaneous_active_power_export_l3": { "name": "Potencia activa exportada instantánea L3" },
+      "instantaneous_active_current_import": { "name": "Corriente activa importada instantánea" },
+      "breaker_load": { "name": "Carga del interruptor" }, "last_update": { "name": "Última actualización" }, "update_interval": { "name": "Intervalo de actualización" }
     }
+  }
 }
