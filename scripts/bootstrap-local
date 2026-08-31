@@ -18,8 +18,13 @@ fi
 echo "Installing Python 3.13..."
 uv python install 3.13
 
-echo "Creating the local Python environment..."
-uv venv --python 3.13 .venv
+if [ -x ".venv/bin/python" ] && \
+    .venv/bin/python -c 'import sys; raise SystemExit(sys.version_info[:2] != (3, 13))'; then
+    echo "Reusing the existing Python 3.13 environment..."
+else
+    echo "Creating the local Python environment..."
+    uv venv --clear --python 3.13 .venv
+fi
 
 echo "Installing development dependencies..."
 uv pip install --python .venv/bin/python -r requirements_dev.txt

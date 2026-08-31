@@ -37,7 +37,7 @@ SENSOR_MAPPING = {
         "key": "active_energy_import",
         "unit": "Wh",
         "device_class": "energy",
-        "state_class": "total_increasing",
+        "state_class": "total",
         "icon": "mdi:counter",
     },
     "instantaneousActivePowerExport": {
@@ -61,7 +61,7 @@ SENSOR_MAPPING = {
         "key": "active_energy_export",
         "unit": "Wh",
         "device_class": "energy",
-        "state_class": "total_increasing",
+        "state_class": "total",
         "icon": "mdi:counter",
     },
     "voltageL1": {

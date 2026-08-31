@@ -2,7 +2,7 @@ name: e-redes-smart-metering-plus-dev
 
 services:
   homeassistant:
-    image: ghcr.io/home-assistant/home-assistant:2025.6.1
+    image: ghcr.io/home-assistant/home-assistant:2026.1.0
     ports:
       - "8123:8123"
     volumes:

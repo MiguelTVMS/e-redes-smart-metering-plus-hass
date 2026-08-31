@@ -51,17 +51,21 @@ async def test_sensor_state_and_unique_id(
     assert state.attributes.get("cpe") == payload["cpe"]
 
 
-async def test_total_increasing_prevents_decreasing_values(
+async def test_total_sensor_accepts_corrections_and_ignores_older_payloads(
     hass: HomeAssistant, hass_client, config_entry
 ) -> None:
-    """Test that total_increasing sensors reject decreasing values."""
+    """Test that total sensors accept newer corrections but ignore stale payloads."""
 
     client = await hass_client()
     cpe = "CPE_TEST_001"
 
     # Send initial value
     initial_value = 10000.0
-    payload = {"cpe": cpe, "activeEnergyImport": initial_value}
+    payload = {
+        "cpe": cpe,
+        "SourceTimestamp": "2026-08-30 12:00:00",
+        "activeEnergyImport": initial_value,
+    }
     resp = await client.post(
         f"/api/webhook/{config_entry.data['webhook_id']}",
         json=payload,
@@ -79,10 +83,15 @@ async def test_total_increasing_prevents_decreasing_values(
     state = hass.states.get(ent_id)
     assert state is not None
     assert float(state.state) == initial_value
+    assert state.attributes["state_class"] == "total"
 
     # Send increasing value - should update
     increasing_value = 10500.0
-    payload = {"cpe": cpe, "activeEnergyImport": increasing_value}
+    payload = {
+        "cpe": cpe,
+        "SourceTimestamp": "2026-08-30 12:02:00",
+        "activeEnergyImport": increasing_value,
+    }
     resp = await client.post(
         f"/api/webhook/{config_entry.data['webhook_id']}",
         json=payload,
@@ -94,24 +103,13 @@ async def test_total_increasing_prevents_decreasing_values(
     assert state is not None
     assert float(state.state) == increasing_value
 
-    # Send decreasing value - should be rejected and state should remain unchanged
-    decreasing_value = 9500.0
-    payload = {"cpe": cpe, "activeEnergyImport": decreasing_value}
-    resp = await client.post(
-        f"/api/webhook/{config_entry.data['webhook_id']}",
-        json=payload,
-    )
-    assert resp.status == 200
-    await hass.async_block_till_done()
-
-    # State should still be the previous increasing value
-    state = hass.states.get(ent_id)
-    assert state is not None
-    assert float(state.state) == increasing_value  # Should not have changed
-
-    # Send another increasing value - should update again
-    next_increasing_value = 11000.0
-    payload = {"cpe": cpe, "activeEnergyImport": next_increasing_value}
+    # An older payload should be ignored, regardless of its value.
+    stale_value = 9500.0
+    payload = {
+        "cpe": cpe,
+        "SourceTimestamp": "2026-08-30 12:01:00",
+        "activeEnergyImport": stale_value,
+    }
     resp = await client.post(
         f"/api/webhook/{config_entry.data['webhook_id']}",
         json=payload,
@@ -121,13 +119,31 @@ async def test_total_increasing_prevents_decreasing_values(
 
     state = hass.states.get(ent_id)
     assert state is not None
-    assert float(state.state) == next_increasing_value
+    assert float(state.state) == increasing_value
+
+    # A newer downward correction should be accepted.
+    corrected_value = 10450.0
+    payload = {
+        "cpe": cpe,
+        "SourceTimestamp": "2026-08-30 12:03:00",
+        "activeEnergyImport": corrected_value,
+    }
+    resp = await client.post(
+        f"/api/webhook/{config_entry.data['webhook_id']}",
+        json=payload,
+    )
+    assert resp.status == 200
+    await hass.async_block_till_done()
+
+    state = hass.states.get(ent_id)
+    assert state is not None
+    assert float(state.state) == corrected_value
 
 
 async def test_measurement_sensors_allow_any_values(
     hass: HomeAssistant, hass_client, config_entry
 ) -> None:
-    """Test that measurement sensors (not total_increasing) accept any value changes."""
+    """Test that measurement sensors accept any value changes."""
 
     client = await hass_client()
     cpe = "CPE_TEST_002"
