@@ -103,13 +103,6 @@ mixin-class-rgx = ".*[Mm]ixin"
 [tool.pylint.FORMAT]
 expected-line-ending-format = "LF"
 
-[tool.pytest.ini_options]
-testpaths = ["tests"]
-norecursedirs = [".git", "testing_config"]
-log_format = "%(asctime)s.%(msecs)03d %(levelname)-8s %(threadName)s %(name)s:%(filename)s:%(lineno)s %(message)s"
-log_date_format = "%Y-%m-%d %H:%M:%S"
-asyncio_mode = "auto"
-
 [tool.ruff]
 target-version = "py313"
 line-length = 88

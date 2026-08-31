@@ -1,0 +1,46 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Development: Bootstrap",
+            "type": "shell",
+            "command": "make bootstrap",
+            "problemMatcher": []
+        },
+        {
+            "label": "Development: Validate",
+            "type": "shell",
+            "command": "make validate",
+            "group": {
+                "kind": "test",
+                "isDefault": true
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Home Assistant: Start",
+            "type": "shell",
+            "command": "make ha-up",
+            "problemMatcher": []
+        },
+        {
+            "label": "Home Assistant: Restart",
+            "type": "shell",
+            "command": "make ha-restart",
+            "problemMatcher": []
+        },
+        {
+            "label": "Home Assistant: Logs",
+            "type": "shell",
+            "command": "make ha-logs",
+            "isBackground": true,
+            "problemMatcher": []
+        },
+        {
+            "label": "Home Assistant: Send test webhook",
+            "type": "shell",
+            "command": "make webhook",
+            "problemMatcher": []
+        }
+    ]
+}

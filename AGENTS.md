@@ -1,7 +1,3 @@
----
-applyTo: '**'
----
-
 # E-Redes Smart Metering Plus Home Assistant Integration
 
 ## Project Description
@@ -36,9 +32,9 @@ The fields activeEnergyImport and activeEnergyExport are cumulative values in Wh
 The user may have **multiple meters**, each uniquely identified by the `cpe` field.
 All webhook requests will be sent to the **same endpoint**, but the integration must dynamically create and update **separate devices and entities** for each unique `cpe` value.
 
-## Copilot Instructions
+## Codex Instructions
 
-Copilot should help the developer build the following features for this custom Home Assistant integration:
+Codex should help the developer build the following features for this custom Home Assistant integration:
 
 ### 1. Component Structure
 
@@ -108,7 +104,7 @@ Ensure HACS compatibility:
 
 ### 7. Testing
 
-Copilot should assist in writing tests for:
+Codex should assist in writing tests for:
 
 * Webhook handler logic
 * Sensor creation and updates
@@ -121,8 +117,8 @@ All the tests should be in the `tests` directory.
 ### 8. Dev Tools
 
 Support modern Python tooling:
-* All development will be done based on Home Assistant version 2025.6.1.
-* Devcontainers using `.devcontainer/devcontainer.json` for VSCode with python 3.13 and without virtual environments.
+* All development will be done based on Home Assistant version 2026.1.0.
+* Local development using Python 3.13 managed by `uv`, with Home Assistant running through Docker Compose.
 * All the development requirements should be in `requirements_dev.txt`
 * GitHub Actions workflow for HACS lint + Tests
 
@@ -160,7 +156,7 @@ pytest tests/ -q --tb=short
 
 **Note:** The pre-commit hook (`.git/hooks/pre-commit` symlinked from `scripts/pre-commit`) runs these exact commands on staged files. By running them during development, you catch issues early.
 
-## Documentation to help Copilot
+## Documentation to help Codex
 
 [Home Assistant Developer Documentation](https://developers.home-assistant.io/docs)
 [HACS Documentation](https://www.hacs.xyz/docs/publish/start).

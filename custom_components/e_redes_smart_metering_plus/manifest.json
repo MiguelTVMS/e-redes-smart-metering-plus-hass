@@ -1,13 +1,15 @@
 {
     "domain": "e_redes_smart_metering_plus",
     "name": "E-Redes Smart Metering Plus",
+    "after_dependencies": [
+        "cloud"
+    ],
     "codeowners": [
         "@MiguelTVMS"
     ],
     "config_flow": true,
     "dependencies": [
-        "webhook",
-        "cloud"
+        "webhook"
     ],
     "documentation": "https://github.com/MiguelTVMS/e-redes-smart-metering-plus-hass?tab=readme-ov-file#readme",
     "integration_type": "service",
@@ -16,5 +18,5 @@
     "quality_scale": "bronze",
     "requirements": [],
     "single_config_entry": true,
-    "version": "1.4.0"
+    "version": "1.5.0"
 }

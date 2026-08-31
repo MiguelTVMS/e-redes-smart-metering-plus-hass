@@ -134,6 +134,10 @@ If you want to contribute, please read the [Contribution Guidelines](CONTRIBUTIN
 ### Development Tools
 
 - 🪝 **Pre-commit Hook** - Automatic code quality checks before each commit. See [Pre-commit Hook Documentation](docs/PRE_COMMIT_HOOK.md) for details.
+- 🐍 **Native Python 3.13** - Reproducible local tooling managed by `uv`.
+- 🐳 **Local Home Assistant** - Run Home Assistant 2026.1.0 with `make ha-up` and validate the integration at `http://localhost:8123`.
+
+Run `make bootstrap` once, then use `make validate` for formatting, linting, and tests. See [Contributing](CONTRIBUTING.md) for the complete local workflow.
 
 ## Legal
 

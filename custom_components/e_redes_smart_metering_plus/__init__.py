@@ -33,6 +33,8 @@ async def async_setup_entry(
         "name": entry.data.get("name", "E-Redes Smart Meter"),
         "entities": {},  # Will store sensor entities
         "add_entities": None,  # Will be set by sensor platform
+        "last_source_timestamps": {},
+        "webhook_locks": {},
     }
 
     # Store configuration data for platforms to access
@@ -42,10 +44,11 @@ async def async_setup_entry(
         "name": entry.data.get("name", "E-Redes Smart Meter"),
     }
 
-    # Set up the webhook
-    await async_setup_webhook(hass, entry)
-
+    # Platforms must provide their entity callbacks before the webhook can receive data.
     await hass.config_entries.async_forward_entry_setups(entry, _PLATFORMS)
+
+    # Register the webhook only after dynamic entity creation is ready.
+    await async_setup_webhook(hass, entry)
 
     return True
 
@@ -55,7 +58,7 @@ async def async_unload_entry(
 ) -> bool:
     """Unload a config entry."""
     # Unload the webhook - use fixed webhook ID
-    await async_unload_webhook(hass, WEBHOOK_ID)
+    await async_unload_webhook(hass, WEBHOOK_ID, entry.entry_id)
 
     # Clean up domain data
     if DOMAIN in hass.data and entry.entry_id in hass.data[DOMAIN]:
