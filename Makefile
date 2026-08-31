@@ -1,4 +1,4 @@
-.PHONY: bootstrap validate test ha-up ha-down ha-restart ha-logs webhook
+.PHONY: bootstrap validate test sync-integration ha-up ha-down ha-restart ha-logs webhook
 
 bootstrap:
 	./scripts/bootstrap-local
@@ -9,13 +9,17 @@ validate:
 test:
 	.venv/bin/pytest tests/ -q --tb=short
 
-ha-up:
+sync-integration:
+	mkdir -p config/custom_components/e_redes_smart_metering_plus
+	rsync -a --delete --exclude '__pycache__/' custom_components/e_redes_smart_metering_plus/ config/custom_components/e_redes_smart_metering_plus/
+
+ha-up: sync-integration
 	docker compose up -d
 
 ha-down:
 	docker compose down
 
-ha-restart:
+ha-restart: sync-integration
 	docker compose restart homeassistant
 
 ha-logs:

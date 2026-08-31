@@ -1,47 +1,50 @@
 {
-    "config": {
-        "error": {
-            "unknown": "[%key:common::config_flow::error::unknown%]"
-        },
-        "abort": {
-            "already_configured": "[%key:common::config_flow::abort::already_configured_device%]"
-        },
-        "step": {
-            "user": {
-                "title": "E-Redes Smart Metering Plus",
-                "description": "Your webhook URL is ready. This URL uses a fixed path that won't change:\n\n**{webhook_url}**\n\nCopy this URL and configure it in your E-Redes provider dashboard to receive smart meter data, then click submit to complete the setup.\n\n💡 **Note:** The webhook path `/api/webhook/e_redes_smart_metering_plus` is consistent across restarts.\n\n💡 **Nabu Casa Subscribers:** If you have Home Assistant Cloud, a secure cloud URL is automatically generated using the same fixed webhook ID."
-            }
-        }
+  "config": {
+    "step": {
+      "user": {
+        "title": "E-Redes Smart Metering Plus",
+        "description": "Enter every CPE that is allowed to send data to this integration. Add one or more complete E-REDES CPE identifiers. Payloads for other CPEs are rejected.\n\nThe fixed local webhook URL is:\n\n**{webhook_url}**\n\nAfter setup, open Configure to see the active URL, including the Home Assistant Cloud URL when available.",
+        "data": { "cpes": "Allowed CPE" }
+      }
     },
-    "options": {
-        "step": {
-            "init": {
-                "title": "E-Redes Webhook Configuration",
-                "description": "This is your webhook URL that should be configured in your E-Redes provider dashboard:\n\n**{webhook_url}**\n\nThe webhook uses a fixed path `/api/webhook/e_redes_smart_metering_plus` that remains consistent.\n\n💡 **Nabu Casa Subscribers:** If you have Home Assistant Cloud, a secure cloud URL is automatically generated using the same fixed webhook ID. You can view all your webhooks by going to Settings > Home Assistant Cloud > Webhooks."
-            }
-        }
+    "error": {
+      "invalid_cpe": "Enter at least one valid 20-character CPE beginning with PT",
+      "unknown": "[%key:common::config_flow::error::unknown%]"
     },
-    "entity": {
-        "number": {
-            "breaker_limit": {
-                "name": "Breaker Limit"
-            }
-        },
-        "sensor": {
-            "breaker_load": {
-                "name": "Breaker Load"
-            },
-            "last_update": {
-                "name": "Last Update"
-            },
-            "update_interval": {
-                "name": "Update Interval"
-            }
-        },
-        "binary_sensor": {
-            "breaker_overload": {
-                "name": "Breaker Overload"
-            }
-        }
+    "abort": { "already_configured": "[%key:common::config_flow::abort::already_configured_device%]" }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "E-Redes webhook configuration",
+        "description": "The active webhook URL is:\n\n**{webhook_url}**\n\nHome Assistant Cloud users can also find their external webhook URL under [Settings > Home Assistant Cloud > Webhooks](/config/cloud/webhooks).\n\nKeep all CPEs that should continue receiving updates in the list below, since payloads for CPEs not in this list are rejected.",
+        "data": { "cpes": "Allowed CPE" }
+      }
     }
+  },
+  "entity": {
+    "number": { "breaker_limit": { "name": "Breaker limit" } },
+    "binary_sensor": { "breaker_overload": { "name": "Breaker overload" } },
+    "sensor": {
+      "instantaneous_active_power_import": { "name": "Instantaneous active power import" },
+      "max_active_power_import": { "name": "Maximum active power import" },
+      "active_energy_import": { "name": "Active energy import" },
+      "instantaneous_active_power_export": { "name": "Instantaneous active power export" },
+      "max_active_power_export": { "name": "Maximum active power export" },
+      "active_energy_export": { "name": "Active energy export" },
+      "voltage_l1": { "name": "Voltage L1" },
+      "voltage_l2": { "name": "Voltage L2" },
+      "voltage_l3": { "name": "Voltage L3" },
+      "instantaneous_active_power_import_l1": { "name": "Instantaneous active power import L1" },
+      "instantaneous_active_power_import_l2": { "name": "Instantaneous active power import L2" },
+      "instantaneous_active_power_import_l3": { "name": "Instantaneous active power import L3" },
+      "instantaneous_active_power_export_l1": { "name": "Instantaneous active power export L1" },
+      "instantaneous_active_power_export_l2": { "name": "Instantaneous active power export L2" },
+      "instantaneous_active_power_export_l3": { "name": "Instantaneous active power export L3" },
+      "instantaneous_active_current_import": { "name": "Instantaneous active current import" },
+      "breaker_load": { "name": "Breaker load" },
+      "last_update": { "name": "Last update" },
+      "update_interval": { "name": "Update interval" }
+    }
+  }
 }

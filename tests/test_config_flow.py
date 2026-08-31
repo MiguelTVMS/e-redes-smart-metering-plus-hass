@@ -4,10 +4,16 @@ from __future__ import annotations
 
 import pytest
 
-from custom_components.e_redes_smart_metering_plus.const import DOMAIN, WEBHOOK_ID
+from custom_components.e_redes_smart_metering_plus.const import (
+    CONF_CPES,
+    DOMAIN,
+    WEBHOOK_ID,
+)
 from homeassistant.core import HomeAssistant
 
 pytestmark = pytest.mark.asyncio
+
+TEST_CPE = "PT000000000000000000"
 
 
 async def test_show_form(hass: HomeAssistant) -> None:
@@ -32,7 +38,7 @@ async def test_create_entry(hass: HomeAssistant) -> None:
     assert result["type"] == "form"
 
     result2 = await hass.config_entries.flow.async_configure(
-        result["flow_id"], user_input={}
+        result["flow_id"], user_input={CONF_CPES: [TEST_CPE]}
     )
 
     assert result2["type"] == "create_entry"
@@ -40,3 +46,31 @@ async def test_create_entry(hass: HomeAssistant) -> None:
     data = result2["data"]
     assert "webhook_id" in data
     assert data["webhook_id"] == WEBHOOK_ID
+    assert data[CONF_CPES] == [TEST_CPE]
+
+
+async def test_options_show_active_url_and_update_cpes(
+    hass: HomeAssistant, config_entry, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Options expose the active URL and replace the allowed CPE list."""
+    active_url = "https://hooks.nabu.casa/test"
+
+    async def mock_active_url(hass_instance, entry):
+        return active_url
+
+    monkeypatch.setattr(
+        "custom_components.e_redes_smart_metering_plus.config_flow.async_get_active_webhook_url",
+        mock_active_url,
+    )
+    result = await hass.config_entries.options.async_init(config_entry.entry_id)
+
+    assert result["type"] == "form"
+    assert result["description_placeholders"]["webhook_url"] == active_url
+
+    updated_cpes = [TEST_CPE, "PT000000000000000001"]
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], user_input={CONF_CPES: updated_cpes}
+    )
+
+    assert result["type"] == "create_entry"
+    assert config_entry.data[CONF_CPES] == sorted(updated_cpes)

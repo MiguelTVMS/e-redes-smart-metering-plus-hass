@@ -2,66 +2,84 @@
 
 from __future__ import annotations
 
-from homeassistant.config_entries import ConfigEntry
+import re
+
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import device_registry as dr, entity_registry as er
 
-from .const import DOMAIN, WEBHOOK_ID
-from .webhook import async_setup_webhook, async_unload_webhook
+from .const import CONF_CPES, DOMAIN
+from .models import ERedesConfigEntry, ERedesRuntimeData
+from .webhook import (
+    async_remove_cloudhook,
+    async_setup_webhook,
+    async_unload_webhook,
+)
 
-# List the platforms that you want to support.
-# For your initial PR, limit it to 1 platform.
 _PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.NUMBER, Platform.BINARY_SENSOR]
+_CPE_UNIQUE_ID_PATTERN = re.compile(rf"^{DOMAIN}_(PT[A-Z0-9]{{18}})_")
 
 
-# Create ConfigEntry type alias for webhook integration
-type EredesSmartMeteringPlusConfigEntry = ConfigEntry[dict[str, str]]
-
-
-async def async_setup_entry(
-    hass: HomeAssistant, entry: EredesSmartMeteringPlusConfigEntry
-) -> bool:
+async def async_setup_entry(hass: HomeAssistant, entry: ERedesConfigEntry) -> bool:
     """Set up E-Redes Smart Metering Plus from a config entry."""
-
-    # Initialize domain data if not exists
-    if DOMAIN not in hass.data:
-        hass.data[DOMAIN] = {}
-
-    # Initialize entry-specific data structure required by sensor platform
-    hass.data[DOMAIN][entry.entry_id] = {
-        "webhook_id": WEBHOOK_ID,
-        "name": entry.data.get("name", "E-Redes Smart Meter"),
-        "entities": {},  # Will store sensor entities
-        "add_entities": None,  # Will be set by sensor platform
-        "last_source_timestamps": {},
-        "webhook_locks": {},
-    }
-
-    # Store configuration data for platforms to access
-    # For webhook integrations, we typically store webhook configuration
-    entry.runtime_data = {
-        "webhook_id": WEBHOOK_ID,
-        "name": entry.data.get("name", "E-Redes Smart Meter"),
-    }
+    entry.runtime_data = ERedesRuntimeData(
+        allowed_cpes=frozenset(entry.data.get(CONF_CPES, ()))
+    )
 
     # Platforms must provide their entity callbacks before the webhook can receive data.
     await hass.config_entries.async_forward_entry_setups(entry, _PLATFORMS)
 
-    # Register the webhook only after dynamic entity creation is ready.
-    await async_setup_webhook(hass, entry)
+    try:
+        # Register the webhook only after dynamic entity creation is ready.
+        await async_setup_webhook(hass, entry)
+    except Exception:
+        await hass.config_entries.async_unload_platforms(entry, _PLATFORMS)
+        raise
+
+    entry.async_on_unload(entry.add_update_listener(_async_reload_entry))
 
     return True
 
 
-async def async_unload_entry(
-    hass: HomeAssistant, entry: EredesSmartMeteringPlusConfigEntry
-) -> bool:
+async def async_unload_entry(hass: HomeAssistant, entry: ERedesConfigEntry) -> bool:
     """Unload a config entry."""
-    # Unload the webhook - use fixed webhook ID
-    await async_unload_webhook(hass, WEBHOOK_ID, entry.entry_id)
+    if not await hass.config_entries.async_unload_platforms(entry, _PLATFORMS):
+        return False
 
-    # Clean up domain data
-    if DOMAIN in hass.data and entry.entry_id in hass.data[DOMAIN]:
-        del hass.data[DOMAIN][entry.entry_id]
+    async_unload_webhook(hass, entry.runtime_data.webhook_id)
+    return True
 
-    return await hass.config_entries.async_unload_platforms(entry, _PLATFORMS)
+
+async def async_remove_entry(hass: HomeAssistant, entry: ERedesConfigEntry) -> None:
+    """Remove cloud resources when a config entry is permanently deleted."""
+    await async_remove_cloudhook(hass, entry.data.get("webhook_id", DOMAIN))
+
+
+async def async_migrate_entry(hass: HomeAssistant, entry: ERedesConfigEntry) -> bool:
+    """Migrate existing config entries to the current schema."""
+    if entry.version >= 2:
+        return True
+
+    configured_cpes = set(entry.data.get(CONF_CPES, ()))
+    device_registry = dr.async_get(hass)
+    for device in dr.async_entries_for_config_entry(device_registry, entry.entry_id):
+        configured_cpes.update(
+            identifier for domain, identifier in device.identifiers if domain == DOMAIN
+        )
+
+    entity_registry = er.async_get(hass)
+    for entity in er.async_entries_for_config_entry(entity_registry, entry.entry_id):
+        if match := _CPE_UNIQUE_ID_PATTERN.match(entity.unique_id):
+            configured_cpes.add(match.group(1))
+
+    hass.config_entries.async_update_entry(
+        entry,
+        data={**entry.data, CONF_CPES: sorted(configured_cpes)},
+        version=2,
+    )
+    return True
+
+
+async def _async_reload_entry(hass: HomeAssistant, entry: ERedesConfigEntry) -> None:
+    """Reload the integration after its configuration changes."""
+    await hass.config_entries.async_reload(entry.entry_id)

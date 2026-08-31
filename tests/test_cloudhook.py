@@ -13,11 +13,17 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry
 import homeassistant.components as homeassistant_components
 from homeassistant.core import HomeAssistant
 
-from custom_components.e_redes_smart_metering_plus.const import DOMAIN, WEBHOOK_ID
+from custom_components.e_redes_smart_metering_plus.const import (
+    CONF_CPES,
+    DOMAIN,
+    WEBHOOK_ID,
+)
+from custom_components.e_redes_smart_metering_plus.models import ERedesRuntimeData
 from custom_components.e_redes_smart_metering_plus import webhook as webhook_module
 from custom_components.e_redes_smart_metering_plus.webhook import (
     _async_create_cloudhook,
     _async_refresh_cloudhook,
+    async_get_active_webhook_url,
     async_setup_webhook,
 )
 
@@ -28,7 +34,7 @@ async def test_cloudhook_waits_for_cloud_connection(
     """Logged-in but disconnected Cloud must not attempt cloudhook creation."""
     get_or_create = AsyncMock(return_value="https://hooks.nabu.casa/test")
     fake_cloud = SimpleNamespace(
-        async_is_logged_in=lambda hass_instance: True,
+        async_active_subscription=lambda hass_instance: True,
         async_is_connected=lambda hass_instance: False,
         async_get_or_create_cloudhook=get_or_create,
     )
@@ -73,6 +79,34 @@ async def test_cloudhook_failure_log_is_not_empty(
     assert "Failed to create cloud webhook (EmptyCloudError): no details" in caplog.text
 
 
+async def test_active_webhook_url_falls_back_when_cloudhook_fails(
+    hass: HomeAssistant,
+    config_entry,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Configure must remain available when Home Assistant Cloud fails."""
+    config_entry.runtime_data.webhook_url = None
+    monkeypatch.setattr(
+        webhook_module,
+        "_async_refresh_cloudhook",
+        _async_refresh_cloudhook,
+    )
+    monkeypatch.setattr(
+        webhook_module,
+        "_async_create_cloudhook",
+        AsyncMock(side_effect=RuntimeError("Cloud unavailable")),
+    )
+    monkeypatch.setattr(
+        webhook_module.webhook,
+        "async_generate_url",
+        lambda hass_instance, webhook_id: f"/api/webhook/{webhook_id}",
+    )
+
+    assert await async_get_active_webhook_url(hass, config_entry) == (
+        f"/api/webhook/{WEBHOOK_ID}"
+    )
+
+
 async def test_cloud_connection_refreshes_stored_webhook_url(
     hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -80,16 +114,19 @@ async def test_cloud_connection_refreshes_stored_webhook_url(
     entry = MockConfigEntry(
         domain=DOMAIN,
         title="E-Redes Smart Metering Plus",
-        data={"webhook_id": WEBHOOK_ID},
+        data={"webhook_id": WEBHOOK_ID, CONF_CPES: []},
+        version=2,
     )
     entry.add_to_hass(hass)
-    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = {}
+    entry.runtime_data = ERedesRuntimeData(allowed_cpes=frozenset())
 
     refresh_cloudhook = AsyncMock(return_value=None)
     connection_callbacks = []
 
     monkeypatch.setattr(webhook_module, "_async_refresh_cloudhook", refresh_cloudhook)
-    monkeypatch.setattr(webhook_module.webhook, "async_register", lambda *args: None)
+    monkeypatch.setattr(
+        webhook_module.webhook, "async_register", lambda *args, **kwargs: None
+    )
     monkeypatch.setattr(
         webhook_module.webhook,
         "async_generate_url",

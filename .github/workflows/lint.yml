@@ -22,16 +22,20 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.head.sha || github.sha }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   lint:
     runs-on: ubuntu-latest
     name: Lint
+    timeout-minutes: 20
     steps:
       - name: Check out code from GitHub
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.13'
           cache: 'pip'
@@ -57,9 +61,10 @@ jobs:
   hacs:
     runs-on: ubuntu-latest
     name: HACS
+    timeout-minutes: 10
     steps:
       - name: Check out code from GitHub
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: HACS validation
         uses: hacs/action@main
         with:
@@ -68,8 +73,9 @@ jobs:
   hassfest:
     runs-on: ubuntu-latest
     name: Hassfest
+    timeout-minutes: 10
     steps:
       - name: Check out code from GitHub
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Hassfest validation
         uses: home-assistant/actions/hassfest@master

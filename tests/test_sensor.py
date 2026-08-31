@@ -37,7 +37,7 @@ async def test_sensor_state_and_unique_id(
 
     entity_registry = er.async_get(hass)
 
-    sensor_key = SENSOR_MAPPING[field_name]["key"]
+    sensor_key = SENSOR_MAPPING[field_name].key
     unique_id = f"{DOMAIN}_{payload['cpe']}_{sensor_key}"
 
     ent_id = entity_registry.async_get_entity_id("sensor", DOMAIN, unique_id)
@@ -74,7 +74,7 @@ async def test_total_sensor_accepts_corrections_and_ignores_older_payloads(
     await hass.async_block_till_done()
 
     entity_registry = er.async_get(hass)
-    sensor_key = SENSOR_MAPPING["activeEnergyImport"]["key"]
+    sensor_key = SENSOR_MAPPING["activeEnergyImport"].key
     unique_id = f"{DOMAIN}_{cpe}_{sensor_key}"
     ent_id = entity_registry.async_get_entity_id("sensor", DOMAIN, unique_id)
     assert ent_id is not None
@@ -159,7 +159,7 @@ async def test_measurement_sensors_allow_any_values(
     await hass.async_block_till_done()
 
     entity_registry = er.async_get(hass)
-    sensor_key = SENSOR_MAPPING["instantaneousActivePowerImport"]["key"]
+    sensor_key = SENSOR_MAPPING["instantaneousActivePowerImport"].key
     unique_id = f"{DOMAIN}_{cpe}_{sensor_key}"
     ent_id = entity_registry.async_get_entity_id("sensor", DOMAIN, unique_id)
     assert ent_id is not None

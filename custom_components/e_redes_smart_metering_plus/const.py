@@ -1,6 +1,21 @@
 """Constants for the E-Redes Smart Metering Plus integration."""
 
-from homeassistant.helpers.entity import EntityCategory
+from dataclasses import dataclass
+
+from homeassistant.components.sensor import (
+    SensorDeviceClass,
+    SensorEntityDescription,
+    SensorStateClass,
+)
+from homeassistant.const import (
+    PERCENTAGE,
+    EntityCategory,
+    UnitOfElectricCurrent,
+    UnitOfElectricPotential,
+    UnitOfEnergy,
+    UnitOfPower,
+    UnitOfTime,
+)
 
 DOMAIN = "e_redes_smart_metering_plus"
 
@@ -10,114 +25,193 @@ WEBHOOK_ID = DOMAIN
 # Webhook constants
 WEBHOOK_PATH = f"/api/webhook/{WEBHOOK_ID}"
 
+CONF_CPES = "cpes"
+
 # Device info
 MANUFACTURER = "E-Redes"
 MODEL = "Smart Metering Plus"
 
-# Sensor mapping
-SENSOR_MAPPING = {
-    "instantaneousActivePowerImport": {
-        "name": "Instantaneous Active Power Import",
-        "key": "instantaneous_active_power_import",
-        "unit": "W",
-        "device_class": "power",
-        "state_class": "measurement",
-        "icon": "mdi:transmission-tower-import",
-    },
-    "maxActivePowerImport": {
-        "name": "Max Active Power Import",
-        "key": "max_active_power_import",
-        "unit": "W",
-        "device_class": "power",
-        "state_class": "measurement",
-        "icon": "mdi:transmission-tower-import",
-    },
-    "activeEnergyImport": {
-        "name": "Active Energy Import",
-        "key": "active_energy_import",
-        "unit": "Wh",
-        "device_class": "energy",
-        "state_class": "total",
-        "icon": "mdi:counter",
-    },
-    "instantaneousActivePowerExport": {
-        "name": "Instantaneous Active Power Export",
-        "key": "instantaneous_active_power_export",
-        "unit": "W",
-        "device_class": "power",
-        "state_class": "measurement",
-        "icon": "mdi:transmission-tower-export",
-    },
-    "maxActivePowerExport": {
-        "name": "Max Active Power Export",
-        "key": "max_active_power_export",
-        "unit": "W",
-        "device_class": "power",
-        "state_class": "measurement",
-        "icon": "mdi:transmission-tower-export",
-    },
-    "activeEnergyExport": {
-        "name": "Active Energy Export",
-        "key": "active_energy_export",
-        "unit": "Wh",
-        "device_class": "energy",
-        "state_class": "total",
-        "icon": "mdi:counter",
-    },
-    "voltageL1": {
-        "name": "Voltage L1",
-        "key": "voltage_l1",
-        "unit": "V",
-        "device_class": "voltage",
-        "state_class": "measurement",
-        "icon": "mdi:sine-wave",
-    },
+
+@dataclass(frozen=True, kw_only=True)
+class ERedesSensorEntityDescription(SensorEntityDescription):
+    """Describe a sensor supplied directly by E-REDES."""
+
+
+@dataclass(frozen=True, kw_only=True)
+class ERedesCalculatedSensorEntityDescription(SensorEntityDescription):
+    """Describe a locally calculated sensor."""
+
+    calculation: str
+    source_sensors: tuple[str, ...]
+    requires_number_entity: str | None = None
+
+
+INSTANTANEOUS_POWER_IMPORT = ERedesSensorEntityDescription(
+    key="instantaneous_active_power_import",
+    translation_key="instantaneous_active_power_import",
+    native_unit_of_measurement=UnitOfPower.WATT,
+    device_class=SensorDeviceClass.POWER,
+    state_class=SensorStateClass.MEASUREMENT,
+    icon="mdi:transmission-tower-import",
+)
+MAX_POWER_IMPORT = ERedesSensorEntityDescription(
+    key="max_active_power_import",
+    translation_key="max_active_power_import",
+    native_unit_of_measurement=UnitOfPower.WATT,
+    device_class=SensorDeviceClass.POWER,
+    state_class=SensorStateClass.MEASUREMENT,
+    icon="mdi:transmission-tower-import",
+)
+ACTIVE_ENERGY_IMPORT = ERedesSensorEntityDescription(
+    key="active_energy_import",
+    translation_key="active_energy_import",
+    native_unit_of_measurement=UnitOfEnergy.WATT_HOUR,
+    device_class=SensorDeviceClass.ENERGY,
+    state_class=SensorStateClass.TOTAL,
+    icon="mdi:counter",
+)
+INSTANTANEOUS_POWER_EXPORT = ERedesSensorEntityDescription(
+    key="instantaneous_active_power_export",
+    translation_key="instantaneous_active_power_export",
+    native_unit_of_measurement=UnitOfPower.WATT,
+    device_class=SensorDeviceClass.POWER,
+    state_class=SensorStateClass.MEASUREMENT,
+    icon="mdi:transmission-tower-export",
+)
+MAX_POWER_EXPORT = ERedesSensorEntityDescription(
+    key="max_active_power_export",
+    translation_key="max_active_power_export",
+    native_unit_of_measurement=UnitOfPower.WATT,
+    device_class=SensorDeviceClass.POWER,
+    state_class=SensorStateClass.MEASUREMENT,
+    icon="mdi:transmission-tower-export",
+)
+ACTIVE_ENERGY_EXPORT = ERedesSensorEntityDescription(
+    key="active_energy_export",
+    translation_key="active_energy_export",
+    native_unit_of_measurement=UnitOfEnergy.WATT_HOUR,
+    device_class=SensorDeviceClass.ENERGY,
+    state_class=SensorStateClass.TOTAL,
+    icon="mdi:counter",
+)
+
+
+def _voltage_description(phase: int) -> ERedesSensorEntityDescription:
+    """Create a voltage description for one phase."""
+    return ERedesSensorEntityDescription(
+        key=f"voltage_l{phase}",
+        translation_key=f"voltage_l{phase}",
+        native_unit_of_measurement=UnitOfElectricPotential.VOLT,
+        device_class=SensorDeviceClass.VOLTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:sine-wave",
+        suggested_display_precision=1,
+    )
+
+
+def _phase_power_description(
+    direction: str, phase: int
+) -> ERedesSensorEntityDescription:
+    """Create a per-phase power description."""
+    return ERedesSensorEntityDescription(
+        key=f"instantaneous_active_power_{direction}_l{phase}",
+        translation_key=f"instantaneous_active_power_{direction}_l{phase}",
+        native_unit_of_measurement=UnitOfPower.WATT,
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon=f"mdi:transmission-tower-{direction}",
+    )
+
+
+VOLTAGE_L1 = _voltage_description(1)
+VOLTAGE_L2 = _voltage_description(2)
+VOLTAGE_L3 = _voltage_description(3)
+
+SENSOR_MAPPING: dict[str, ERedesSensorEntityDescription] = {
+    "instantaneousActivePowerImport": INSTANTANEOUS_POWER_IMPORT,
+    "maxActivePowerImport": MAX_POWER_IMPORT,
+    # Legacy field observed before E-REDES published its current API examples.
+    "maxActivePowerImportTotalLastAverage": MAX_POWER_IMPORT,
+    "activeEnergyImport": ACTIVE_ENERGY_IMPORT,
+    "instantaneousActivePowerExport": INSTANTANEOUS_POWER_EXPORT,
+    "maxActivePowerExport": MAX_POWER_EXPORT,
+    "activeEnergyExport": ACTIVE_ENERGY_EXPORT,
+    "voltageL1": VOLTAGE_L1,
+    "voltageL2": VOLTAGE_L2,
+    "voltageL3": VOLTAGE_L3,
 }
 
-# Calculated sensors (not directly from webhook data)
-CALCULATED_SENSORS = {
-    "instantaneous_active_current_import": {
-        "name": "Instantaneous Active Current Import",
-        "key": "instantaneous_active_current_import",
-        "unit": "A",
-        "device_class": "current",
-        "state_class": "measurement",
-        "icon": "mdi:current-ac",
-        "calculation": "power_voltage",  # Indicates calculation type
-        "source_sensors": ["instantaneous_active_power_import", "voltage_l1"],
-    },
-    "breaker_load": {
-        "name": "Breaker Load",
-        "key": "breaker_load",
-        "unit": "%",
-        "device_class": "power_factor",
-        "state_class": "measurement",
-        "icon": "mdi:gauge",
-        "calculation": "current_breaker_limit",  # Indicates calculation type
-        "source_sensors": ["instantaneous_active_power_import", "voltage_l1"],
-        # Requires breaker limit number entity
-        "requires_number_entity": "breaker_limit",
-    },
+for _phase in (1, 2, 3):
+    SENSOR_MAPPING[f"instantaneousActivePowerImportL{_phase}"] = (
+        _phase_power_description("import", _phase)
+    )
+    SENSOR_MAPPING[f"instantaneousActivePowerExportL{_phase}"] = (
+        _phase_power_description("export", _phase)
+    )
+
+SENSOR_DESCRIPTIONS_BY_KEY = {
+    description.key: description for description in SENSOR_MAPPING.values()
 }
 
-# Diagnostic sensors
-DIAGNOSTIC_SENSORS = {
-    "last_update": {
-        "name": "Last Update",
-        "key": "last_update",
-        "device_class": "timestamp",
-        "icon": "mdi:clock-outline",
-        "entity_category": EntityCategory.DIAGNOSTIC,
-        "enabled_by_default": False,
-    },
-    "update_interval": {
-        "name": "Update Interval",
-        "key": "update_interval",
-        "unit": "s",
-        "device_class": "duration",
-        "state_class": "measurement",
-        "icon": "mdi:timer-outline",
-        "entity_category": EntityCategory.DIAGNOSTIC,
-        "enabled_by_default": False,
-    },
+CALCULATED_SENSORS: dict[str, ERedesCalculatedSensorEntityDescription] = {
+    "instantaneous_active_current_import": ERedesCalculatedSensorEntityDescription(
+        key="instantaneous_active_current_import",
+        translation_key="instantaneous_active_current_import",
+        native_unit_of_measurement=UnitOfElectricCurrent.AMPERE,
+        device_class=SensorDeviceClass.CURRENT,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:current-ac",
+        suggested_display_precision=2,
+        calculation="power_voltage",
+        source_sensors=("instantaneous_active_power_import", "voltage_l1"),
+    ),
+    "breaker_load": ERedesCalculatedSensorEntityDescription(
+        key="breaker_load",
+        translation_key="breaker_load",
+        native_unit_of_measurement=PERCENTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:gauge",
+        suggested_display_precision=0,
+        calculation="current_breaker_limit",
+        source_sensors=("instantaneous_active_power_import", "voltage_l1"),
+        requires_number_entity="breaker_limit",
+    ),
 }
+
+DIAGNOSTIC_SENSORS: dict[str, SensorEntityDescription] = {
+    "last_update": SensorEntityDescription(
+        key="last_update",
+        translation_key="last_update",
+        device_class=SensorDeviceClass.TIMESTAMP,
+        icon="mdi:clock-outline",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        entity_registry_enabled_default=False,
+    ),
+    "update_interval": SensorEntityDescription(
+        key="update_interval",
+        translation_key="update_interval",
+        native_unit_of_measurement=UnitOfTime.SECONDS,
+        device_class=SensorDeviceClass.DURATION,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:timer-outline",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        entity_registry_enabled_default=False,
+        suggested_display_precision=1,
+    ),
+}
+
+TIMESTAMP_FIELDS = (
+    "LocalTimestamp",
+    "SourceTimestamp",
+    "clock",
+)
+
+PAYLOAD_METADATA_FIELDS = {
+    "cpe",
+    *TIMESTAMP_FIELDS,
+    "maxActivePowerImportTime",
+    "maxActivePowerImportTotalTime",
+    "maxActivePowerExportTime",
+}
+
+KNOWN_PAYLOAD_FIELDS = frozenset(SENSOR_MAPPING) | PAYLOAD_METADATA_FIELDS

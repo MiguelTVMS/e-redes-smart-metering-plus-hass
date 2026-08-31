@@ -5,17 +5,16 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from homeassistant.components.number import NumberEntity, NumberMode
-from homeassistant.config_entries import ConfigEntry
+from homeassistant.components.number import NumberMode, RestoreNumber
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.restore_state import RestoreEntity
 
-from .const import DOMAIN, MANUFACTURER, MODEL
+from .const import DOMAIN
+from .models import ERedesConfigEntry, device_info_for_cpe
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -24,16 +23,11 @@ DEFAULT_BREAKER_LIMIT = 20  # Default breaker limit in amps
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: ConfigEntry,
+    config_entry: ERedesConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up E-Redes Smart Metering Plus number entities from config entry."""
-    # Store the add_entities callback for later use when devices are discovered
-    if "number_add_entities" not in hass.data[DOMAIN][config_entry.entry_id]:
-        hass.data[DOMAIN][config_entry.entry_id][
-            "number_add_entities"
-        ] = async_add_entities
-        hass.data[DOMAIN][config_entry.entry_id]["number_entities"] = {}
+    config_entry.runtime_data.number_add_entities = async_add_entities
 
     # Restore existing entities from entity registry
     await async_restore_existing_number_entities(hass, config_entry, async_add_entities)
@@ -41,7 +35,7 @@ async def async_setup_entry(
 
 async def async_restore_existing_number_entities(
     hass: HomeAssistant,
-    config_entry: ConfigEntry,
+    config_entry: ERedesConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Restore existing number entities from entity registry."""
@@ -49,7 +43,9 @@ async def async_restore_existing_number_entities(
     entities_to_restore = []
 
     # Find all number entities for this integration
-    for entity_entry in entity_registry.entities.values():
+    for entity_entry in er.async_entries_for_config_entry(
+        entity_registry, config_entry.entry_id
+    ):
         if not (
             entity_entry.config_entry_id == config_entry.entry_id
             and entity_entry.domain == "number"
@@ -77,11 +73,11 @@ async def async_restore_existing_number_entities(
         )
 
         # Create number entity
-        entity = ERedisBreakerLimitNumber(cpe, config_entry.entry_id)
+        entity = ERedesBreakerLimitNumber(cpe)
         entities_to_restore.append(entity)
 
         # Store reference
-        hass.data[DOMAIN][config_entry.entry_id]["number_entities"][cpe] = entity
+        config_entry.runtime_data.number_entities[cpe] = entity
 
     if entities_to_restore:
         async_add_entities(entities_to_restore)
@@ -94,17 +90,16 @@ async def async_restore_existing_number_entities(
 
 @callback
 def async_create_breaker_limit_entity(
-    hass: HomeAssistant,
-    config_entry_id: str,
+    config_entry: ERedesConfigEntry,
     cpe: str,
 ) -> None:
     """Create a breaker limit number entity for a CPE device."""
     # Check if entity already exists
-    if cpe in hass.data[DOMAIN][config_entry_id].get("number_entities", {}):
+    if cpe in config_entry.runtime_data.number_entities:
         return
 
     # Get the add_entities callback
-    add_entities = hass.data[DOMAIN][config_entry_id].get("number_add_entities")
+    add_entities = config_entry.runtime_data.number_add_entities
     if not add_entities:
         _LOGGER.warning(
             "Cannot create breaker limit entity for %s: add_entities not available", cpe
@@ -112,22 +107,20 @@ def async_create_breaker_limit_entity(
         return
 
     # Create the entity
-    entity = ERedisBreakerLimitNumber(cpe, config_entry_id)
+    entity = ERedesBreakerLimitNumber(cpe)
 
     # Add it to Home Assistant
+    config_entry.runtime_data.number_entities[cpe] = entity
     add_entities([entity])
-
-    # Store reference
-    hass.data[DOMAIN][config_entry_id]["number_entities"][cpe] = entity
 
     _LOGGER.info("Created breaker limit number entity for CPE: %s", cpe)
 
 
-# type: ignore[misc]
-class ERedisBreakerLimitNumber(NumberEntity, RestoreEntity):
+class ERedesBreakerLimitNumber(RestoreNumber):
     """Representation of the E-Redes Breaker Limit number entity."""
 
     _attr_has_entity_name = True
+    _attr_translation_key = "breaker_limit"
     _attr_entity_category = EntityCategory.CONFIG
     _attr_native_min_value = 1
     _attr_native_max_value = 200
@@ -139,29 +132,19 @@ class ERedisBreakerLimitNumber(NumberEntity, RestoreEntity):
     def __init__(
         self,
         cpe: str,
-        config_entry_id: str,
     ) -> None:
         """Initialize the breaker limit number entity."""
         self._cpe = cpe
-        self._config_entry_id = config_entry_id
         self._attr_unique_id = f"{DOMAIN}_{cpe}_breaker_limit"
-        self._attr_name = "Breaker limit"
         self._attr_should_poll = False
         self._native_value: float = DEFAULT_BREAKER_LIMIT
 
-    @property  # type: ignore[misc]
+    @property
     def device_info(self) -> DeviceInfo:
         """Return device information."""
-        return DeviceInfo(
-            identifiers={(DOMAIN, self._cpe)},
-            name=f"E-Redes Smart Meter ({self._cpe})",
-            manufacturer=MANUFACTURER,
-            model=MODEL,
-            serial_number=self._cpe,
-            suggested_area="Energy",
-        )
+        return device_info_for_cpe(self._cpe)
 
-    @property  # type: ignore[override]
+    @property
     def native_value(self) -> float:
         """Return the current value."""
         return self._native_value
@@ -171,14 +154,10 @@ class ERedisBreakerLimitNumber(NumberEntity, RestoreEntity):
         await super().async_added_to_hass()
 
         # Restore previous state
-        last_state = await self.async_get_last_state()
-        if last_state is not None and last_state.state not in (
-            None,
-            "unknown",
-            "unavailable",
-        ):
+        last_data = await self.async_get_last_number_data()
+        if last_data is not None and last_data.native_value is not None:
             try:
-                restored_value = float(last_state.state)
+                restored_value = float(last_data.native_value)
                 self._native_value = restored_value
                 _LOGGER.info(
                     "Restored breaker limit for %s: %s A",
@@ -216,7 +195,6 @@ class ERedisBreakerLimitNumber(NumberEntity, RestoreEntity):
         )
 
     @property
-    # type: ignore[override]
     def extra_state_attributes(self) -> dict[str, Any] | None:
         """Return extra state attributes."""
         return {

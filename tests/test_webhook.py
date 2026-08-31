@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 
 import pytest
 
@@ -13,6 +14,7 @@ from custom_components.e_redes_smart_metering_plus.const import (
 )
 from custom_components.e_redes_smart_metering_plus.webhook import handle_webhook
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 
 pytestmark = pytest.mark.asyncio
@@ -64,7 +66,7 @@ async def test_webhook_creates_and_updates_sensors(
 
     # Determine which field maps to a sensor key
     first_field = next(k for k in payload if k != "cpe" and k in SENSOR_MAPPING)
-    sensor_key = SENSOR_MAPPING[first_field]["key"]
+    sensor_key = SENSOR_MAPPING[first_field].key
 
     unique_id = f"{DOMAIN}_{payload['cpe']}_{sensor_key}"
     entity_entry = entity_registry.async_get_entity_id("sensor", DOMAIN, unique_id)
@@ -80,12 +82,6 @@ async def test_webhook_creates_and_updates_sensors(
 
     # Attributes
     assert state.attributes.get("cpe") == payload["cpe"]
-    # For the specific import power sensor, webhook URL attributes are exposed
-    if sensor_key == "instantaneous_active_power_import":
-        assert "integration_webhook_url" in state.attributes
-        assert state.attributes.get("webhook_info")
-        assert state.attributes.get("configuration_note")
-
 
 async def test_webhook_missing_cpe_returns_400(
     hass: HomeAssistant, config_entry
@@ -127,7 +123,7 @@ async def test_webhook_ignores_unknown_fields(
     payload = {"cpe": "XYZ", "foo": 1, "bar": 2}
 
     resp = await handle_webhook(hass, WEBHOOK_ID, DummyRequest(payload), config_entry)
-    assert resp.status == 200
+    assert resp.status == 422
 
     # Ensure no entities were created for unknown fields
     entity_registry = er.async_get(hass)
@@ -135,3 +131,122 @@ async def test_webhook_ignores_unknown_fields(
         unique_id = f"{DOMAIN}_{payload['cpe']}_{key}"
         ent_id = entity_registry.async_get_entity_id("sensor", DOMAIN, unique_id)
         assert ent_id is None
+
+
+async def test_webhook_rejects_unconfigured_cpe(
+    hass: HomeAssistant, config_entry
+) -> None:
+    """A valid payload cannot create devices for an unconfigured CPE."""
+    response = await handle_webhook(
+        hass,
+        WEBHOOK_ID,
+        DummyRequest(
+            {"cpe": "NOT_ALLOWED", "instantaneousActivePowerImport": 100}
+        ),
+        config_entry,
+    )
+
+    assert response.status == 403
+
+
+async def test_payload_changes_keep_supported_values(
+    hass: HomeAssistant,
+    config_entry,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Schema changes warn but valid values in partial payloads are retained."""
+    first = {
+        "cpe": "ABCDEF",
+        "LocalTimestamp": "2026-08-31 10:00:00",
+        "activeEnergyImport": 1000,
+        "futureField": "future",
+    }
+    second = {
+        "cpe": "ABCDEF",
+        "LocalTimestamp": "2026-08-31 10:00:05",
+        "activeEnergyImport": 1001,
+        "voltageL1": "invalid",
+    }
+
+    with caplog.at_level(logging.DEBUG):
+        assert (
+            await handle_webhook(
+                hass, WEBHOOK_ID, DummyRequest(first), config_entry
+            )
+        ).status == 200
+        assert (
+            await handle_webhook(
+                hass, WEBHOOK_ID, DummyRequest(second), config_entry
+            )
+        ).status == 200
+    await hass.async_block_till_done()
+
+    assert "First webhook payload after startup for CPE ABCDEF" in caplog.text
+    assert "contains unsupported fields: futureField" in caplog.text
+    assert "Webhook payload fields changed for CPE ABCDEF" in caplog.text
+    assert "Ignored invalid value for payload field voltageL1" in caplog.text
+
+    entity_registry = er.async_get(hass)
+    entity_id = entity_registry.async_get_entity_id(
+        "sensor", DOMAIN, f"{DOMAIN}_ABCDEF_active_energy_import"
+    )
+    assert entity_id is not None
+    state = hass.states.get(entity_id)
+    assert state is not None
+    assert float(state.state) == 1001
+
+
+async def test_current_three_phase_payload_fields(
+    hass: HomeAssistant, config_entry
+) -> None:
+    """Current E-REDES three-phase fields create their available sensors."""
+    payload = {
+        "cpe": "TEST123",
+        "LocalTimestamp": "2026-08-31 10:00:00",
+        "voltageL2": 231.2,
+        "instantaneousActivePowerImportL2": 420,
+    }
+
+    response = await handle_webhook(
+        hass, WEBHOOK_ID, DummyRequest(payload), config_entry
+    )
+    assert response.status == 200
+    await hass.async_block_till_done()
+
+    entity_registry = er.async_get(hass)
+    assert entity_registry.async_get_entity_id(
+        "sensor", DOMAIN, f"{DOMAIN}_TEST123_voltage_l2"
+    )
+    assert entity_registry.async_get_entity_id(
+        "sensor",
+        DOMAIN,
+        f"{DOMAIN}_TEST123_instantaneous_active_power_import_l2",
+    )
+
+
+async def test_existing_device_gets_companion_entities(
+    hass: HomeAssistant, config_entry
+) -> None:
+    """Existing devices must receive number and overload entities on update."""
+    cpe = "ABCDEF"
+    dr.async_get(hass).async_get_or_create(
+        config_entry_id=config_entry.entry_id,
+        identifiers={(DOMAIN, cpe)},
+    )
+
+    response = await handle_webhook(
+        hass,
+        WEBHOOK_ID,
+        DummyRequest({"cpe": cpe, "activeEnergyImport": 1000}),
+        config_entry,
+    )
+    assert response.status == 200
+    await hass.async_block_till_done()
+
+    entity_registry = er.async_get(hass)
+    assert entity_registry.async_get_entity_id(
+        "number", DOMAIN, f"{DOMAIN}_{cpe}_breaker_limit"
+    )
+    assert entity_registry.async_get_entity_id(
+        "binary_sensor", DOMAIN, f"{DOMAIN}_{cpe}_breaker_overload"
+    )
