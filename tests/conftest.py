@@ -19,21 +19,23 @@ def _mock_cloud(monkeypatch: pytest.MonkeyPatch) -> None:
     Force cloud to appear logged out so the integration falls back to local webhook URLs
     and avoids cloudhook API calls.
     """
-    # Mock cloud login status
+    async def mock_refresh_cloudhook(hass, entry, webhook_id):
+        return None
+
+    async def mock_delete_cloudhook(hass, webhook_id):
+        return None
+
     monkeypatch.setattr(
-        "homeassistant.components.cloud.async_is_logged_in",
-        lambda hass: False,
-        raising=True,
+        "custom_components.e_redes_smart_metering_plus.webhook._async_refresh_cloudhook",
+        mock_refresh_cloudhook,
     )
-
-    # Mock cloud setup to prevent initialization errors
-    async def mock_cloud_setup(hass, config):
-        return True
-
     monkeypatch.setattr(
-        "homeassistant.components.cloud.async_setup",
-        mock_cloud_setup,
-        raising=False,
+        "custom_components.e_redes_smart_metering_plus.webhook._async_delete_cloudhook",
+        mock_delete_cloudhook,
+    )
+    monkeypatch.setattr(
+        "custom_components.e_redes_smart_metering_plus.webhook._listen_for_cloud_connection",
+        lambda hass, target: lambda: None,
     )
 
 

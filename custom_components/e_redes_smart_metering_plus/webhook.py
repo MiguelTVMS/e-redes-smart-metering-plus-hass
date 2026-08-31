@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
+import asyncio
+from collections.abc import Awaitable, Callable
+from datetime import UTC, datetime
 import json
 import logging
 from typing import Any
 
 from aiohttp.web import Request, Response
 
-from homeassistant.components import cloud, webhook
+from homeassistant.components import webhook
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
@@ -18,6 +21,98 @@ from .const import DOMAIN, MANUFACTURER, MODEL, SENSOR_MAPPING, WEBHOOK_ID
 from .sensor import async_ensure_calculated_sensors, async_ensure_sensors_for_data
 
 _LOGGER = logging.getLogger(__name__)
+
+
+def _get_measurement_timestamp(
+    data: dict[str, Any],
+) -> tuple[str | None, datetime | None]:
+    """Return the best available normalized measurement timestamp."""
+    for field_name in ("SourceTimestamp", "clock"):
+        raw_timestamp = data.get(field_name)
+        if not isinstance(raw_timestamp, str):
+            continue
+
+        try:
+            parsed_timestamp = datetime.fromisoformat(raw_timestamp.replace(" ", "T"))
+        except ValueError:
+            continue
+
+        if parsed_timestamp.tzinfo is None:
+            parsed_timestamp = parsed_timestamp.replace(tzinfo=UTC)
+        else:
+            parsed_timestamp = parsed_timestamp.astimezone(UTC)
+
+        return raw_timestamp, parsed_timestamp
+
+    return None, None
+
+
+async def _async_create_cloudhook(hass: HomeAssistant, webhook_id: str) -> str | None:
+    """Create a cloudhook when Home Assistant Cloud is available."""
+    from homeassistant.components import cloud
+
+    if not cloud.async_is_logged_in(hass) or not cloud.async_is_connected(hass):
+        return None
+
+    return await cloud.async_get_or_create_cloudhook(hass, webhook_id)
+
+
+def _listen_for_cloud_connection(
+    hass: HomeAssistant,
+    target: Callable[[Any], Awaitable[None] | None],
+) -> Callable[[], None]:
+    """Listen for Home Assistant Cloud connection changes."""
+    from homeassistant.components import cloud
+
+    return cloud.async_listen_connection_change(hass, target)
+
+
+def _store_webhook_url(
+    hass: HomeAssistant, entry: ConfigEntry, webhook_id: str, webhook_url: str
+) -> None:
+    """Store the active webhook URL in the config entry and runtime data."""
+    if entry.data.get("webhook_url") != webhook_url:
+        hass.config_entries.async_update_entry(
+            entry,
+            data={
+                **entry.data,
+                "webhook_id": webhook_id,
+                "webhook_url": webhook_url,
+            },
+        )
+
+    entry_data = hass.data[DOMAIN][entry.entry_id]
+    entry_data["webhook_url"] = webhook_url
+    entry_data["webhook_id"] = webhook_id
+
+
+async def _async_refresh_cloudhook(
+    hass: HomeAssistant, entry: ConfigEntry, webhook_id: str
+) -> str | None:
+    """Create or retrieve and store the cloudhook when Cloud is connected."""
+    try:
+        webhook_url = await _async_create_cloudhook(hass, webhook_id)
+    except Exception as err:  # noqa: BLE001
+        _LOGGER.warning(
+            "Failed to create cloud webhook (%s): %s",
+            type(err).__name__,
+            str(err) or "no details",
+        )
+        return None
+
+    if webhook_url:
+        _store_webhook_url(hass, entry, webhook_id, webhook_url)
+        _LOGGER.info("Using cloud webhook: %s", webhook_url)
+
+    return webhook_url
+
+
+async def _async_delete_cloudhook(hass: HomeAssistant, webhook_id: str) -> None:
+    """Delete a cloudhook when Home Assistant Cloud is available."""
+    from homeassistant.components import cloud
+
+    if cloud.async_is_logged_in(hass) and cloud.async_is_connected(hass):
+        await cloud.async_delete_cloudhook(hass, webhook_id)
 
 
 async def async_setup_webhook(hass: HomeAssistant, entry: ConfigEntry) -> str:
@@ -41,46 +136,47 @@ async def async_setup_webhook(hass: HomeAssistant, entry: ConfigEntry) -> str:
         webhook_handler,
     )
 
-    # Try to create a cloud webhook if available
-    webhook_url = None
-    if cloud.async_is_logged_in(hass):
-        try:
-            webhook_url = await cloud.async_create_cloudhook(hass, webhook_id)
-            _LOGGER.info("Created cloud webhook: %s", webhook_url)
-        except Exception as err:  # noqa: BLE001
-            _LOGGER.warning("Failed to create cloud webhook: %s", err)
+    # Use a cloudhook immediately when Cloud is already connected.
+    webhook_url = await _async_refresh_cloudhook(hass, entry, webhook_id)
 
     if not webhook_url:
         # Fall back to local webhook
         webhook_url = webhook.async_generate_url(hass, webhook_id)
         _LOGGER.info("Using local webhook: %s", webhook_url)
 
-    # Store webhook URL in config entry data
-    hass.config_entries.async_update_entry(
-        entry, data={**entry.data, "webhook_id": webhook_id, "webhook_url": webhook_url}
-    )
+    _store_webhook_url(hass, entry, webhook_id, webhook_url)
 
-    # Also store webhook URL in integration data for easy access
-    if DOMAIN not in hass.data:
-        hass.data[DOMAIN] = {}
-    if entry.entry_id not in hass.data[DOMAIN]:
-        hass.data[DOMAIN][entry.entry_id] = {}
-    hass.data[DOMAIN][entry.entry_id]["webhook_url"] = webhook_url
-    hass.data[DOMAIN][entry.entry_id]["webhook_id"] = webhook_id
+    async def async_handle_cloud_connection_change(_state: Any) -> None:
+        """Create the cloudhook when Home Assistant Cloud connects."""
+        await _async_refresh_cloudhook(hass, entry, webhook_id)
+
+    unsubscribe = _listen_for_cloud_connection(
+        hass, async_handle_cloud_connection_change
+    )
+    hass.data[DOMAIN][entry.entry_id]["cloud_connection_unsubscribe"] = unsubscribe
 
     return webhook_id
 
 
-async def async_unload_webhook(hass: HomeAssistant, webhook_id: str) -> None:
+async def async_unload_webhook(
+    hass: HomeAssistant, webhook_id: str, entry_id: str
+) -> None:
     """Unload webhook."""
     webhook.async_unregister(hass, webhook_id)
 
+    entry_data = hass.data.get(DOMAIN, {}).get(entry_id, {})
+    if unsubscribe := entry_data.pop("cloud_connection_unsubscribe", None):
+        unsubscribe()
+
     # Remove cloud webhook if it exists
-    if cloud.async_is_logged_in(hass):
-        try:
-            await cloud.async_delete_cloudhook(hass, webhook_id)
-        except Exception as err:  # noqa: BLE001
-            _LOGGER.warning("Failed to delete cloud webhook: %s", err)
+    try:
+        await _async_delete_cloudhook(hass, webhook_id)
+    except Exception as err:  # noqa: BLE001
+        _LOGGER.warning(
+            "Failed to delete cloud webhook (%s): %s",
+            type(err).__name__,
+            str(err) or "no details",
+        )
 
 
 async def handle_webhook(
@@ -158,6 +254,38 @@ async def async_process_sensor_data(
     hass: HomeAssistant, entry: ConfigEntry, cpe: str, data: dict[str, Any]
 ) -> None:
     """Process sensor data and update entities."""
+    entry_data = hass.data[DOMAIN][entry.entry_id]
+    webhook_locks: dict[str, asyncio.Lock] = entry_data.setdefault("webhook_locks", {})
+    webhook_lock = webhook_locks.setdefault(cpe, asyncio.Lock())
+
+    async with webhook_lock:
+        await _async_process_ordered_sensor_data(hass, entry, cpe, data)
+
+
+async def _async_process_ordered_sensor_data(
+    hass: HomeAssistant, entry: ConfigEntry, cpe: str, data: dict[str, Any]
+) -> None:
+    """Process sensor data in measurement timestamp order for one CPE."""
+    entry_data = hass.data[DOMAIN][entry.entry_id]
+    raw_timestamp, source_timestamp = _get_measurement_timestamp(data)
+    last_source_timestamps: dict[str, datetime] = entry_data.setdefault(
+        "last_source_timestamps", {}
+    )
+    last_source_timestamp = last_source_timestamps.get(cpe)
+
+    if (
+        source_timestamp is not None
+        and last_source_timestamp is not None
+        and source_timestamp < last_source_timestamp
+    ):
+        _LOGGER.debug(
+            "Ignored out-of-order webhook for CPE %s: measurement timestamp %s is older than %s",
+            cpe,
+            source_timestamp.isoformat(),
+            last_source_timestamp.isoformat(),
+        )
+        return
+
     # Ensure sensors exist for this data
     await async_ensure_sensors_for_data(hass, entry.entry_id, cpe, data)
 
@@ -174,7 +302,7 @@ async def async_process_sensor_data(
                 hass,
                 f"{DOMAIN}_{cpe}_{sensor_key}_update",
                 field_value,
-                data.get("clock"),  # Include timestamp if available
+                raw_timestamp,
             )
 
             _LOGGER.debug(
@@ -198,5 +326,8 @@ async def async_process_sensor_data(
     async_dispatcher_send(
         hass,
         f"{DOMAIN}_{cpe}_webhook_update",
-        data.get("clock"),  # Include timestamp if available
+        raw_timestamp,
     )
+
+    if source_timestamp is not None:
+        last_source_timestamps[cpe] = source_timestamp

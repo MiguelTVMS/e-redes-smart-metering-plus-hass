@@ -6,7 +6,9 @@
     ],
     "config_flow": true,
     "dependencies": [
-        "webhook",
+        "webhook"
+    ],
+    "after_dependencies": [
         "cloud"
     ],
     "documentation": "https://github.com/MiguelTVMS/e-redes-smart-metering-plus-hass?tab=readme-ov-file#readme",
