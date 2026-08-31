@@ -62,6 +62,11 @@ async def _async_create_cloudhook(hass: HomeAssistant, webhook_id: str) -> str |
     """Create a cloudhook when Home Assistant Cloud is available."""
     from homeassistant.components import cloud
 
+    # Respect Settings > System > Network > Home Assistant URL. A configured
+    # external URL means the user explicitly chose it instead of Cloud.
+    if hass.config.external_url:
+        return None
+
     if not cloud.async_active_subscription(hass) or not cloud.async_is_connected(hass):
         return None
 
@@ -111,13 +116,18 @@ async def async_get_active_webhook_url(
     hass: HomeAssistant, entry: ERedesConfigEntry
 ) -> str:
     """Return the active webhook URL for display in integration settings."""
-    if hasattr(entry, "runtime_data") and entry.runtime_data.webhook_url:
-        return entry.runtime_data.webhook_url
+    if hass.config.external_url:
+        webhook_url = webhook.async_generate_url(hass, WEBHOOK_ID)
+        _store_webhook_url(entry, WEBHOOK_ID, webhook_url)
+        return webhook_url
 
     cloudhook_url = await _async_refresh_cloudhook(hass, entry, WEBHOOK_ID)
     if cloudhook_url:
         return cloudhook_url
-    return webhook.async_generate_url(hass, WEBHOOK_ID)
+
+    webhook_url = webhook.async_generate_url(hass, WEBHOOK_ID)
+    _store_webhook_url(entry, WEBHOOK_ID, webhook_url)
+    return webhook_url
 
 
 async def async_setup_webhook(hass: HomeAssistant, entry: ERedesConfigEntry) -> str:
