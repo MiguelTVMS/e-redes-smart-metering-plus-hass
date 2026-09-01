@@ -17,8 +17,12 @@
     "data": { "cpes": "CPE autorizado" }
   } } },
   "entity": {
-    "number": { "breaker_limit": { "name": "Limite do disjuntor" } },
-    "binary_sensor": { "breaker_overload": { "name": "Sobrecarga do disjuntor" } },
+    "select": { "contracted_power": { "name": "Potência contratada" } },
+    "binary_sensor": {
+      "breaker_load_warning": { "name": "Aviso de carga do disjuntor" },
+      "breaker_load_critical": { "name": "Carga crítica do disjuntor" },
+      "breaker_overload": { "name": "Sobrecarga do disjuntor" }
+    },
     "sensor": {
       "instantaneous_active_power_import": { "name": "Potência ativa importada instantânea" },
       "max_active_power_import": { "name": "Potência ativa importada máxima" },
@@ -34,7 +38,20 @@
       "instantaneous_active_power_export_l2": { "name": "Potência ativa exportada instantânea L2" },
       "instantaneous_active_power_export_l3": { "name": "Potência ativa exportada instantânea L3" },
       "instantaneous_active_current_import": { "name": "Corrente ativa importada instantânea" },
-      "breaker_load": { "name": "Carga do disjuntor" }, "last_update": { "name": "Última atualização" }, "update_interval": { "name": "Intervalo de atualização" }
+      "instantaneous_active_current_import_l1": { "name": "Corrente ativa importada instantânea L1" },
+      "instantaneous_active_current_import_l2": { "name": "Corrente ativa importada instantânea L2" },
+      "instantaneous_active_current_import_l3": { "name": "Corrente ativa importada instantânea L3" },
+      "breaker_load": { "name": "Carga do disjuntor" },
+      "breaker_load_status": {
+        "name": "Estado da carga do disjuntor",
+        "state": {
+          "normal": "Normal",
+          "warning": "Aviso",
+          "critical": "Crítico",
+          "overload": "Sobrecarga"
+        }
+      },
+      "last_update": { "name": "Última atualização" }, "update_interval": { "name": "Intervalo de atualização" }
     }
   }
 }

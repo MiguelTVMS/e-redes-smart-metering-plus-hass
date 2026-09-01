@@ -227,7 +227,7 @@ async def test_current_three_phase_payload_fields(
 async def test_existing_device_gets_companion_entities(
     hass: HomeAssistant, config_entry
 ) -> None:
-    """Existing devices must receive number and overload entities on update."""
+    """Existing devices receive configuration and problem entities on update."""
     cpe = "ABCDEF"
     dr.async_get(hass).async_get_or_create(
         config_entry_id=config_entry.entry_id,
@@ -245,8 +245,13 @@ async def test_existing_device_gets_companion_entities(
 
     entity_registry = er.async_get(hass)
     assert entity_registry.async_get_entity_id(
-        "number", DOMAIN, f"{DOMAIN}_{cpe}_breaker_limit"
+        "select", DOMAIN, f"{DOMAIN}_{cpe}_contracted_power"
     )
-    assert entity_registry.async_get_entity_id(
-        "binary_sensor", DOMAIN, f"{DOMAIN}_{cpe}_breaker_overload"
-    )
+    for sensor_key in (
+        "breaker_load_warning",
+        "breaker_load_critical",
+        "breaker_overload",
+    ):
+        assert entity_registry.async_get_entity_id(
+            "binary_sensor", DOMAIN, f"{DOMAIN}_{cpe}_{sensor_key}"
+        )

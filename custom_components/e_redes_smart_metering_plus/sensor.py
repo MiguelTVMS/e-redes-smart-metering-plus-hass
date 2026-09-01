@@ -22,6 +22,9 @@ from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.util import dt as dt_util
 
 from .const import (
+    BREAKER_LOAD_CRITICAL_PERCENT,
+    BREAKER_LOAD_OVERLOAD_PERCENT,
+    BREAKER_LOAD_WARNING_PERCENT,
     CALCULATED_SENSORS,
     DIAGNOSTIC_SENSORS,
     DOMAIN,
@@ -31,8 +34,12 @@ from .const import (
     ERedesSensorEntityDescription,
 )
 from .models import ERedesConfigEntry, device_info_for_cpe
+from .select import breaker_limit_amps, is_three_phase
 
 _LOGGER = logging.getLogger(__name__)
+
+_PHASES = (1, 2, 3)
+_SINGLE_PHASE_CURRENT_KEY = "instantaneous_active_current_import"
 
 
 async def async_setup_entry(
@@ -203,13 +210,43 @@ class ERedesCalculatedSensor(RestoreSensor):
         return device_info_for_cpe(self._cpe)
 
     @property
+    def available(self) -> bool:
+        """Return whether load entities have valid configured inputs."""
+        if self.entity_description.key in {"breaker_load", "breaker_load_status"}:
+            return self.native_value is not None
+        return True
+
+    @property
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return stable calculation metadata."""
-        return {
+        attributes: dict[str, Any] = {
             "cpe": self._cpe,
             "calculation_type": self.entity_description.calculation,
             "source_sensors": self.entity_description.source_sensors,
         }
+        if self.entity_description.key in {"breaker_load", "breaker_load_status"}:
+            select_entity = self._config_entry.runtime_data.select_entities.get(
+                self._cpe
+            )
+            selected_option = (
+                select_entity.current_option if select_entity is not None else None
+            )
+            attributes.update(
+                {
+                    "contracted_power": selected_option,
+                    "breaker_limit": breaker_limit_amps(
+                        self._config_entry, self._cpe, selected_option
+                    ),
+                    "installation_type": (
+                        "three_phase"
+                        if is_three_phase(self._config_entry, self._cpe)
+                        else "single_phase"
+                    ),
+                }
+            )
+            if current_and_phase := self._breaker_current_and_phase():
+                attributes["limiting_phase"] = current_and_phase[1]
+        return attributes
 
     async def async_added_to_hass(self) -> None:
         """Restore state and subscribe to source updates."""
@@ -217,7 +254,20 @@ class ERedesCalculatedSensor(RestoreSensor):
         if restored := await self.async_get_last_sensor_data():
             self._attr_native_value = restored.native_value
 
-        for source_sensor in self.entity_description.source_sensors:
+        source_sensors = set(self.entity_description.source_sensors)
+        if self.entity_description.key in {
+            _SINGLE_PHASE_CURRENT_KEY,
+            "breaker_load",
+        }:
+            for phase in _PHASES:
+                source_sensors.update(
+                    {
+                        f"instantaneous_active_power_import_l{phase}",
+                        f"voltage_l{phase}",
+                    }
+                )
+
+        for source_sensor in source_sensors:
             self.async_on_remove(
                 async_dispatcher_connect(
                     self.hass,
@@ -226,32 +276,33 @@ class ERedesCalculatedSensor(RestoreSensor):
                 )
             )
 
-        if number_key := self.entity_description.requires_number_entity:
+        if select_key := self.entity_description.requires_select_entity:
             self.async_on_remove(
                 async_dispatcher_connect(
                     self.hass,
-                    f"{DOMAIN}_{self._cpe}_{number_key}_update",
-                    self._handle_number_entity_update,
+                    f"{DOMAIN}_{self._cpe}_{select_key}_update",
+                    self._handle_config_entity_update,
                 )
             )
 
         calculated = self._calculate_value()
-        if calculated is not None:
+        if calculated is not None or self.entity_description.key in {
+            "breaker_load",
+            "breaker_load_status",
+        }:
             self._attr_native_value = calculated
         self._notify_breaker_load_update()
 
     @callback
-    def _handle_source_update(
-        self, _value: float, _timestamp: str | None = None
-    ) -> None:
+    def _handle_source_update(self, *_args: Any) -> None:
         """Recalculate after a source sensor update."""
         self._attr_native_value = self._calculate_value()
         self.async_write_ha_state()
         self._notify_breaker_load_update()
 
     @callback
-    def _handle_number_entity_update(self, _value: float) -> None:
-        """Recalculate after the breaker limit changes."""
+    def _handle_config_entity_update(self, *_args: Any) -> None:
+        """Recalculate after the contracted-power selection changes."""
         self._attr_native_value = self._calculate_value()
         self.async_write_ha_state()
         self._notify_breaker_load_update()
@@ -263,12 +314,14 @@ class ERedesCalculatedSensor(RestoreSensor):
                 self.hass, f"{DOMAIN}_{self._cpe}_breaker_load_update"
             )
 
-    def _calculate_value(self) -> float | None:
+    def _calculate_value(self) -> float | str | None:
         """Calculate the current value from runtime entities."""
         if self.entity_description.calculation == "power_voltage":
             return self._calculate_current_from_power_voltage()
         if self.entity_description.calculation == "current_breaker_limit":
             return self._calculate_breaker_load()
+        if self.entity_description.calculation == "breaker_load_status":
+            return self._calculate_breaker_load_status()
         _LOGGER.warning(
             "Unknown calculation type: %s", self.entity_description.calculation
         )
@@ -276,9 +329,16 @@ class ERedesCalculatedSensor(RestoreSensor):
 
     def _power_and_voltage(self) -> tuple[float, float] | None:
         """Return current power and voltage source values."""
+        power_key, voltage_key = self.entity_description.source_sensors[:2]
+        return self._sensor_values(power_key, voltage_key)
+
+    def _sensor_values(
+        self, power_key: str, voltage_key: str
+    ) -> tuple[float, float] | None:
+        """Return numeric values for matching power and voltage sensors."""
         entities = self._config_entry.runtime_data.sensor_entities
-        power_sensor = entities.get(f"{self._cpe}_instantaneous_active_power_import")
-        voltage_sensor = entities.get(f"{self._cpe}_voltage_l1")
+        power_sensor = entities.get(f"{self._cpe}_{power_key}")
+        voltage_sensor = entities.get(f"{self._cpe}_{voltage_key}")
         if (
             power_sensor is None
             or power_sensor.native_value is None
@@ -296,29 +356,99 @@ class ERedesCalculatedSensor(RestoreSensor):
         return power, voltage
 
     def _calculate_current_from_power_voltage(self) -> float | None:
-        """Calculate single-phase current from power and voltage."""
+        """Calculate active current from matching power and voltage values."""
+        if (
+            self.entity_description.key == _SINGLE_PHASE_CURRENT_KEY
+            and self._has_phase_power()
+        ):
+            return None
         if (values := self._power_and_voltage()) is None:
             return None
         power, voltage = values
         return power / voltage
 
-    def _calculate_breaker_load(self) -> float | None:
-        """Calculate breaker load percentage."""
-        if (values := self._power_and_voltage()) is None:
+    def _has_phase_power(self) -> bool:
+        """Return whether E-REDES supplied any phase-specific import power."""
+        entities = self._config_entry.runtime_data.sensor_entities
+        return any(
+            f"{self._cpe}_instantaneous_active_power_import_l{phase}" in entities
+            for phase in _PHASES
+        )
+
+    def _phase_currents(self) -> list[tuple[float, str]]:
+        """Return active currents and names for phases with matching values."""
+        entities = self._config_entry.runtime_data.sensor_entities
+        currents: list[tuple[float, str]] = []
+        for phase in _PHASES:
+            power_sensor = entities.get(
+                f"{self._cpe}_instantaneous_active_power_import_l{phase}"
+            )
+            voltage_sensor = entities.get(f"{self._cpe}_voltage_l{phase}")
+            if (
+                power_sensor is None
+                or power_sensor.native_value is None
+                or voltage_sensor is None
+                or voltage_sensor.native_value is None
+            ):
+                continue
+            try:
+                power = float(str(power_sensor.native_value))
+                voltage = float(str(voltage_sensor.native_value))
+            except (TypeError, ValueError):
+                continue
+            if voltage != 0:
+                currents.append((power / voltage, f"L{phase}"))
+        return currents
+
+    def _breaker_current_and_phase(self) -> tuple[float, str] | None:
+        """Return the highest measured active current and its phase."""
+        if self._has_phase_power():
+            if not (currents := self._phase_currents()):
+                return None
+            return max(currents, key=lambda value: value[0])
+        if (
+            values := self._sensor_values(
+                "instantaneous_active_power_import", "voltage_l1"
+            )
+        ) is None:
             return None
         power, voltage = values
-        breaker_limit_entity = self._config_entry.runtime_data.number_entities.get(
-            self._cpe
+        return power / voltage, "single_phase"
+
+    def _calculate_breaker_load(self) -> float | None:
+        """Calculate breaker load percentage."""
+        if (current_and_phase := self._breaker_current_and_phase()) is None:
+            return None
+        current, _phase = current_and_phase
+        select_entity = self._config_entry.runtime_data.select_entities.get(self._cpe)
+        selected_option = (
+            select_entity.current_option if select_entity is not None else None
         )
-        if breaker_limit_entity is None or breaker_limit_entity.native_value is None:
+        breaker_limit = breaker_limit_amps(
+            self._config_entry, self._cpe, selected_option
+        )
+        if breaker_limit is None or breaker_limit <= 0:
+            return None
+        return current / breaker_limit * 100
+
+    def _calculate_breaker_load_status(self) -> str | None:
+        """Return the severity corresponding to the current breaker load."""
+        load_sensor = self._config_entry.runtime_data.sensor_entities.get(
+            f"{self._cpe}_breaker_load"
+        )
+        if load_sensor is None or load_sensor.native_value is None:
             return None
         try:
-            breaker_limit = float(breaker_limit_entity.native_value)
+            load = float(str(load_sensor.native_value))
         except (TypeError, ValueError):
             return None
-        if breaker_limit <= 0:
-            return None
-        return (power / voltage) / breaker_limit * 100
+        if load >= BREAKER_LOAD_OVERLOAD_PERCENT:
+            return "overload"
+        if load >= BREAKER_LOAD_CRITICAL_PERCENT:
+            return "critical"
+        if load >= BREAKER_LOAD_WARNING_PERCENT:
+            return "warning"
+        return "normal"
 
 
 async def async_create_sensor_for_cpe(
@@ -362,19 +492,32 @@ async def async_ensure_calculated_sensors(
 ) -> None:
     """Ensure calculated sensors exist when all their dependencies are present."""
     entities = config_entry.runtime_data.sensor_entities
+    has_phase_power = any(
+        f"{cpe}_instantaneous_active_power_import_l{phase}" in entities
+        for phase in _PHASES
+    )
 
     for sensor_key, description in CALCULATED_SENSORS.items():
         entity_key = f"{cpe}_{sensor_key}"
         if entity_key in entities:
             continue
-        if any(
-            f"{cpe}_{source_sensor}" not in entities
+        if sensor_key == _SINGLE_PHASE_CURRENT_KEY and has_phase_power:
+            continue
+        has_description_sources = all(
+            f"{cpe}_{source_sensor}" in entities
             for source_sensor in description.source_sensors
+        )
+        has_complete_phase = any(
+            f"{cpe}_instantaneous_active_power_import_l{phase}" in entities
+            and f"{cpe}_voltage_l{phase}" in entities
+            for phase in _PHASES
+        )
+        if not has_description_sources and not (
+            sensor_key == "breaker_load" and has_complete_phase
         ):
             continue
-        if (
-            description.requires_number_entity
-            and cpe not in config_entry.runtime_data.number_entities
+        if description.requires_select_entity and (
+            cpe not in config_entry.runtime_data.select_entities
         ):
             continue
 

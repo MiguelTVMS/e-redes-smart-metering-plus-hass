@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 
 from homeassistant.components.binary_sensor import BinarySensorEntity
-from homeassistant.components.number import NumberEntity
+from homeassistant.components.select import SelectEntity
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.device_registry import DeviceInfo
@@ -24,10 +24,10 @@ class ERedesRuntimeData:
     webhook_id: str = WEBHOOK_ID
     webhook_url: str | None = None
     sensor_entities: dict[str, SensorEntity] = field(default_factory=dict)
-    number_entities: dict[str, NumberEntity] = field(default_factory=dict)
+    select_entities: dict[str, SelectEntity] = field(default_factory=dict)
     binary_sensor_entities: dict[str, BinarySensorEntity] = field(default_factory=dict)
     sensor_add_entities: AddConfigEntryEntitiesCallback | None = None
-    number_add_entities: AddConfigEntryEntitiesCallback | None = None
+    select_add_entities: AddConfigEntryEntitiesCallback | None = None
     binary_sensor_add_entities: AddConfigEntryEntitiesCallback | None = None
     last_source_timestamps: dict[str, datetime] = field(default_factory=dict)
     webhook_locks: dict[str, asyncio.Lock] = field(default_factory=dict)

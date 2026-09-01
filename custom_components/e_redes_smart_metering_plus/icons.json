@@ -1,0 +1,50 @@
+{
+  "entity": {
+    "binary_sensor": {
+      "breaker_load_warning": {
+        "default": "mdi:alert-outline",
+        "state": {
+          "on": "mdi:alert"
+        }
+      },
+      "breaker_load_critical": {
+        "default": "mdi:alert-circle-outline",
+        "state": {
+          "on": "mdi:alert-circle"
+        }
+      },
+      "breaker_overload": {
+        "default": "mdi:alert-octagon-outline",
+        "state": {
+          "on": "mdi:alert-octagon"
+        }
+      }
+    },
+    "select": {
+      "contracted_power": {
+        "default": "mdi:transmission-tower"
+      }
+    },
+    "sensor": {
+      "breaker_load": {
+        "default": "mdi:gauge",
+        "range": {
+          "0": "mdi:gauge-empty",
+          "1": "mdi:gauge-low",
+          "80": "mdi:gauge",
+          "95": "mdi:gauge-full",
+          "100": "mdi:alert-octagon"
+        }
+      },
+      "breaker_load_status": {
+        "default": "mdi:gauge",
+        "state": {
+          "normal": "mdi:check-circle-outline",
+          "warning": "mdi:alert-outline",
+          "critical": "mdi:alert-circle",
+          "overload": "mdi:alert-octagon"
+        }
+      }
+    }
+  }
+}

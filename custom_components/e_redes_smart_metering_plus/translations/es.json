@@ -17,8 +17,12 @@
     "data": { "cpes": "CPE autorizado" }
   } } },
   "entity": {
-    "number": { "breaker_limit": { "name": "Límite del interruptor" } },
-    "binary_sensor": { "breaker_overload": { "name": "Sobrecarga del interruptor" } },
+    "select": { "contracted_power": { "name": "Potencia contratada" } },
+    "binary_sensor": {
+      "breaker_load_warning": { "name": "Aviso de carga del interruptor" },
+      "breaker_load_critical": { "name": "Carga crítica del interruptor" },
+      "breaker_overload": { "name": "Sobrecarga del interruptor" }
+    },
     "sensor": {
       "instantaneous_active_power_import": { "name": "Potencia activa importada instantánea" },
       "max_active_power_import": { "name": "Potencia activa importada máxima" },
@@ -34,7 +38,20 @@
       "instantaneous_active_power_export_l2": { "name": "Potencia activa exportada instantánea L2" },
       "instantaneous_active_power_export_l3": { "name": "Potencia activa exportada instantánea L3" },
       "instantaneous_active_current_import": { "name": "Corriente activa importada instantánea" },
-      "breaker_load": { "name": "Carga del interruptor" }, "last_update": { "name": "Última actualización" }, "update_interval": { "name": "Intervalo de actualización" }
+      "instantaneous_active_current_import_l1": { "name": "Corriente activa importada instantánea L1" },
+      "instantaneous_active_current_import_l2": { "name": "Corriente activa importada instantánea L2" },
+      "instantaneous_active_current_import_l3": { "name": "Corriente activa importada instantánea L3" },
+      "breaker_load": { "name": "Carga del interruptor" },
+      "breaker_load_status": {
+        "name": "Estado de carga del interruptor",
+        "state": {
+          "normal": "Normal",
+          "warning": "Aviso",
+          "critical": "Crítico",
+          "overload": "Sobrecarga"
+        }
+      },
+      "last_update": { "name": "Última actualización" }, "update_interval": { "name": "Intervalo de actualización" }
     }
   }
 }

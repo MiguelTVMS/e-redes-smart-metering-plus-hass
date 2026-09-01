@@ -23,8 +23,12 @@
     }
   },
   "entity": {
-    "number": { "breaker_limit": { "name": "Breaker limit" } },
-    "binary_sensor": { "breaker_overload": { "name": "Breaker overload" } },
+    "select": { "contracted_power": { "name": "Contracted power" } },
+    "binary_sensor": {
+      "breaker_load_warning": { "name": "Breaker load warning" },
+      "breaker_load_critical": { "name": "Breaker load critical" },
+      "breaker_overload": { "name": "Breaker overload" }
+    },
     "sensor": {
       "instantaneous_active_power_import": { "name": "Instantaneous active power import" },
       "max_active_power_import": { "name": "Maximum active power import" },
@@ -42,7 +46,19 @@
       "instantaneous_active_power_export_l2": { "name": "Instantaneous active power export L2" },
       "instantaneous_active_power_export_l3": { "name": "Instantaneous active power export L3" },
       "instantaneous_active_current_import": { "name": "Instantaneous active current import" },
+      "instantaneous_active_current_import_l1": { "name": "Instantaneous active current import L1" },
+      "instantaneous_active_current_import_l2": { "name": "Instantaneous active current import L2" },
+      "instantaneous_active_current_import_l3": { "name": "Instantaneous active current import L3" },
       "breaker_load": { "name": "Breaker load" },
+      "breaker_load_status": {
+        "name": "Breaker load status",
+        "state": {
+          "normal": "Normal",
+          "warning": "Warning",
+          "critical": "Critical",
+          "overload": "Overload"
+        }
+      },
       "last_update": { "name": "Last update" },
       "update_interval": { "name": "Update interval" }
     }

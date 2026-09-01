@@ -92,18 +92,38 @@ async def test_migration_adds_existing_device_cpes(hass: HomeAssistant) -> None:
         domain="sensor",
         platform=DOMAIN,
         config_entry=entry,
-        unique_id=(
-            f"{DOMAIN}_PT000000000000000003_instantaneous_active_power_import"
-        ),
+        unique_id=(f"{DOMAIN}_PT000000000000000003_instantaneous_active_power_import"),
     )
 
     assert await async_migrate_entry(hass, entry)
-    assert entry.version == 2
+    assert entry.version == 3
     assert entry.data[CONF_CPES] == [
         "PT000000000000000001",
         "PT000000000000000002",
         "PT000000000000000003",
     ]
+
+
+async def test_migration_disables_legacy_breaker_number(
+    hass: HomeAssistant,
+) -> None:
+    """The retired free-form breaker number is disabled during migration."""
+    entry = MockConfigEntry(domain=DOMAIN, data={CONF_CPES: []}, version=2)
+    entry.add_to_hass(hass)
+    registry = er.async_get(hass)
+    legacy = registry.async_get_or_create(
+        domain="number",
+        platform=DOMAIN,
+        config_entry=entry,
+        unique_id=f"{DOMAIN}_PT000000000000000001_breaker_limit",
+    )
+
+    assert await async_migrate_entry(hass, entry)
+
+    assert entry.version == 3
+    migrated = registry.async_get(legacy.entity_id)
+    assert migrated is not None
+    assert migrated.disabled_by is er.RegistryEntryDisabler.INTEGRATION
 
 
 async def test_unload_does_not_remove_cloudhook(

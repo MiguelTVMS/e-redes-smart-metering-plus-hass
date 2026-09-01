@@ -16,7 +16,7 @@ from .webhook import (
     async_unload_webhook,
 )
 
-_PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.NUMBER, Platform.BINARY_SENSOR]
+_PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.SELECT, Platform.BINARY_SENSOR]
 _CPE_UNIQUE_ID_PATTERN = re.compile(rf"^{DOMAIN}_(PT[A-Z0-9]{{18}})_")
 
 
@@ -57,25 +57,45 @@ async def async_remove_entry(hass: HomeAssistant, entry: ERedesConfigEntry) -> N
 
 async def async_migrate_entry(hass: HomeAssistant, entry: ERedesConfigEntry) -> bool:
     """Migrate existing config entries to the current schema."""
-    if entry.version >= 2:
-        return True
+    data = dict(entry.data)
+    if entry.version < 2:
+        configured_cpes = set(entry.data.get(CONF_CPES, ()))
+        device_registry = dr.async_get(hass)
+        for device in dr.async_entries_for_config_entry(
+            device_registry, entry.entry_id
+        ):
+            configured_cpes.update(
+                identifier
+                for domain, identifier in device.identifiers
+                if domain == DOMAIN
+            )
 
-    configured_cpes = set(entry.data.get(CONF_CPES, ()))
-    device_registry = dr.async_get(hass)
-    for device in dr.async_entries_for_config_entry(device_registry, entry.entry_id):
-        configured_cpes.update(
-            identifier for domain, identifier in device.identifiers if domain == DOMAIN
-        )
+        entity_registry = er.async_get(hass)
+        for entity in er.async_entries_for_config_entry(
+            entity_registry, entry.entry_id
+        ):
+            if match := _CPE_UNIQUE_ID_PATTERN.match(entity.unique_id):
+                configured_cpes.add(match.group(1))
 
-    entity_registry = er.async_get(hass)
-    for entity in er.async_entries_for_config_entry(entity_registry, entry.entry_id):
-        if match := _CPE_UNIQUE_ID_PATTERN.match(entity.unique_id):
-            configured_cpes.add(match.group(1))
+        data[CONF_CPES] = sorted(configured_cpes)
+
+    if entry.version < 3:
+        entity_registry = er.async_get(hass)
+        for entity in er.async_entries_for_config_entry(
+            entity_registry, entry.entry_id
+        ):
+            if entity.domain == Platform.NUMBER and entity.unique_id.endswith(
+                "_breaker_limit"
+            ):
+                entity_registry.async_update_entity(
+                    entity.entity_id,
+                    disabled_by=er.RegistryEntryDisabler.INTEGRATION,
+                )
 
     hass.config_entries.async_update_entry(
         entry,
-        data={**entry.data, CONF_CPES: sorted(configured_cpes)},
-        version=2,
+        data=data,
+        version=3,
     )
     return True
 

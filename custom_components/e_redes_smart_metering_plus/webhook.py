@@ -328,13 +328,13 @@ async def async_ensure_device(
         _LOGGER.info("Created new device for CPE: %s", cpe)
 
     # Ensure companion entities even when the device predates those platforms.
-    from .number import async_create_breaker_limit_entity
+    from .select import async_create_contracted_power_entity
 
-    async_create_breaker_limit_entity(entry, cpe)
+    async_create_contracted_power_entity(entry, cpe)
 
-    from .binary_sensor import async_create_breaker_overload_sensor
+    from .binary_sensor import async_create_breaker_problem_sensors
 
-    async_create_breaker_overload_sensor(entry, cpe)
+    async_create_breaker_problem_sensors(entry, cpe)
 
 
 async def async_process_sensor_data(
@@ -370,6 +370,10 @@ async def _async_process_ordered_sensor_data(
 
     # Ensure sensors exist for this data
     await async_ensure_sensors_for_data(entry, cpe, data, raw_timestamp)
+
+    from .select import async_refresh_contracted_power_entity
+
+    async_refresh_contracted_power_entity(entry, cpe)
 
     # Send update signal for each sensor type
     for field_name, field_value in data.items():

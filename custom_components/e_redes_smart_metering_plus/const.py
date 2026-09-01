@@ -43,7 +43,7 @@ class ERedesCalculatedSensorEntityDescription(SensorEntityDescription):
 
     calculation: str
     source_sensors: tuple[str, ...]
-    requires_number_entity: str | None = None
+    requires_select_entity: str | None = None
 
 
 INSTANTANEOUS_POWER_IMPORT = ERedesSensorEntityDescription(
@@ -170,13 +170,71 @@ CALCULATED_SENSORS: dict[str, ERedesCalculatedSensorEntityDescription] = {
         translation_key="breaker_load",
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:gauge",
         suggested_display_precision=0,
         calculation="current_breaker_limit",
         source_sensors=("instantaneous_active_power_import", "voltage_l1"),
-        requires_number_entity="breaker_limit",
+        requires_select_entity="contracted_power",
     ),
 }
+
+for _phase in (1, 2, 3):
+    CALCULATED_SENSORS[f"instantaneous_active_current_import_l{_phase}"] = (
+        ERedesCalculatedSensorEntityDescription(
+            key=f"instantaneous_active_current_import_l{_phase}",
+            translation_key=f"instantaneous_active_current_import_l{_phase}",
+            native_unit_of_measurement=UnitOfElectricCurrent.AMPERE,
+            device_class=SensorDeviceClass.CURRENT,
+            state_class=SensorStateClass.MEASUREMENT,
+            icon="mdi:current-ac",
+            suggested_display_precision=2,
+            calculation="power_voltage",
+            source_sensors=(
+                f"instantaneous_active_power_import_l{_phase}",
+                f"voltage_l{_phase}",
+            ),
+        )
+    )
+
+CALCULATED_SENSORS["breaker_load_status"] = ERedesCalculatedSensorEntityDescription(
+    key="breaker_load_status",
+    translation_key="breaker_load_status",
+    device_class=SensorDeviceClass.ENUM,
+    options=["normal", "warning", "critical", "overload"],
+    calculation="breaker_load_status",
+    source_sensors=("breaker_load",),
+)
+
+BREAKER_LOAD_WARNING_PERCENT = 80.0
+BREAKER_LOAD_CRITICAL_PERCENT = 95.0
+BREAKER_LOAD_OVERLOAD_PERCENT = 100.0
+
+SINGLE_PHASE_CONTRACTED_POWER_AMPS = {
+    "1.15 kVA": 5.0,
+    "2.30 kVA": 10.0,
+    "3.45 kVA": 15.0,
+    "4.60 kVA": 20.0,
+    "5.75 kVA": 25.0,
+    "6.90 kVA": 30.0,
+    "10.35 kVA": 45.0,
+    "13.80 kVA": 60.0,
+}
+
+THREE_PHASE_CONTRACTED_POWER_AMPS = {
+    "6.90 kVA": 10.0,
+    "10.35 kVA": 15.0,
+    "13.80 kVA": 20.0,
+    "17.25 kVA": 25.0,
+    "20.70 kVA": 30.0,
+    "27.60 kVA": 40.0,
+    "34.50 kVA": 50.0,
+    "41.40 kVA": 60.0,
+}
+
+CONTRACTED_POWER_OPTIONS = tuple(
+    dict.fromkeys(
+        (*SINGLE_PHASE_CONTRACTED_POWER_AMPS, *THREE_PHASE_CONTRACTED_POWER_AMPS)
+    )
+)
 
 DIAGNOSTIC_SENSORS: dict[str, SensorEntityDescription] = {
     "last_update": SensorEntityDescription(
