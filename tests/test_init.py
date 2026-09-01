@@ -96,7 +96,7 @@ async def test_migration_adds_existing_device_cpes(hass: HomeAssistant) -> None:
     )
 
     assert await async_migrate_entry(hass, entry)
-    assert entry.version == 3
+    assert entry.version == 6
     assert entry.data[CONF_CPES] == [
         "PT000000000000000001",
         "PT000000000000000002",
@@ -104,10 +104,10 @@ async def test_migration_adds_existing_device_cpes(hass: HomeAssistant) -> None:
     ]
 
 
-async def test_migration_disables_legacy_breaker_number(
+async def test_migration_disables_legacy_current_limit_number(
     hass: HomeAssistant,
 ) -> None:
-    """The retired free-form breaker number is disabled during migration."""
+    """The retired free-form current-limit number is disabled during migration."""
     entry = MockConfigEntry(domain=DOMAIN, data={CONF_CPES: []}, version=2)
     entry.add_to_hass(hass)
     registry = er.async_get(hass)
@@ -120,10 +120,57 @@ async def test_migration_disables_legacy_breaker_number(
 
     assert await async_migrate_entry(hass, entry)
 
-    assert entry.version == 3
+    assert entry.version == 6
     migrated = registry.async_get(legacy.entity_id)
     assert migrated is not None
     assert migrated.disabled_by is er.RegistryEntryDisabler.INTEGRATION
+
+
+async def test_migration_renames_contracted_power_entity_keys(
+    hass: HomeAssistant,
+) -> None:
+    """Pre-release entity keys are migrated without creating duplicates."""
+    entry = MockConfigEntry(domain=DOMAIN, data={CONF_CPES: []}, version=5)
+    entry.add_to_hass(hass)
+    registry = er.async_get(hass)
+    old_keys = {
+        "breaker_load_warning": "contracted_power_usage_warning",
+        "breaker_load_critical": "contracted_power_usage_critical",
+        "breaker_overload": "contracted_power_exceeded",
+        "breaker_load": "contracted_power_usage",
+        "breaker_load_status": "contracted_power_usage_status",
+    }
+    entities = []
+    for old_key, new_key in old_keys.items():
+        domain = (
+            "binary_sensor"
+            if old_key
+            in {
+                "breaker_load_warning",
+                "breaker_load_critical",
+                "breaker_overload",
+            }
+            else "sensor"
+        )
+        entity = registry.async_get_or_create(
+            domain=domain,
+            platform=DOMAIN,
+            config_entry=entry,
+            unique_id=f"{DOMAIN}_PT000000000000000001_{old_key}",
+            suggested_object_id=f"meter_{old_key}",
+        )
+        entities.append((entity.entity_id, domain, new_key))
+
+    assert await async_migrate_entry(hass, entry)
+
+    assert entry.version == 6
+    for old_entity_id, domain, new_key in entities:
+        assert registry.async_get(old_entity_id) is None
+        migrated = registry.async_get(f"{domain}.meter_{new_key}")
+        assert migrated is not None
+        assert migrated.unique_id == (
+            f"{DOMAIN}_PT000000000000000001_{new_key}"
+        )
 
 
 async def test_unload_does_not_remove_cloudhook(

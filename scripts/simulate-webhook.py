@@ -39,7 +39,7 @@ SOLAR_POWER = (
     (0, 1450),
     (180, 0),
 )
-BREAKER_LOAD_RATIOS = (0.50, 0.82, 0.96, 1.05, 0.70)
+CONTRACTED_POWER_USAGE_RATIOS = (0.50, 0.82, 0.96, 1.05, 0.70)
 VOLTAGE_PATTERN = (230.0, 229.6, 230.4, 231.1, 229.8, 230.2)
 
 
@@ -55,7 +55,7 @@ class SimulationConfig:
     scenario: str = "household"
     interval: float = 2.0
     phases: int = 1
-    breaker_amps: float = 20.0
+    nominal_current_amps: float = 20.0
     initial_energy_import_wh: float = 14_817_930.0
     initial_energy_export_wh: float = 0.0
 
@@ -78,7 +78,17 @@ class MeterSimulator:
         """Return the next payload and advance cumulative energy counters."""
         formatted_timestamp = _format_timestamp(timestamp)
         voltage_l1 = VOLTAGE_PATTERN[self.sample_index % len(VOLTAGE_PATTERN)]
+        voltage_l2 = round(voltage_l1 + 0.7, 1)
+        voltage_l3 = round(voltage_l1 - 0.5, 1)
         import_w, export_w = self._power_values(voltage_l1)
+        phase_import_w: tuple[int, int, int] | None = None
+        if self.config.phases == 3 and self.config.scenario == "contracted-power":
+            ratio = self._contracted_power_usage_ratio()
+            phase_import_w = tuple(
+                round(voltage * self.config.nominal_current_amps * ratio)
+                for voltage in (voltage_l1, voltage_l2, voltage_l3)
+            )
+            import_w = sum(phase_import_w)
 
         if import_w > self.max_import_w:
             self.max_import_w = import_w
@@ -106,11 +116,12 @@ class MeterSimulator:
         if self.config.phases == 3:
             payload.update(
                 {
-                    "voltageL2": round(voltage_l1 + 0.7, 1),
-                    "voltageL3": round(voltage_l1 - 0.5, 1),
+                    "voltageL2": voltage_l2,
+                    "voltageL3": voltage_l3,
                 }
             )
-            for phase, value in enumerate(_split_power(import_w), start=1):
+            import_values = phase_import_w or _split_power(import_w)
+            for phase, value in enumerate(import_values, start=1):
                 payload[f"instantaneousActivePowerImportL{phase}"] = value
             for phase, value in enumerate(_split_power(export_w), start=1):
                 payload[f"instantaneousActivePowerExportL{phase}"] = value
@@ -122,12 +133,24 @@ class MeterSimulator:
 
     def _power_values(self, voltage: float) -> tuple[int, int]:
         """Return import and export power for the current scenario step."""
-        if self.config.scenario == "breaker":
-            ratio = BREAKER_LOAD_RATIOS[self.sample_index % len(BREAKER_LOAD_RATIOS)]
-            return round(voltage * self.config.breaker_amps * ratio), 0
+        if self.config.scenario == "contracted-power":
+            return (
+                round(
+                    voltage
+                    * self.config.nominal_current_amps
+                    * self._contracted_power_usage_ratio()
+                ),
+                0,
+            )
 
         pattern = SOLAR_POWER if self.config.scenario == "solar" else HOUSEHOLD_POWER
         return pattern[self.sample_index % len(pattern)]
+
+    def _contracted_power_usage_ratio(self) -> float:
+        """Return the usage ratio for the current scenario step."""
+        return CONTRACTED_POWER_USAGE_RATIOS[
+            self.sample_index % len(CONTRACTED_POWER_USAGE_RATIOS)
+        ]
 
 
 def _format_timestamp(timestamp: datetime) -> str:
@@ -207,7 +230,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--cpe", default=os.environ.get("TEST_CPE", DEFAULT_CPE))
     parser.add_argument(
         "--scenario",
-        choices=("household", "solar", "breaker"),
+        choices=("household", "solar", "contracted-power"),
         default=os.environ.get("SIMULATION_SCENARIO", "household"),
     )
     parser.add_argument(
@@ -229,10 +252,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=os.environ.get("SIMULATION_PHASES", "1"),
     )
     parser.add_argument(
-        "--breaker-amps",
+        "--nominal-current-amps",
         type=_positive_float,
-        default=os.environ.get("SIMULATION_BREAKER_AMPS", "20"),
-        help="nominal current used by the breaker scenario (default: 20)",
+        default=os.environ.get("SIMULATION_NOMINAL_CURRENT_AMPS", "20"),
+        help="nominal current for the contracted-power scenario (default: 20)",
     )
     parser.add_argument("--timeout", type=_positive_float, default=10.0)
     parser.add_argument(
@@ -258,7 +281,7 @@ def run(args: argparse.Namespace) -> int:
         scenario=args.scenario,
         interval=args.interval,
         phases=args.phases,
-        breaker_amps=args.breaker_amps,
+        nominal_current_amps=args.nominal_current_amps,
     )
     simulator = MeterSimulator(config)
     count = 1 if args.dry_run and args.count == 0 else args.count

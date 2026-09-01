@@ -130,15 +130,15 @@ Available scenarios are:
 
 - `household`: varied import with brief export periods
 - `solar`: a daytime-style transition from import to export
-- `breaker`: 50%, 82%, 96%, 105%, and 70% of a nominal current, exercising normal, warning, critical, overload, and recovery states
+- `contracted-power`: 50%, 82%, 96%, 105%, and 70% of a nominal current, exercising normal, warning, critical, exceeded, and recovery states
 
-For example, send ten three-phase breaker samples one second apart:
+For example, send ten three-phase contracted-power samples one second apart:
 
 ```console
-make simulate SIMULATOR_ARGS="--cpe PT000000000000000000 --scenario breaker --phases 3 --breaker-amps 20 --interval 1 --count 10"
+make simulate SIMULATOR_ARGS="--cpe PT000000000000000000 --scenario contracted-power --phases 3 --nominal-current-amps 20 --interval 1 --count 10"
 ```
 
-Select the matching contracted-power tier in Home Assistant before using the breaker scenario. A 20 A nominal current corresponds to 4.60 kVA for a single-phase installation or 13.80 kVA for a three-phase installation.
+Select the matching contracted-power tier in Home Assistant before using this scenario. A 20 A nominal current corresponds to 4.60 kVA for a single-phase installation or 13.80 kVA for a three-phase installation.
 
 Use `--dry-run` to inspect one generated payload without sending it, or `--print-payload` to display every payload while sending. Run the complete option reference with:
 
@@ -146,7 +146,7 @@ Use `--dry-run` to inspect one generated payload without sending it, or `--print
 .venv/bin/python scripts/simulate-webhook.py --help
 ```
 
-On Windows, replace `.venv/bin/python` with `.venv\Scripts\python.exe`. The same settings are available through the `WEBHOOK_URL`, `TEST_CPE`, `SIMULATION_SCENARIO`, `SIMULATION_INTERVAL`, `SIMULATION_COUNT`, `SIMULATION_PHASES`, and `SIMULATION_BREAKER_AMPS` environment variables.
+On Windows, replace `.venv/bin/python` with `.venv\Scripts\python.exe`. The same settings are available through the `WEBHOOK_URL`, `TEST_CPE`, `SIMULATION_SCENARIO`, `SIMULATION_INTERVAL`, `SIMULATION_COUNT`, `SIMULATION_PHASES`, and `SIMULATION_NOMINAL_CURRENT_AMPS` environment variables.
 
 ## Validation contract
 

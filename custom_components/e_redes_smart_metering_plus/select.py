@@ -51,7 +51,7 @@ def contracted_power_options(
     return tuple(SINGLE_PHASE_CONTRACTED_POWER_AMPS)
 
 
-def breaker_limit_amps(
+def contracted_power_limit_amps(
     config_entry: ERedesConfigEntry, cpe: str, option: str | None
 ) -> float | None:
     """Return the official nominal current for a contracted-power option."""
@@ -151,7 +151,7 @@ class ERedesContractedPowerSelect(SelectEntity, RestoreEntity):
         self._attr_unique_id = f"{DOMAIN}_{cpe}_contracted_power"
         self._attr_options = list(CONTRACTED_POWER_OPTIONS)
         self._attr_current_option = None
-        self._legacy_breaker_limit: float | None = None
+        self._legacy_current_limit: float | None = None
         self._legacy_migration_warning_logged = False
 
     @property
@@ -172,17 +172,17 @@ class ERedesContractedPowerSelect(SelectEntity, RestoreEntity):
         }
 
     async def async_added_to_hass(self) -> None:
-        """Restore the selection or migrate the legacy breaker limit."""
+        """Restore the selection or migrate the legacy current limit."""
         await super().async_added_to_hass()
         if (last_state := await self.async_get_last_state()) and (
             last_state.state in CONTRACTED_POWER_OPTIONS
         ):
             self._attr_current_option = last_state.state
         else:
-            self._legacy_breaker_limit = self._legacy_breaker_limit_from_state()
+            self._legacy_current_limit = self._legacy_current_limit_from_state()
         self.async_refresh_options()
 
-    def _legacy_breaker_limit_from_state(self) -> float | None:
+    def _legacy_current_limit_from_state(self) -> float | None:
         """Return the previous number entity value when available."""
         registry = er.async_get(self.hass)
         entity_id = registry.async_get_entity_id(
@@ -215,7 +215,7 @@ class ERedesContractedPowerSelect(SelectEntity, RestoreEntity):
                 )
             self._attr_current_option = None
 
-        if self._attr_current_option is None and self._legacy_breaker_limit is not None:
+        if self._attr_current_option is None and self._legacy_current_limit is not None:
             mapping = (
                 THREE_PHASE_CONTRACTED_POWER_AMPS
                 if is_three_phase(self._config_entry, self._cpe)
@@ -225,21 +225,21 @@ class ERedesContractedPowerSelect(SelectEntity, RestoreEntity):
                 (
                     option
                     for option, amps in mapping.items()
-                    if amps == self._legacy_breaker_limit
+                    if amps == self._legacy_current_limit
                 ),
                 None,
             )
             if self._attr_current_option is not None:
                 _LOGGER.info(
-                    "Migrated legacy breaker limit for %s to contracted power %s",
+                    "Migrated legacy current limit for %s to contracted power %s",
                     self._cpe,
                     self._attr_current_option,
                 )
-                self._legacy_breaker_limit = None
+                self._legacy_current_limit = None
             elif not self._legacy_migration_warning_logged:
                 _LOGGER.warning(
-                    "Legacy breaker limit %.2f A for %s does not match an official contracted-power tier; select the value shown on the electricity contract",
-                    self._legacy_breaker_limit,
+                    "Legacy current limit %.2f A for %s does not match an official contracted-power tier; select the value shown on the electricity contract",
+                    self._legacy_current_limit,
                     self._cpe,
                 )
                 self._legacy_migration_warning_logged = True

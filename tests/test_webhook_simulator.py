@@ -62,11 +62,15 @@ def test_three_phase_payload_preserves_total_power() -> None:
     )
 
 
-def test_breaker_scenario_crosses_alert_thresholds() -> None:
-    """Breaker samples should exercise normal, warning, critical, and overload."""
+@pytest.mark.parametrize("phases", (1, 3))
+def test_contracted_power_scenario_crosses_alert_thresholds(phases: int) -> None:
+    """Samples should exercise normal, warning, critical, and exceeded usage."""
     simulator = webhook_simulator.MeterSimulator(
         webhook_simulator.SimulationConfig(
-            cpe="TEST", scenario="breaker", breaker_amps=20
+            cpe="TEST",
+            scenario="contracted-power",
+            phases=phases,
+            nominal_current_amps=20,
         )
     )
     ratios = []
@@ -74,11 +78,23 @@ def test_breaker_scenario_crosses_alert_thresholds() -> None:
         payload = simulator.next_payload(
             datetime(2026, 9, 1, 12, 0, sample, tzinfo=UTC)
         )
-        ratios.append(
-            payload["instantaneousActivePowerImport"] / (payload["voltageL1"] * 20)
-        )
+        if phases == 1:
+            ratios.append(
+                payload["instantaneousActivePowerImport"]
+                / (payload["voltageL1"] * 20)
+            )
+        else:
+            ratios.append(
+                max(
+                    payload[f"instantaneousActivePowerImportL{phase}"]
+                    / (payload[f"voltageL{phase}"] * 20)
+                    for phase in (1, 2, 3)
+                )
+            )
 
-    assert ratios == pytest.approx(webhook_simulator.BREAKER_LOAD_RATIOS, abs=0.001)
+    assert ratios == pytest.approx(
+        webhook_simulator.CONTRACTED_POWER_USAGE_RATIOS, abs=0.001
+    )
 
 
 def test_post_payload_sends_json(monkeypatch: pytest.MonkeyPatch) -> None:

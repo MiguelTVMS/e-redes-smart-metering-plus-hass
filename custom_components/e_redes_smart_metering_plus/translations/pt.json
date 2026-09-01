@@ -9,7 +9,7 @@
       "invalid_cpe": "Introduza pelo menos um CPE válido com 20 caracteres, começado por PT",
       "unknown": "[%key:common::config_flow::error::unknown%]"
     },
-    "abort": { "already_configured": "[%key:common::config_flow::abort::already_configured_device%]" }
+    "abort": { "already_configured": "Esta integração já está configurada" }
   },
   "options": { "step": { "init": {
     "title": "Configuração do webhook E-Redes",
@@ -19,9 +19,9 @@
   "entity": {
     "select": { "contracted_power": { "name": "Potência contratada" } },
     "binary_sensor": {
-      "breaker_load_warning": { "name": "Aviso de carga do disjuntor" },
-      "breaker_load_critical": { "name": "Carga crítica do disjuntor" },
-      "breaker_overload": { "name": "Sobrecarga do disjuntor" }
+      "contracted_power_usage_warning": { "name": "Aviso de utilização da potência contratada" },
+      "contracted_power_usage_critical": { "name": "Utilização crítica da potência contratada" },
+      "contracted_power_exceeded": { "name": "Potência contratada excedida" }
     },
     "sensor": {
       "instantaneous_active_power_import": { "name": "Potência ativa importada instantânea" },
@@ -41,14 +41,14 @@
       "instantaneous_active_current_import_l1": { "name": "Corrente ativa importada instantânea L1" },
       "instantaneous_active_current_import_l2": { "name": "Corrente ativa importada instantânea L2" },
       "instantaneous_active_current_import_l3": { "name": "Corrente ativa importada instantânea L3" },
-      "breaker_load": { "name": "Carga do disjuntor" },
-      "breaker_load_status": {
-        "name": "Estado da carga do disjuntor",
+      "contracted_power_usage": { "name": "Utilização da potência contratada" },
+      "contracted_power_usage_status": {
+        "name": "Estado da utilização da potência contratada",
         "state": {
           "normal": "Normal",
           "warning": "Aviso",
           "critical": "Crítico",
-          "overload": "Sobrecarga"
+          "exceeded": "Excedida"
         }
       },
       "last_update": { "name": "Última atualização" }, "update_interval": { "name": "Intervalo de atualização" }

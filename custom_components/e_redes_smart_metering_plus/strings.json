@@ -11,7 +11,7 @@
       "invalid_cpe": "Enter at least one valid 20-character CPE beginning with PT",
       "unknown": "[%key:common::config_flow::error::unknown%]"
     },
-    "abort": { "already_configured": "[%key:common::config_flow::abort::already_configured_device%]" }
+    "abort": { "already_configured": "This integration is already configured" }
   },
   "options": {
     "step": {
@@ -25,9 +25,9 @@
   "entity": {
     "select": { "contracted_power": { "name": "Contracted power" } },
     "binary_sensor": {
-      "breaker_load_warning": { "name": "Breaker load warning" },
-      "breaker_load_critical": { "name": "Breaker load critical" },
-      "breaker_overload": { "name": "Breaker overload" }
+      "contracted_power_usage_warning": { "name": "Contracted power usage warning" },
+      "contracted_power_usage_critical": { "name": "Critical contracted power usage" },
+      "contracted_power_exceeded": { "name": "Contracted power exceeded" }
     },
     "sensor": {
       "instantaneous_active_power_import": { "name": "Instantaneous active power import" },
@@ -49,14 +49,14 @@
       "instantaneous_active_current_import_l1": { "name": "Instantaneous active current import L1" },
       "instantaneous_active_current_import_l2": { "name": "Instantaneous active current import L2" },
       "instantaneous_active_current_import_l3": { "name": "Instantaneous active current import L3" },
-      "breaker_load": { "name": "Breaker load" },
-      "breaker_load_status": {
-        "name": "Breaker load status",
+      "contracted_power_usage": { "name": "Contracted power usage" },
+      "contracted_power_usage_status": {
+        "name": "Contracted power usage status",
         "state": {
           "normal": "Normal",
           "warning": "Warning",
           "critical": "Critical",
-          "overload": "Overload"
+          "exceeded": "Exceeded"
         }
       },
       "last_update": { "name": "Last update" },

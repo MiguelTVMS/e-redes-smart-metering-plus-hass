@@ -29,13 +29,13 @@ async def _select_contracted_power(
     await hass.async_block_till_done()
 
 
-async def test_breaker_overload_sensor_off_when_under_100(
+async def test_contracted_power_exceeded_sensor_off_when_under_100(
     hass: HomeAssistant, hass_client, config_entry
 ) -> None:
-    """Test that breaker overload sensor is OFF when load is under 100%."""
+    """The exceeded sensor is off while contracted-power usage is below 100%."""
 
     client = await hass_client()
-    cpe = "CPE_OVERLOAD_TEST_1"
+    cpe = "CPE_USAGE_TEST_1"
 
     # Send webhook data with load under 100% (2300W / 230V = 10A, with 20A limit = 50%)
     payload = {
@@ -53,8 +53,8 @@ async def test_breaker_overload_sensor_off_when_under_100(
 
     entity_registry = er.async_get(hass)
 
-    # Check that breaker overload sensor was created
-    unique_id = f"{DOMAIN}_{cpe}_breaker_overload"
+    # Check that the contracted-power exceeded sensor was created.
+    unique_id = f"{DOMAIN}_{cpe}_contracted_power_exceeded"
     ent_id = entity_registry.async_get_entity_id("binary_sensor", DOMAIN, unique_id)
     assert ent_id is not None
 
@@ -62,7 +62,7 @@ async def test_breaker_overload_sensor_off_when_under_100(
     state = hass.states.get(ent_id)
     assert state is not None
 
-    # Should be OFF (no overload) when load is 50%
+    # Should be off while contracted-power usage is 50%.
     assert state.state == "off"
     assert state.attributes.get("device_class") == "problem"
 
@@ -72,7 +72,7 @@ async def test_load_entities_unavailable_until_contracted_power_selected(
 ) -> None:
     """Load entities must not claim a state before explicit configuration."""
     client = await hass_client()
-    cpe = "CPE_OVERLOAD_TEST_1"
+    cpe = "CPE_USAGE_TEST_1"
     response = await client.post(
         f"/api/webhook/{config_entry.data['webhook_id']}",
         json={
@@ -86,18 +86,24 @@ async def test_load_entities_unavailable_until_contracted_power_selected(
 
     registry = er.async_get(hass)
     entity_ids = [
-        registry.async_get_entity_id("sensor", DOMAIN, f"{DOMAIN}_{cpe}_breaker_load"),
         registry.async_get_entity_id(
-            "sensor", DOMAIN, f"{DOMAIN}_{cpe}_breaker_load_status"
+            "sensor", DOMAIN, f"{DOMAIN}_{cpe}_contracted_power_usage"
         ),
         registry.async_get_entity_id(
-            "binary_sensor", DOMAIN, f"{DOMAIN}_{cpe}_breaker_load_warning"
+            "sensor", DOMAIN, f"{DOMAIN}_{cpe}_contracted_power_usage_status"
         ),
         registry.async_get_entity_id(
-            "binary_sensor", DOMAIN, f"{DOMAIN}_{cpe}_breaker_load_critical"
+            "binary_sensor",
+            DOMAIN,
+            f"{DOMAIN}_{cpe}_contracted_power_usage_warning",
         ),
         registry.async_get_entity_id(
-            "binary_sensor", DOMAIN, f"{DOMAIN}_{cpe}_breaker_overload"
+            "binary_sensor",
+            DOMAIN,
+            f"{DOMAIN}_{cpe}_contracted_power_usage_critical",
+        ),
+        registry.async_get_entity_id(
+            "binary_sensor", DOMAIN, f"{DOMAIN}_{cpe}_contracted_power_exceeded"
         ),
     ]
     assert all(entity_ids)
@@ -107,13 +113,13 @@ async def test_load_entities_unavailable_until_contracted_power_selected(
         assert state.state == "unavailable"
 
 
-async def test_breaker_overload_sensor_on_when_over_100(
+async def test_contracted_power_exceeded_sensor_on_when_over_100(
     hass: HomeAssistant, hass_client, config_entry
 ) -> None:
-    """Test that breaker overload sensor is ON when load exceeds 100%."""
+    """The exceeded sensor is on when contracted-power usage exceeds 100%."""
 
     client = await hass_client()
-    cpe = "CPE_OVERLOAD_TEST_2"
+    cpe = "CPE_USAGE_TEST_2"
 
     # Send webhook data with load over 100% (5750W / 230V = 25A, with 20A limit = 125%)
     payload = {
@@ -132,8 +138,8 @@ async def test_breaker_overload_sensor_on_when_over_100(
 
     entity_registry = er.async_get(hass)
 
-    # Check that breaker overload sensor exists
-    unique_id = f"{DOMAIN}_{cpe}_breaker_overload"
+    # Check that the contracted-power exceeded sensor exists.
+    unique_id = f"{DOMAIN}_{cpe}_contracted_power_exceeded"
     ent_id = entity_registry.async_get_entity_id("binary_sensor", DOMAIN, unique_id)
     assert ent_id is not None
 
@@ -141,17 +147,17 @@ async def test_breaker_overload_sensor_on_when_over_100(
     state = hass.states.get(ent_id)
     assert state is not None
 
-    # Should be ON (overload) when load is 125%
+    # Should be on when contracted-power usage is 125%.
     assert state.state == "on"
 
 
-async def test_breaker_overload_sensor_updates_with_load_changes(
+async def test_contracted_power_exceeded_sensor_updates_with_usage_changes(
     hass: HomeAssistant, hass_client, config_entry
 ) -> None:
-    """Test that breaker overload sensor updates when load changes."""
+    """The exceeded sensor updates when contracted-power usage changes."""
 
     client = await hass_client()
-    cpe = "CPE_OVERLOAD_TEST_3"
+    cpe = "CPE_USAGE_TEST_3"
 
     # Start with normal load (under 100%)
     payload = {
@@ -169,7 +175,7 @@ async def test_breaker_overload_sensor_updates_with_load_changes(
     await _select_contracted_power(hass, cpe)
 
     entity_registry = er.async_get(hass)
-    unique_id = f"{DOMAIN}_{cpe}_breaker_overload"
+    unique_id = f"{DOMAIN}_{cpe}_contracted_power_exceeded"
     ent_id = entity_registry.async_get_entity_id("binary_sensor", DOMAIN, unique_id)
     assert ent_id is not None
 
@@ -178,7 +184,7 @@ async def test_breaker_overload_sensor_updates_with_load_changes(
     assert state is not None
     assert state.state == "off"
 
-    # Increase load to overload (125%)
+    # Increase contracted-power usage to 125%.
     payload = {
         "cpe": cpe,
         "instantaneousActivePowerImport": 5750.0,
@@ -215,13 +221,13 @@ async def test_breaker_overload_sensor_updates_with_load_changes(
     assert state.state == "off"
 
 
-async def test_breaker_overload_sensor_updates_with_limit_changes(
+async def test_contracted_power_exceeded_sensor_updates_with_selection_changes(
     hass: HomeAssistant, hass_client, config_entry
 ) -> None:
-    """Test that breaker overload sensor updates when breaker limit changes."""
+    """The exceeded sensor updates when the contracted-power selection changes."""
 
     client = await hass_client()
-    cpe = "CPE_OVERLOAD_TEST_4"
+    cpe = "CPE_USAGE_TEST_4"
 
     # Send webhook data with normal load (5290W / 230V = 23A, with 20A limit = 115%)
     payload = {
@@ -239,7 +245,7 @@ async def test_breaker_overload_sensor_updates_with_limit_changes(
     await _select_contracted_power(hass, cpe)
 
     entity_registry = er.async_get(hass)
-    unique_id = f"{DOMAIN}_{cpe}_breaker_overload"
+    unique_id = f"{DOMAIN}_{cpe}_contracted_power_exceeded"
     ent_id = entity_registry.async_get_entity_id("binary_sensor", DOMAIN, unique_id)
     assert ent_id is not None
 
@@ -251,18 +257,18 @@ async def test_breaker_overload_sensor_updates_with_limit_changes(
     # Select 6.90 kVA, corresponding to 30A (23A / 30A = 76.67%).
     await _select_contracted_power(hass, cpe, "6.90 kVA")
 
-    # Should now be OFF (no overload)
+    # Should now be off because usage is below the selected tier.
     state = hass.states.get(ent_id)
     assert state is not None
     assert state.state == "off"
 
 
-async def test_breaker_problem_levels_and_status(
+async def test_contracted_power_problem_levels_and_status(
     hass: HomeAssistant, hass_client, config_entry
 ) -> None:
-    """Warning, critical, overload, and enum status follow cumulative levels."""
+    """Warning, critical, exceeded, and enum status follow cumulative levels."""
     client = await hass_client()
-    cpe = "CPE_OVERLOAD_TEST_1"
+    cpe = "CPE_USAGE_TEST_1"
     entity_registry = er.async_get(hass)
 
     async def send_load(load_percent: float) -> None:
@@ -284,12 +290,12 @@ async def test_breaker_problem_levels_and_status(
         (70, ("off", "off", "off"), "normal"),
         (85, ("on", "off", "off"), "warning"),
         (97, ("on", "on", "off"), "critical"),
-        (100, ("on", "on", "on"), "overload"),
+        (100, ("on", "on", "on"), "exceeded"),
     )
     sensor_keys = (
-        "breaker_load_warning",
-        "breaker_load_critical",
-        "breaker_overload",
+        "contracted_power_usage_warning",
+        "contracted_power_usage_critical",
+        "contracted_power_exceeded",
     )
 
     for load, expected_binary_states, expected_status in expected_levels:
@@ -306,7 +312,7 @@ async def test_breaker_problem_levels_and_status(
             assert state.state == expected_state
 
         status_id = entity_registry.async_get_entity_id(
-            "sensor", DOMAIN, f"{DOMAIN}_{cpe}_breaker_load_status"
+            "sensor", DOMAIN, f"{DOMAIN}_{cpe}_contracted_power_usage_status"
         )
         assert status_id is not None
         status = hass.states.get(status_id)

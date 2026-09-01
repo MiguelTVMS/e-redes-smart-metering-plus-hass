@@ -352,22 +352,22 @@ async def test_three_phase_current_sensors_use_matching_phase_data(
     )
     await hass.async_block_till_done()
 
-    breaker_load_id = entity_registry.async_get_entity_id(
-        "sensor", DOMAIN, f"{DOMAIN}_{cpe}_breaker_load"
+    usage_id = entity_registry.async_get_entity_id(
+        "sensor", DOMAIN, f"{DOMAIN}_{cpe}_contracted_power_usage"
     )
-    assert breaker_load_id is not None
-    breaker_load = hass.states.get(breaker_load_id)
-    assert breaker_load is not None
-    assert float(breaker_load.state) == pytest.approx(100.0)
+    assert usage_id is not None
+    usage = hass.states.get(usage_id)
+    assert usage is not None
+    assert float(usage.state) == pytest.approx(100.0)
 
 
-async def test_breaker_load_sensor(
+async def test_contracted_power_usage_sensor(
     hass: HomeAssistant, hass_client, config_entry
 ) -> None:
-    """Test that breaker load sensor calculates percentage correctly."""
+    """Test that contracted-power usage is calculated correctly."""
 
     client = await hass_client()
-    cpe = "CPE_BREAKER_TEST"
+    cpe = "CPE_USAGE_TEST"
 
     # Send complete webhook data (power and voltage)
     payload = {
@@ -396,9 +396,9 @@ async def test_breaker_load_sensor(
     )
     await hass.async_block_till_done()
 
-    # Check that breaker load sensor was created
-    breaker_load_sensor_key = "breaker_load"
-    unique_id = f"{DOMAIN}_{cpe}_{breaker_load_sensor_key}"
+    # Check that the contracted-power usage sensor was created.
+    usage_sensor_key = "contracted_power_usage"
+    unique_id = f"{DOMAIN}_{cpe}_{usage_sensor_key}"
     ent_id = entity_registry.async_get_entity_id("sensor", DOMAIN, unique_id)
     assert ent_id is not None
 
@@ -413,7 +413,7 @@ async def test_breaker_load_sensor(
     # Check attributes
     assert state.attributes.get("unit_of_measurement") == "%"
     assert state.attributes.get("cpe") == cpe
-    assert state.attributes.get("calculation_type") == "current_breaker_limit"
+    assert state.attributes.get("calculation_type") == "contracted_power_usage"
 
     # Select 6.90 kVA, corresponding to 30A for a single-phase installation.
     await hass.services.async_call(
@@ -424,7 +424,7 @@ async def test_breaker_load_sensor(
     )
     await hass.async_block_till_done()
 
-    # Check that breaker load updated to 66.67% (20A / 30A).
+    # Check that contracted-power usage updated to 66.67% (20A / 30A).
     state = hass.states.get(ent_id)
     assert state is not None
     assert float(state.state) == pytest.approx(66.67, rel=0.01)
@@ -442,7 +442,7 @@ async def test_breaker_load_sensor(
     assert resp.status == 200
     await hass.async_block_till_done()
 
-    # Check that breaker load updated to 33.33% (10A / 30A).
+    # Check that contracted-power usage updated to 33.33% (10A / 30A).
     state = hass.states.get(ent_id)
     assert state is not None
     assert float(state.state) == pytest.approx(33.33, rel=0.01)

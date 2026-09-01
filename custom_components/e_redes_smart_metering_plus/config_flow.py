@@ -46,7 +46,7 @@ def _cpe_schema(default: list[str] | None = None) -> vol.Schema:
 class EredesSmartMeteringPlusConfigFlow(ConfigFlow, domain=DOMAIN):
     """Handle a config flow for E-Redes Smart Metering Plus."""
 
-    VERSION = 3
+    VERSION = 6
 
     @staticmethod
     @callback

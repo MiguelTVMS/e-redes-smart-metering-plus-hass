@@ -104,7 +104,7 @@ async def test_three_phase_payload_uses_three_phase_options(
     ]
 
 
-async def test_standard_legacy_breaker_limit_is_migrated(
+async def test_standard_legacy_current_limit_is_migrated(
     hass: HomeAssistant, config_entry
 ) -> None:
     """A standard legacy amp value becomes its matching contracted-power tier."""

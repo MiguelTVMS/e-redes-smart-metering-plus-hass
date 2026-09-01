@@ -22,10 +22,10 @@ from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.util import dt as dt_util
 
 from .const import (
-    BREAKER_LOAD_CRITICAL_PERCENT,
-    BREAKER_LOAD_OVERLOAD_PERCENT,
-    BREAKER_LOAD_WARNING_PERCENT,
     CALCULATED_SENSORS,
+    CONTRACTED_POWER_USAGE_CRITICAL_PERCENT,
+    CONTRACTED_POWER_USAGE_EXCEEDED_PERCENT,
+    CONTRACTED_POWER_USAGE_WARNING_PERCENT,
     DIAGNOSTIC_SENSORS,
     DOMAIN,
     SENSOR_DESCRIPTIONS_BY_KEY,
@@ -34,7 +34,7 @@ from .const import (
     ERedesSensorEntityDescription,
 )
 from .models import ERedesConfigEntry, device_info_for_cpe
-from .select import breaker_limit_amps, is_three_phase
+from .select import contracted_power_limit_amps, is_three_phase
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -212,7 +212,10 @@ class ERedesCalculatedSensor(RestoreSensor):
     @property
     def available(self) -> bool:
         """Return whether load entities have valid configured inputs."""
-        if self.entity_description.key in {"breaker_load", "breaker_load_status"}:
+        if self.entity_description.key in {
+            "contracted_power_usage",
+            "contracted_power_usage_status",
+        }:
             return self.native_value is not None
         return True
 
@@ -224,7 +227,10 @@ class ERedesCalculatedSensor(RestoreSensor):
             "calculation_type": self.entity_description.calculation,
             "source_sensors": self.entity_description.source_sensors,
         }
-        if self.entity_description.key in {"breaker_load", "breaker_load_status"}:
+        if self.entity_description.key in {
+            "contracted_power_usage",
+            "contracted_power_usage_status",
+        }:
             select_entity = self._config_entry.runtime_data.select_entities.get(
                 self._cpe
             )
@@ -234,7 +240,7 @@ class ERedesCalculatedSensor(RestoreSensor):
             attributes.update(
                 {
                     "contracted_power": selected_option,
-                    "breaker_limit": breaker_limit_amps(
+                    "contracted_power_current_limit_amps": contracted_power_limit_amps(
                         self._config_entry, self._cpe, selected_option
                     ),
                     "installation_type": (
@@ -244,7 +250,7 @@ class ERedesCalculatedSensor(RestoreSensor):
                     ),
                 }
             )
-            if current_and_phase := self._breaker_current_and_phase():
+            if current_and_phase := self._usage_current_and_phase():
                 attributes["limiting_phase"] = current_and_phase[1]
         return attributes
 
@@ -257,7 +263,7 @@ class ERedesCalculatedSensor(RestoreSensor):
         source_sensors = set(self.entity_description.source_sensors)
         if self.entity_description.key in {
             _SINGLE_PHASE_CURRENT_KEY,
-            "breaker_load",
+            "contracted_power_usage",
         }:
             for phase in _PHASES:
                 source_sensors.update(
@@ -287,41 +293,41 @@ class ERedesCalculatedSensor(RestoreSensor):
 
         calculated = self._calculate_value()
         if calculated is not None or self.entity_description.key in {
-            "breaker_load",
-            "breaker_load_status",
+            "contracted_power_usage",
+            "contracted_power_usage_status",
         }:
             self._attr_native_value = calculated
-        self._notify_breaker_load_update()
+        self._notify_contracted_power_usage_update()
 
     @callback
     def _handle_source_update(self, *_args: Any) -> None:
         """Recalculate after a source sensor update."""
         self._attr_native_value = self._calculate_value()
         self.async_write_ha_state()
-        self._notify_breaker_load_update()
+        self._notify_contracted_power_usage_update()
 
     @callback
     def _handle_config_entity_update(self, *_args: Any) -> None:
         """Recalculate after the contracted-power selection changes."""
         self._attr_native_value = self._calculate_value()
         self.async_write_ha_state()
-        self._notify_breaker_load_update()
+        self._notify_contracted_power_usage_update()
 
-    def _notify_breaker_load_update(self) -> None:
-        """Notify the overload binary sensor when breaker load changes."""
-        if self.entity_description.key == "breaker_load":
+    def _notify_contracted_power_usage_update(self) -> None:
+        """Notify problem sensors when contracted-power usage changes."""
+        if self.entity_description.key == "contracted_power_usage":
             async_dispatcher_send(
-                self.hass, f"{DOMAIN}_{self._cpe}_breaker_load_update"
+                self.hass, f"{DOMAIN}_{self._cpe}_contracted_power_usage_update"
             )
 
     def _calculate_value(self) -> float | str | None:
         """Calculate the current value from runtime entities."""
         if self.entity_description.calculation == "power_voltage":
             return self._calculate_current_from_power_voltage()
-        if self.entity_description.calculation == "current_breaker_limit":
-            return self._calculate_breaker_load()
-        if self.entity_description.calculation == "breaker_load_status":
-            return self._calculate_breaker_load_status()
+        if self.entity_description.calculation == "contracted_power_usage":
+            return self._calculate_contracted_power_usage()
+        if self.entity_description.calculation == "contracted_power_usage_status":
+            return self._calculate_contracted_power_usage_status()
         _LOGGER.warning(
             "Unknown calculation type: %s", self.entity_description.calculation
         )
@@ -400,7 +406,7 @@ class ERedesCalculatedSensor(RestoreSensor):
                 currents.append((power / voltage, f"L{phase}"))
         return currents
 
-    def _breaker_current_and_phase(self) -> tuple[float, str] | None:
+    def _usage_current_and_phase(self) -> tuple[float, str] | None:
         """Return the highest measured active current and its phase."""
         if self._has_phase_power():
             if not (currents := self._phase_currents()):
@@ -415,38 +421,38 @@ class ERedesCalculatedSensor(RestoreSensor):
         power, voltage = values
         return power / voltage, "single_phase"
 
-    def _calculate_breaker_load(self) -> float | None:
-        """Calculate breaker load percentage."""
-        if (current_and_phase := self._breaker_current_and_phase()) is None:
+    def _calculate_contracted_power_usage(self) -> float | None:
+        """Calculate contracted-power usage percentage."""
+        if (current_and_phase := self._usage_current_and_phase()) is None:
             return None
         current, _phase = current_and_phase
         select_entity = self._config_entry.runtime_data.select_entities.get(self._cpe)
         selected_option = (
             select_entity.current_option if select_entity is not None else None
         )
-        breaker_limit = breaker_limit_amps(
+        current_limit = contracted_power_limit_amps(
             self._config_entry, self._cpe, selected_option
         )
-        if breaker_limit is None or breaker_limit <= 0:
+        if current_limit is None or current_limit <= 0:
             return None
-        return current / breaker_limit * 100
+        return current / current_limit * 100
 
-    def _calculate_breaker_load_status(self) -> str | None:
-        """Return the severity corresponding to the current breaker load."""
-        load_sensor = self._config_entry.runtime_data.sensor_entities.get(
-            f"{self._cpe}_breaker_load"
+    def _calculate_contracted_power_usage_status(self) -> str | None:
+        """Return the severity corresponding to contracted-power usage."""
+        usage_sensor = self._config_entry.runtime_data.sensor_entities.get(
+            f"{self._cpe}_contracted_power_usage"
         )
-        if load_sensor is None or load_sensor.native_value is None:
+        if usage_sensor is None or usage_sensor.native_value is None:
             return None
         try:
-            load = float(str(load_sensor.native_value))
+            usage = float(str(usage_sensor.native_value))
         except (TypeError, ValueError):
             return None
-        if load >= BREAKER_LOAD_OVERLOAD_PERCENT:
-            return "overload"
-        if load >= BREAKER_LOAD_CRITICAL_PERCENT:
+        if usage >= CONTRACTED_POWER_USAGE_EXCEEDED_PERCENT:
+            return "exceeded"
+        if usage >= CONTRACTED_POWER_USAGE_CRITICAL_PERCENT:
             return "critical"
-        if load >= BREAKER_LOAD_WARNING_PERCENT:
+        if usage >= CONTRACTED_POWER_USAGE_WARNING_PERCENT:
             return "warning"
         return "normal"
 
@@ -513,7 +519,7 @@ async def async_ensure_calculated_sensors(
             for phase in _PHASES
         )
         if not has_description_sources and not (
-            sensor_key == "breaker_load" and has_complete_phase
+            sensor_key == "contracted_power_usage" and has_complete_phase
         ):
             continue
         if description.requires_select_entity and (

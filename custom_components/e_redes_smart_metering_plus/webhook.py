@@ -332,9 +332,9 @@ async def async_ensure_device(
 
     async_create_contracted_power_entity(entry, cpe)
 
-    from .binary_sensor import async_create_breaker_problem_sensors
+    from .binary_sensor import async_create_contracted_power_problem_sensors
 
-    async_create_breaker_problem_sensors(entry, cpe)
+    async_create_contracted_power_problem_sensors(entry, cpe)
 
 
 async def async_process_sensor_data(

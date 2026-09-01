@@ -165,13 +165,13 @@ CALCULATED_SENSORS: dict[str, ERedesCalculatedSensorEntityDescription] = {
         calculation="power_voltage",
         source_sensors=("instantaneous_active_power_import", "voltage_l1"),
     ),
-    "breaker_load": ERedesCalculatedSensorEntityDescription(
-        key="breaker_load",
-        translation_key="breaker_load",
+    "contracted_power_usage": ERedesCalculatedSensorEntityDescription(
+        key="contracted_power_usage",
+        translation_key="contracted_power_usage",
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
-        calculation="current_breaker_limit",
+        calculation="contracted_power_usage",
         source_sensors=("instantaneous_active_power_import", "voltage_l1"),
         requires_select_entity="contracted_power",
     ),
@@ -195,18 +195,20 @@ for _phase in (1, 2, 3):
         )
     )
 
-CALCULATED_SENSORS["breaker_load_status"] = ERedesCalculatedSensorEntityDescription(
-    key="breaker_load_status",
-    translation_key="breaker_load_status",
-    device_class=SensorDeviceClass.ENUM,
-    options=["normal", "warning", "critical", "overload"],
-    calculation="breaker_load_status",
-    source_sensors=("breaker_load",),
+CALCULATED_SENSORS["contracted_power_usage_status"] = (
+    ERedesCalculatedSensorEntityDescription(
+        key="contracted_power_usage_status",
+        translation_key="contracted_power_usage_status",
+        device_class=SensorDeviceClass.ENUM,
+        options=["normal", "warning", "critical", "exceeded"],
+        calculation="contracted_power_usage_status",
+        source_sensors=("contracted_power_usage",),
+    )
 )
 
-BREAKER_LOAD_WARNING_PERCENT = 80.0
-BREAKER_LOAD_CRITICAL_PERCENT = 95.0
-BREAKER_LOAD_OVERLOAD_PERCENT = 100.0
+CONTRACTED_POWER_USAGE_WARNING_PERCENT = 80.0
+CONTRACTED_POWER_USAGE_CRITICAL_PERCENT = 95.0
+CONTRACTED_POWER_USAGE_EXCEEDED_PERCENT = 100.0
 
 SINGLE_PHASE_CONTRACTED_POWER_AMPS = {
     "1.15 kVA": 5.0,

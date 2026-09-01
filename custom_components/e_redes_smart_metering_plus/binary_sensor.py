@@ -15,9 +15,9 @@ from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import (
-    BREAKER_LOAD_CRITICAL_PERCENT,
-    BREAKER_LOAD_OVERLOAD_PERCENT,
-    BREAKER_LOAD_WARNING_PERCENT,
+    CONTRACTED_POWER_USAGE_CRITICAL_PERCENT,
+    CONTRACTED_POWER_USAGE_EXCEEDED_PERCENT,
+    CONTRACTED_POWER_USAGE_WARNING_PERCENT,
     DOMAIN,
 )
 from .models import ERedesConfigEntry, device_info_for_cpe
@@ -25,9 +25,9 @@ from .models import ERedesConfigEntry, device_info_for_cpe
 _LOGGER = logging.getLogger(__name__)
 
 _PROBLEM_THRESHOLDS = {
-    "breaker_load_warning": BREAKER_LOAD_WARNING_PERCENT,
-    "breaker_load_critical": BREAKER_LOAD_CRITICAL_PERCENT,
-    "breaker_overload": BREAKER_LOAD_OVERLOAD_PERCENT,
+    "contracted_power_usage_warning": CONTRACTED_POWER_USAGE_WARNING_PERCENT,
+    "contracted_power_usage_critical": CONTRACTED_POWER_USAGE_CRITICAL_PERCENT,
+    "contracted_power_exceeded": CONTRACTED_POWER_USAGE_EXCEEDED_PERCENT,
 }
 
 
@@ -36,7 +36,7 @@ async def async_setup_entry(
     config_entry: ERedesConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
-    """Set up breaker problem binary sensors."""
+    """Set up contracted-power problem binary sensors."""
     config_entry.runtime_data.binary_sensor_add_entities = async_add_entities
     await async_restore_existing_binary_sensors(hass, config_entry, async_add_entities)
 
@@ -46,9 +46,9 @@ async def async_restore_existing_binary_sensors(
     config_entry: ERedesConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
-    """Restore breaker problem entities present in the entity registry."""
+    """Restore contracted-power problem entities from the entity registry."""
     registry = er.async_get(hass)
-    entities: list[ERedesBreakerProblemSensor] = []
+    entities: list[ERedesContractedPowerProblemSensor] = []
     prefix = f"{DOMAIN}_"
 
     for entity_entry in er.async_entries_for_config_entry(
@@ -66,7 +66,7 @@ async def async_restore_existing_binary_sensors(
             cpe = remainder[: -len(suffix)]
             if not cpe:
                 break
-            entity = ERedesBreakerProblemSensor(
+            entity = ERedesContractedPowerProblemSensor(
                 cpe, config_entry, sensor_key, threshold
             )
             config_entry.runtime_data.binary_sensor_entities[f"{cpe}_{sensor_key}"] = (
@@ -77,27 +77,29 @@ async def async_restore_existing_binary_sensors(
 
     if entities:
         async_add_entities(entities)
-        _LOGGER.debug("Restored %d breaker problem sensors", len(entities))
+        _LOGGER.debug("Restored %d contracted-power problem sensors", len(entities))
 
 
 @callback
-def async_create_breaker_problem_sensors(
+def async_create_contracted_power_problem_sensors(
     config_entry: ERedesConfigEntry, cpe: str
 ) -> None:
-    """Create warning, critical, and overload sensors for a CPE."""
+    """Create warning, critical, and exceeded sensors for a CPE."""
     if not (add_entities := config_entry.runtime_data.binary_sensor_add_entities):
         _LOGGER.warning(
-            "Cannot create breaker problem sensors for %s: add_entities unavailable",
+            "Cannot create contracted-power problem sensors for %s: add_entities unavailable",
             cpe,
         )
         return
 
-    entities: list[ERedesBreakerProblemSensor] = []
+    entities: list[ERedesContractedPowerProblemSensor] = []
     for sensor_key, threshold in _PROBLEM_THRESHOLDS.items():
         entity_key = f"{cpe}_{sensor_key}"
         if entity_key in config_entry.runtime_data.binary_sensor_entities:
             continue
-        entity = ERedesBreakerProblemSensor(cpe, config_entry, sensor_key, threshold)
+        entity = ERedesContractedPowerProblemSensor(
+            cpe, config_entry, sensor_key, threshold
+        )
         config_entry.runtime_data.binary_sensor_entities[entity_key] = entity
         entities.append(entity)
 
@@ -105,8 +107,8 @@ def async_create_breaker_problem_sensors(
         add_entities(entities)
 
 
-class ERedesBreakerProblemSensor(BinarySensorEntity):
-    """Represent one breaker active-load severity threshold."""
+class ERedesContractedPowerProblemSensor(BinarySensorEntity):
+    """Represent one contracted-power usage severity threshold."""
 
     _attr_has_entity_name = True
     _attr_device_class = BinarySensorDeviceClass.PROBLEM
@@ -119,7 +121,7 @@ class ERedesBreakerProblemSensor(BinarySensorEntity):
         sensor_key: str,
         threshold: float,
     ) -> None:
-        """Initialize a breaker problem sensor."""
+        """Initialize a contracted-power problem sensor."""
         self._cpe = cpe
         self._config_entry = config_entry
         self._threshold = threshold
@@ -139,39 +141,39 @@ class ERedesBreakerProblemSensor(BinarySensorEntity):
 
     @property
     def available(self) -> bool:
-        """Return whether a configured breaker-load value is available."""
-        load_sensor = self._config_entry.runtime_data.sensor_entities.get(
-            f"{self._cpe}_breaker_load"
+        """Return whether contracted-power usage is available."""
+        usage_sensor = self._config_entry.runtime_data.sensor_entities.get(
+            f"{self._cpe}_contracted_power_usage"
         )
-        return load_sensor is not None and load_sensor.native_value is not None
+        return usage_sensor is not None and usage_sensor.native_value is not None
 
     async def async_added_to_hass(self) -> None:
-        """Subscribe to breaker-load updates."""
+        """Subscribe to contracted-power usage updates."""
         await super().async_added_to_hass()
         self.async_on_remove(
             async_dispatcher_connect(
                 self.hass,
-                f"{DOMAIN}_{self._cpe}_breaker_load_update",
-                self._handle_breaker_load_update,
+                f"{DOMAIN}_{self._cpe}_contracted_power_usage_update",
+                self._handle_contracted_power_usage_update,
             )
         )
         self._update_problem_state()
 
     @callback
-    def _handle_breaker_load_update(self) -> None:
-        """Update after the breaker load changes."""
+    def _handle_contracted_power_usage_update(self) -> None:
+        """Update after contracted-power usage changes."""
         self._update_problem_state()
         self.async_write_ha_state()
 
     def _update_problem_state(self) -> None:
         """Set the problem state from the configured load threshold."""
-        load_sensor = self._config_entry.runtime_data.sensor_entities.get(
-            f"{self._cpe}_breaker_load"
+        usage_sensor = self._config_entry.runtime_data.sensor_entities.get(
+            f"{self._cpe}_contracted_power_usage"
         )
-        if load_sensor is None or load_sensor.native_value is None:
+        if usage_sensor is None or usage_sensor.native_value is None:
             self._attr_is_on = False
             return
         try:
-            self._attr_is_on = float(str(load_sensor.native_value)) >= self._threshold
+            self._attr_is_on = float(str(usage_sensor.native_value)) >= self._threshold
         except (TypeError, ValueError):
             self._attr_is_on = False

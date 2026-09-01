@@ -27,8 +27,8 @@ Platform | Description
 - ⚡ **UI Configuration** - No YAML configuration or automation setup required
 - 🏠 **Automatic Device Creation** - Devices and sensors created dynamically as data arrives
 - ⚙️ **Contracted Power Configuration** - Select the market tier shown on your electricity contract
-- 🔋 **Breaker Load Monitoring** - Monitor active load against the official nominal-current limit
-- ⚠️ **Load Alerts** - Warning, critical, and overload problem sensors
+- 🔋 **Contracted Power Usage** - Monitor active usage against the nominal current for the selected contracted-power tier
+- ⚠️ **Usage Alerts** - Warning, critical, and exceeded problem sensors
 
 ## Installation
 
@@ -56,7 +56,7 @@ Platform | Description
 3. The integration creates the fixed webhook path `/api/webhook/e_redes_smart_metering_plus`.
 4. Open **Settings > Devices & services**, select the integration, then **Configure** to copy the active URL. The integration respects **Settings > System > Network > Home Assistant URL**: a configured external URL is used when Home Assistant Cloud is disabled there, otherwise the Cloudhook URL is shown.
 5. Configure E-REDES with that URL and start receiving data.
-6. On each meter device, select the contracted power shown on your electricity bill. Breaker-load entities remain unavailable until this is configured.
+6. On each meter device, select the contracted power shown on your electricity bill. Contracted-power usage entities remain unavailable until this is configured.
 
 ### Webhook URL Format
 
@@ -109,13 +109,13 @@ For each unique CPE (meter), the following entities are automatically created:
 - **Per-phase Instantaneous Active Power Import/Export** (W) - Created when supplied by a three-phase meter
 - **Instantaneous Active Current Import** (A) - Created for single-phase payloads from total power and L1 voltage
 - **Instantaneous Active Current Import L1/L2/L3** (A) - Created for three-phase payloads from matching per-phase power and voltage
-- **Breaker Load** (%) - Active current relative to the nominal limit; three-phase payloads use the most-loaded measured phase
-- **Breaker Load Status** - Normal, Warning, Critical, or Overload
-- **Breaker Load Warning** - Problem sensor active at 80% and above
-- **Breaker Load Critical** - Problem sensor active at 95% and above
-- **Breaker Overload** - Problem sensor active at 100% and above
+- **Contracted Power Usage** (%) - Active current relative to the nominal current for the selected tier; three-phase payloads use the most-loaded measured phase
+- **Contracted Power Usage Status** - Normal, Warning, Critical, or Exceeded
+- **Contracted Power Usage Warning** - Problem sensor active at 80% and above
+- **Critical Contracted Power Usage** - Problem sensor active at 95% and above
+- **Contracted Power Exceeded** - Problem sensor active at 100% and above
 
-The problem sensors are cumulative: Critical also keeps Warning active, and Overload keeps all three active. They represent active load from the available E-REDES measurements and configured contracted-power tier. They do not simulate a physical breaker's trip curve.
+The problem sensors are cumulative: Critical also keeps Warning active, and Exceeded keeps all three active. They compare available E-REDES measurements with the configured contracted-power tier. They do not predict the trip behavior of physical protection hardware.
 
 The integration does not derive an aggregate current for three-phase payloads. It only calculates currents when E-REDES supplies matching power and voltage measurements for the installation or phase.
 
@@ -123,7 +123,7 @@ The integration does not derive an aggregate current for three-phase payloads. I
 
 - **Contracted Power** (kVA) - Official single-phase or three-phase market tiers. There is no default, so select the value from the electricity contract.
 
-During upgrade, a standard value from the previous free-form Breaker Limit entity is mapped to the corresponding contracted-power tier when possible. The old number entity is disabled, and non-standard values are not rounded or silently changed.
+During upgrade, a standard value from the previous free-form current-limit number entity is mapped to the corresponding contracted-power tier when possible. The old number entity is disabled, and non-standard values are not rounded or silently changed.
 
 ### Diagnostic Sensors
 

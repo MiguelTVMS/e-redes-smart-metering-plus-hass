@@ -248,9 +248,9 @@ async def test_existing_device_gets_companion_entities(
         "select", DOMAIN, f"{DOMAIN}_{cpe}_contracted_power"
     )
     for sensor_key in (
-        "breaker_load_warning",
-        "breaker_load_critical",
-        "breaker_overload",
+        "contracted_power_usage_warning",
+        "contracted_power_usage_critical",
+        "contracted_power_exceeded",
     ):
         assert entity_registry.async_get_entity_id(
             "binary_sensor", DOMAIN, f"{DOMAIN}_{cpe}_{sensor_key}"
