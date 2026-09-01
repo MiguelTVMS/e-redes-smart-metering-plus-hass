@@ -27,7 +27,7 @@ Platform | Description
 - ⚡ **UI Configuration** - No YAML configuration or automation setup required
 - 🏠 **Automatic Device Creation** - Devices and sensors created dynamically as data arrives
 - ⚙️ **Contracted Power Configuration** - Select the market tier shown on your electricity contract
-- 🔋 **Contracted Power Usage** - Monitor active usage against the nominal current for the selected contracted-power tier
+- 🔋 **Power Usage** - Monitor active usage against the nominal current for the selected contracted-power tier
 - ⚠️ **Usage Alerts** - Warning, critical, and exceeded problem sensors
 
 ## Installation
@@ -109,11 +109,11 @@ For each unique CPE (meter), the following entities are automatically created:
 - **Per-phase Instantaneous Active Power Import/Export** (W) - Created when supplied by a three-phase meter
 - **Instantaneous Active Current Import** (A) - Created for single-phase payloads from total power and L1 voltage
 - **Instantaneous Active Current Import L1/L2/L3** (A) - Created for three-phase payloads from matching per-phase power and voltage
-- **Contracted Power Usage** (%) - Active current relative to the nominal current for the selected tier; three-phase payloads use the most-loaded measured phase
-- **Contracted Power Usage Status** - Normal, Warning, Critical, or Exceeded
-- **Contracted Power Usage Warning** - Problem sensor active at 80% and above
-- **Critical Contracted Power Usage** - Problem sensor active at 95% and above
-- **Contracted Power Exceeded** - Problem sensor active at 100% and above
+- **Power Usage** (%) - Active current relative to the nominal current for the selected tier; three-phase payloads use the most-loaded measured phase
+- **Power Usage Status** - Normal, Warning, Critical, or Exceeded
+- **Power Usage Warning** - Problem sensor active at 80% and above
+- **Critical Power Usage** - Problem sensor active at 95% and above
+- **Power Usage Exceeded** - Problem sensor active at 100% and above
 
 The problem sensors are cumulative: Critical also keeps Warning active, and Exceeded keeps all three active. They compare available E-REDES measurements with the configured contracted-power tier. They do not predict the trip behavior of physical protection hardware.
 

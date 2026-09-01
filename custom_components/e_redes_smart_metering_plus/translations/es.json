@@ -19,9 +19,9 @@
   "entity": {
     "select": { "contracted_power": { "name": "Potencia contratada" } },
     "binary_sensor": {
-      "contracted_power_usage_warning": { "name": "Aviso de uso de la potencia contratada" },
-      "contracted_power_usage_critical": { "name": "Uso crítico de la potencia contratada" },
-      "contracted_power_exceeded": { "name": "Potencia contratada excedida" }
+      "contracted_power_usage_warning": { "name": "Aviso de uso de potencia" },
+      "contracted_power_usage_critical": { "name": "Uso crítico de potencia" },
+      "contracted_power_exceeded": { "name": "Límite de potencia excedido" }
     },
     "sensor": {
       "instantaneous_active_power_import": { "name": "Potencia activa importada instantánea" },
@@ -41,9 +41,9 @@
       "instantaneous_active_current_import_l1": { "name": "Corriente activa importada instantánea L1" },
       "instantaneous_active_current_import_l2": { "name": "Corriente activa importada instantánea L2" },
       "instantaneous_active_current_import_l3": { "name": "Corriente activa importada instantánea L3" },
-      "contracted_power_usage": { "name": "Uso de la potencia contratada" },
+      "contracted_power_usage": { "name": "Uso de potencia" },
       "contracted_power_usage_status": {
-        "name": "Estado de uso de la potencia contratada",
+        "name": "Estado del uso de potencia",
         "state": {
           "normal": "Normal",
           "warning": "Aviso",

@@ -25,9 +25,9 @@
   "entity": {
     "select": { "contracted_power": { "name": "Contracted power" } },
     "binary_sensor": {
-      "contracted_power_usage_warning": { "name": "Contracted power usage warning" },
-      "contracted_power_usage_critical": { "name": "Critical contracted power usage" },
-      "contracted_power_exceeded": { "name": "Contracted power exceeded" }
+      "contracted_power_usage_warning": { "name": "Power usage warning" },
+      "contracted_power_usage_critical": { "name": "Critical power usage" },
+      "contracted_power_exceeded": { "name": "Power usage exceeded" }
     },
     "sensor": {
       "instantaneous_active_power_import": { "name": "Instantaneous active power import" },
@@ -49,9 +49,9 @@
       "instantaneous_active_current_import_l1": { "name": "Instantaneous active current import L1" },
       "instantaneous_active_current_import_l2": { "name": "Instantaneous active current import L2" },
       "instantaneous_active_current_import_l3": { "name": "Instantaneous active current import L3" },
-      "contracted_power_usage": { "name": "Contracted power usage" },
+      "contracted_power_usage": { "name": "Power usage" },
       "contracted_power_usage_status": {
-        "name": "Contracted power usage status",
+        "name": "Power usage status",
         "state": {
           "normal": "Normal",
           "warning": "Warning",
