@@ -28,6 +28,8 @@ echo ""
 # Prefer the repository-local development environment.
 if [ -d ".venv/bin" ]; then
     export PATH="$PWD/.venv/bin:$PATH"
+elif [ -d ".venv/Scripts" ]; then
+    export PATH="$PWD/.venv/Scripts:$PATH"
 fi
 
 # Check if dependencies are installed
@@ -75,11 +77,19 @@ else
 fi
 echo ""
 
+run_tests() {
+    if [ -d ".venv/Scripts" ]; then
+        docker compose --profile tools run --rm --build tests
+        return
+    fi
+
+    pytest tests/ -q --tb=short
+}
 # Run pytest if test files are staged
 TEST_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '^tests/.*\.py$' || true)
 if [ -n "$TEST_FILES" ] || [ -n "$PYTHON_FILES" ]; then
     echo "🧪 Running pytest..."
-    if ! pytest tests/ -q --tb=short; then
+    if ! run_tests; then
         echo ""
         echo "❌ Tests failed!"
         CHECKS_FAILED=1

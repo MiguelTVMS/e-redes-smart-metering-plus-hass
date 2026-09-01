@@ -167,7 +167,9 @@ If you want to contribute, please read the [Contribution Guidelines](CONTRIBUTIN
 - 🐍 **Native Python 3.13** - Reproducible local tooling managed by `uv`.
 - 🐳 **Local Home Assistant** - Run Home Assistant 2026.1.0 with `make ha-up` and validate the integration at `http://localhost:8123`.
 
-Run `make bootstrap` once, then use `make validate` for formatting, linting, and tests. `make ha-up` and `make ha-restart` sync the current integration source into the development configuration before starting Home Assistant. See [Contributing](CONTRIBUTING.md) for the complete local workflow.
+Run `make bootstrap` once, then use `make validate` for formatting, linting, and tests. Docker Compose mounts the current integration source directly, so `make ha-restart` is enough after Python changes. See the [cross-platform development guide](docs/DEVELOPMENT.md) and [Contributing](CONTRIBUTING.md) for the complete local workflow.
+
+The development Compose stack seeds a safe `configuration.yaml`, completes Home Assistant onboarding, and enables passwordless local browser access automatically. A generated recovery password stays in ignored local configuration and is available through `make ha-credentials`. Adding the integration remains an explicit UI step because it requires real CPE identifiers.
 
 ## Legal
 

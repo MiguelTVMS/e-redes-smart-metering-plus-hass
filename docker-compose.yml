@@ -1,13 +1,75 @@
 name: e-redes-smart-metering-plus-dev
 
 services:
-  homeassistant:
+  homeassistant-config:
     image: ghcr.io/home-assistant/home-assistant:2026.1.0
-    ports:
-      - "8123:8123"
     volumes:
       - ./config:/config
+      - ./dev/home-assistant:/defaults:ro
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -eu
+        mkdir -p /config/themes
+        for file in configuration.yaml automations.yaml scripts.yaml scenes.yaml; do
+          if [ ! -e "/config/$${file}" ]; then
+            cp "/defaults/$${file}" "/config/$${file}"
+          fi
+        done
+    restart: "no"
+
+  homeassistant:
+    image: ghcr.io/home-assistant/home-assistant:2026.1.0
+    depends_on:
+      homeassistant-config:
+        condition: service_completed_successfully
+    ports:
+      - "127.0.0.1:8123:8123"
+    volumes:
+      - ./config:/config
+      - ./custom_components/e_redes_smart_metering_plus:/config/custom_components/e_redes_smart_metering_plus:ro
     environment:
       TZ: Europe/Lisbon
       PYTHONDONTWRITEBYTECODE: "1"
     restart: unless-stopped
+
+  homeassistant-onboarding:
+    image: ghcr.io/home-assistant/home-assistant:2026.1.0
+    depends_on:
+      homeassistant:
+        condition: service_started
+    volumes:
+      - ./config:/config
+      - ./scripts/onboard-home-assistant.py:/onboard-home-assistant.py:ro
+    environment:
+      HOME_ASSISTANT_URL: http://homeassistant:8123
+      HOME_ASSISTANT_CLIENT_ID: http://localhost:8123/
+      HOME_ASSISTANT_REDIRECT_URI: http://localhost:8123/
+      HOME_ASSISTANT_DEV_NAME: ${HOME_ASSISTANT_DEV_NAME:-E-Redes Developer}
+      HOME_ASSISTANT_DEV_USERNAME: ${HOME_ASSISTANT_DEV_USERNAME:-developer}
+      HOME_ASSISTANT_DEV_PASSWORD: ${HOME_ASSISTANT_DEV_PASSWORD:-}
+      HOME_ASSISTANT_DEV_LANGUAGE: ${HOME_ASSISTANT_DEV_LANGUAGE:-en}
+      HOME_ASSISTANT_CREDENTIALS_FILE: /config/.dev-onboarding.json
+    entrypoint: ["python", "/onboard-home-assistant.py"]
+    restart: "no"
+
+  tests:
+    build:
+      context: .
+      dockerfile: Dockerfile.tests
+    profiles:
+      - tools
+    working_dir: /workspace
+    volumes:
+      - ./:/workspace
+    environment:
+      PYTHONDONTWRITEBYTECODE: "1"
+      PYTHONPATH: /workspace
+    entrypoint: ["pytest"]
+    command: ["tests/", "-q", "--tb=short"]
+
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: 172.31.252.0/24

@@ -27,9 +27,15 @@ permissions:
 
 jobs:
   tests:
-    name: Pytest
-    runs-on: ubuntu-latest
+    name: Pytest (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
     env:
       PYTHONPATH: ${{ github.workspace }}
     steps:
@@ -52,21 +58,67 @@ jobs:
 
       - name: Run tests
         run: |
-          mkdir -p .reports
-          pytest -q \
-            --junitxml=.reports/pytest-junit.xml
+          python -c "from pathlib import Path; Path('.reports').mkdir(exist_ok=True)"
+          pytest -q --junitxml=.reports/pytest-junit.xml
 
       - name: Ensure test report exists
         if: always()
         run: |
-          if [ ! -f .reports/pytest-junit.xml ]; then
-            echo '<testsuite name="empty" tests="0"></testsuite>' > .reports/pytest-junit.xml
-          fi
+          python -c "from pathlib import Path; p = Path('.reports/pytest-junit.xml'); p.parent.mkdir(exist_ok=True); p.write_text('<testsuite/>', encoding='utf-8') if not p.exists() else None"
 
       - name: Upload test report artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-reports
+          name: test-reports-${{ matrix.os }}
           path: .reports/**
           if-no-files-found: ignore
+
+  container-tests:
+    name: Pytest (development container)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Run tests in the development container
+        run: docker compose --profile tools run --rm --build tests
+
+  windows-tooling:
+    name: Windows tooling
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Parse PowerShell scripts
+        shell: pwsh
+        run: |
+          $parseErrors = @()
+          foreach ($file in Get-ChildItem scripts/*.ps1) {
+              $tokens = $null
+              $errors = $null
+              [System.Management.Automation.Language.Parser]::ParseFile(
+                  $file.FullName,
+                  [ref] $tokens,
+                  [ref] $errors
+              ) | Out-Null
+              $parseErrors += $errors
+          }
+          if ($parseErrors.Count -gt 0) {
+              $parseErrors | Format-List
+              exit 1
+          }
+
+      - name: Validate editor configuration and shell line endings
+        shell: pwsh
+        run: |
+          Get-Content -Raw .vscode/settings.json | ConvertFrom-Json | Out-Null
+          Get-Content -Raw .vscode/tasks.json | ConvertFrom-Json | Out-Null
+          $lineEndings = git ls-files --eol Makefile scripts/bootstrap-local scripts/install-hooks.sh scripts/pre-commit scripts/send-test-webhook scripts/validate
+          $lineEndings
+          if ($lineEndings -match "w/crlf") {
+              throw "A POSIX entry point was checked out with CRLF line endings."
+          }

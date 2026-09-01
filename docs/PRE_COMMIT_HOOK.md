@@ -10,7 +10,9 @@ Bootstrap the local development environment from the repository root:
 make bootstrap
 ```
 
-This installs the Python 3.13 development dependencies and copies the pre-commit hook to `.git/hooks/pre-commit`.
+This installs the Python 3.13 development dependencies and copies the pre-commit hook to Git's resolved hooks directory, including in a linked worktree.
+
+On Windows, the same command delegates to the repository PowerShell bootstrap. See the [cross-platform development guide](DEVELOPMENT.md) for prerequisites and troubleshooting on every supported host.
 
 ## What It Does
 

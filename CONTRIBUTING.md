@@ -4,6 +4,8 @@ Contributions are welcome! Please follow these guidelines:
 
 ## Development Setup
 
+See the [cross-platform development guide](docs/DEVELOPMENT.md) for verified Windows, macOS, and Linux prerequisites, bootstrap behavior, Docker usage, and troubleshooting.
+
 1. Fork the repository
 2. Clone your fork
 3. **Important:** This repository uses the gitflow branching model. All new development should be done on the `develop` branch, never on `main`. Please base your feature branches and pull requests on `develop`.
@@ -35,6 +37,7 @@ The Home Assistant configuration is stored in the ignored `config/` directory an
 Command | Purpose
 -- | --
 `make bootstrap` | Install Python 3.13, dependencies, and the Git hook
+`make doctor` | Verify the Python, Docker, and Compose development environment
 `make validate` | Format, lint, and run the complete test suite
 `make test` | Run the test suite only
 `make ha-up` | Start Home Assistant in the background
