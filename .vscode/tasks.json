@@ -60,6 +60,13 @@
             "type": "shell",
             "command": "make webhook",
             "problemMatcher": []
+        },
+        {
+            "label": "Home Assistant: Simulate meter data",
+            "type": "shell",
+            "command": "make simulate",
+            "isBackground": true,
+            "problemMatcher": []
         }
     ]
 }

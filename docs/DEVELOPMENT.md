@@ -79,6 +79,7 @@ Command | Purpose
 `make ha-onboard` | Rerun the idempotent development onboarding helper
 `make ha-credentials` | Show the generated local development login
 `make webhook` | Send a representative payload to the local webhook
+`make simulate` | Continuously send changing simulated meter data
 
 These commands are also available under **Terminal > Run Task** in VS Code.
 
@@ -114,6 +115,38 @@ make ha-restart
 ```
 
 The test webhook defaults to `http://localhost:8123/api/webhook/e_redes_smart_metering_plus`. Override its destination or CPE with `WEBHOOK_URL` and `TEST_CPE` environment variables.
+
+### Simulate meter data
+
+First add the simulator's CPE to the integration through **Settings > Devices & services > E-Redes Smart Metering Plus > Configure**. Then start a continuous single-phase household simulation:
+
+```console
+make simulate SIMULATOR_ARGS="--cpe PT000000000000000000"
+```
+
+Press `Ctrl+C` to stop. The simulator advances cumulative energy from each power sample and updates timestamps, voltage, maximum power, import, and export values. It is deterministic, so developers can reproduce the same state sequence.
+
+Available scenarios are:
+
+- `household`: varied import with brief export periods
+- `solar`: a daytime-style transition from import to export
+- `breaker`: 50%, 82%, 96%, 105%, and 70% of a nominal current, exercising normal, warning, critical, overload, and recovery states
+
+For example, send ten three-phase breaker samples one second apart:
+
+```console
+make simulate SIMULATOR_ARGS="--cpe PT000000000000000000 --scenario breaker --phases 3 --breaker-amps 20 --interval 1 --count 10"
+```
+
+Select the matching contracted-power tier in Home Assistant before using the breaker scenario. A 20 A nominal current corresponds to 4.60 kVA for a single-phase installation or 13.80 kVA for a three-phase installation.
+
+Use `--dry-run` to inspect one generated payload without sending it, or `--print-payload` to display every payload while sending. Run the complete option reference with:
+
+```console
+.venv/bin/python scripts/simulate-webhook.py --help
+```
+
+On Windows, replace `.venv/bin/python` with `.venv\Scripts\python.exe`. The same settings are available through the `WEBHOOK_URL`, `TEST_CPE`, `SIMULATION_SCENARIO`, `SIMULATION_INTERVAL`, `SIMULATION_COUNT`, `SIMULATION_PHASES`, and `SIMULATION_BREAKER_AMPS` environment variables.
 
 ## Validation contract
 

@@ -12,7 +12,10 @@ TEST_COMMAND := $(PYTHON) -m pytest tests/ -q --tb=short
 WEBHOOK_COMMAND := ./scripts/send-test-webhook
 endif
 
-.PHONY: bootstrap validate test doctor sync-integration ha-up ha-down ha-restart ha-logs ha-onboard ha-credentials webhook
+SIMULATOR_ARGS ?=
+SIMULATOR_COMMAND := $(PYTHON) scripts/simulate-webhook.py $(SIMULATOR_ARGS)
+
+.PHONY: bootstrap validate test doctor sync-integration ha-up ha-down ha-restart ha-logs ha-onboard ha-credentials webhook simulate
 
 bootstrap:
 	$(BOOTSTRAP_COMMAND)
@@ -53,3 +56,6 @@ ha-credentials:
 
 webhook:
 	$(WEBHOOK_COMMAND)
+
+simulate:
+	$(SIMULATOR_COMMAND)

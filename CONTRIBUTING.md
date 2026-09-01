@@ -45,6 +45,7 @@ Command | Purpose
 `make ha-restart` | Restart Home Assistant after integration changes
 `make ha-logs` | Follow Home Assistant logs
 `make webhook` | Send a representative payload to the local webhook
+`make simulate` | Continuously send changing meter data to the local webhook
 
 The same commands are available from **Terminal > Run Task** in VS Code.
 
