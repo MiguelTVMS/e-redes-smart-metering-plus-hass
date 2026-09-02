@@ -54,6 +54,7 @@ services:
     restart: "no"
 
   tests:
+    image: e-redes-smart-metering-plus-dev-tests:latest
     build:
       context: .
       dockerfile: Dockerfile.tests
