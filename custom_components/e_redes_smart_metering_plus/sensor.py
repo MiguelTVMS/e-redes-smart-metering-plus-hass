@@ -408,7 +408,7 @@ class ERedesCalculatedSensor(RestoreSensor):
 
     def _usage_current_and_phase(self) -> tuple[float, str] | None:
         """Return the highest measured active current and its phase."""
-        if self._has_phase_power():
+        if is_three_phase(self._config_entry, self._cpe):
             if not (currents := self._phase_currents()):
                 return None
             return max(currents, key=lambda value: value[0])

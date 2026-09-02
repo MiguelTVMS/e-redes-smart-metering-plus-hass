@@ -361,6 +361,47 @@ async def test_three_phase_current_sensors_use_matching_phase_data(
     assert float(usage.state) == pytest.approx(100.0)
 
 
+async def test_three_phase_usage_requires_phase_power_measurements(
+    hass: HomeAssistant, hass_client, config_entry
+) -> None:
+    """Three-phase usage must not derive a phase current from aggregate power."""
+    client = await hass_client()
+    cpe = "TEST123"
+    response = await client.post(
+        f"/api/webhook/{config_entry.data['webhook_id']}",
+        json={
+            "cpe": cpe,
+            "instantaneousActivePowerImport": 13800.0,
+            "voltageL1": 230.0,
+            "voltageL2": 230.0,
+            "voltageL3": 230.0,
+        },
+    )
+    assert response.status == 200
+    await hass.async_block_till_done()
+
+    entity_registry = er.async_get(hass)
+    contracted_power_id = entity_registry.async_get_entity_id(
+        "select", DOMAIN, f"{DOMAIN}_{cpe}_contracted_power"
+    )
+    assert contracted_power_id is not None
+    await hass.services.async_call(
+        "select",
+        "select_option",
+        {"entity_id": contracted_power_id, "option": "13.80 kVA"},
+        blocking=True,
+    )
+    await hass.async_block_till_done()
+
+    usage_id = entity_registry.async_get_entity_id(
+        "sensor", DOMAIN, f"{DOMAIN}_{cpe}_contracted_power_usage"
+    )
+    assert usage_id is not None
+    usage = hass.states.get(usage_id)
+    assert usage is not None
+    assert usage.state == "unavailable"
+
+
 async def test_contracted_power_usage_sensor(
     hass: HomeAssistant, hass_client, config_entry
 ) -> None:

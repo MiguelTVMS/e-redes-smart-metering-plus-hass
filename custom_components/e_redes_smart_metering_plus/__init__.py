@@ -113,10 +113,24 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ERedesConfigEntry) -> 
                 suffix = f"_{old_key}"
                 update_kwargs: dict[str, str] = {}
                 if entity.unique_id.endswith(suffix):
-                    update_kwargs["new_unique_id"] = (
-                        f"{entity.unique_id[: -len(suffix)]}_{new_key}"
-                    )
-                    migrated_keys += 1
+                    new_unique_id = f"{entity.unique_id[: -len(suffix)]}_{new_key}"
+                    if (
+                        entity_registry.async_get_entity_id(
+                            entity.domain,
+                            entity.platform,
+                            new_unique_id,
+                        )
+                        is None
+                    ):
+                        update_kwargs["new_unique_id"] = new_unique_id
+                        migrated_keys += 1
+                    else:
+                        _LOGGER.warning(
+                            "Could not migrate unique ID %s to %s because the target already exists",
+                            entity.unique_id,
+                            new_unique_id,
+                        )
+                        break
                 if entity.entity_id.endswith(suffix):
                     new_entity_id = f"{entity.entity_id[: -len(suffix)]}_{new_key}"
                     if entity_registry.async_get(new_entity_id) is None:

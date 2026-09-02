@@ -173,6 +173,36 @@ async def test_migration_renames_contracted_power_entity_keys(
         )
 
 
+async def test_migration_skips_conflicting_contracted_power_unique_id(
+    hass: HomeAssistant,
+) -> None:
+    """A conflicting renamed unique ID must not prevent integration setup."""
+    entry = MockConfigEntry(domain=DOMAIN, data={CONF_CPES: []}, version=5)
+    entry.add_to_hass(hass)
+    registry = er.async_get(hass)
+    cpe = "PT000000000000000001"
+    legacy = registry.async_get_or_create(
+        domain="sensor",
+        platform=DOMAIN,
+        config_entry=entry,
+        unique_id=f"{DOMAIN}_{cpe}_breaker_load",
+        suggested_object_id="legacy_breaker_load",
+    )
+    current = registry.async_get_or_create(
+        domain="sensor",
+        platform=DOMAIN,
+        config_entry=entry,
+        unique_id=f"{DOMAIN}_{cpe}_contracted_power_usage",
+        suggested_object_id="current_contracted_power_usage",
+    )
+
+    assert await async_migrate_entry(hass, entry)
+
+    assert entry.version == 6
+    assert registry.async_get(legacy.entity_id).unique_id == legacy.unique_id
+    assert registry.async_get(current.entity_id).unique_id == current.unique_id
+
+
 async def test_unload_does_not_remove_cloudhook(
     hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch
 ) -> None:
