@@ -66,7 +66,7 @@ jobs:
       - name: Check out code from GitHub
         uses: actions/checkout@v7
       - name: HACS validation
-        uses: hacs/action@22.5.0
+        uses: hacs/action@main
         with:
           category: integration
 
@@ -78,4 +78,4 @@ jobs:
       - name: Check out code from GitHub
         uses: actions/checkout@v7
       - name: Hassfest validation
-        uses: home-assistant/actions/hassfest@1.0.0
+        uses: home-assistant/actions/hassfest@master
