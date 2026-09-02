@@ -5,6 +5,7 @@ from __future__ import annotations
 import pytest
 
 from custom_components.e_redes_smart_metering_plus.const import DOMAIN
+from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 
@@ -29,6 +30,22 @@ async def _select_contracted_power(
     await hass.async_block_till_done()
 
 
+def _pre_enable_problem_sensor(
+    hass: HomeAssistant, config_entry, cpe: str, sensor_key: str
+) -> str:
+    """Pre-register one enabled problem sensor for behavior testing."""
+    registry = er.async_get(hass)
+    entry = registry.async_get_or_create(
+        "binary_sensor",
+        DOMAIN,
+        f"{DOMAIN}_{cpe}_{sensor_key}",
+        suggested_object_id=f"{cpe}_{sensor_key}",
+        config_entry=config_entry,
+    )
+    assert entry.disabled_by is None
+    return entry.entity_id
+
+
 async def test_contracted_power_exceeded_sensor_off_when_under_100(
     hass: HomeAssistant, hass_client, config_entry
 ) -> None:
@@ -36,6 +53,9 @@ async def test_contracted_power_exceeded_sensor_off_when_under_100(
 
     client = await hass_client()
     cpe = "CPE_USAGE_TEST_1"
+    ent_id = _pre_enable_problem_sensor(
+        hass, config_entry, cpe, "contracted_power_exceeded"
+    )
 
     # Send webhook data with load under 100% (2300W / 230V = 10A, with 20A limit = 50%)
     payload = {
@@ -50,13 +70,6 @@ async def test_contracted_power_exceeded_sensor_off_when_under_100(
     assert resp.status == 200
     await hass.async_block_till_done()
     await _select_contracted_power(hass, cpe)
-
-    entity_registry = er.async_get(hass)
-
-    # Check that the contracted-power exceeded sensor was created.
-    unique_id = f"{DOMAIN}_{cpe}_contracted_power_exceeded"
-    ent_id = entity_registry.async_get_entity_id("binary_sensor", DOMAIN, unique_id)
-    assert ent_id is not None
 
     # Get the state
     state = hass.states.get(ent_id)
@@ -85,32 +98,34 @@ async def test_load_entities_unavailable_until_contracted_power_selected(
     await hass.async_block_till_done()
 
     registry = er.async_get(hass)
-    entity_ids = [
+    enabled_sensor_ids = [
         registry.async_get_entity_id(
             "sensor", DOMAIN, f"{DOMAIN}_{cpe}_contracted_power_usage"
         ),
         registry.async_get_entity_id(
             "sensor", DOMAIN, f"{DOMAIN}_{cpe}_contracted_power_usage_status"
         ),
-        registry.async_get_entity_id(
-            "binary_sensor",
-            DOMAIN,
-            f"{DOMAIN}_{cpe}_contracted_power_usage_warning",
-        ),
-        registry.async_get_entity_id(
-            "binary_sensor",
-            DOMAIN,
-            f"{DOMAIN}_{cpe}_contracted_power_usage_critical",
-        ),
-        registry.async_get_entity_id(
-            "binary_sensor", DOMAIN, f"{DOMAIN}_{cpe}_contracted_power_exceeded"
-        ),
     ]
-    assert all(entity_ids)
-    for entity_id in entity_ids:
+    assert all(enabled_sensor_ids)
+    for entity_id in enabled_sensor_ids:
         state = hass.states.get(entity_id)
         assert state is not None
         assert state.state == "unavailable"
+
+    for sensor_key in (
+        "contracted_power_usage_warning",
+        "contracted_power_usage_critical",
+        "contracted_power_exceeded",
+    ):
+        entity_id = registry.async_get_entity_id(
+            "binary_sensor", DOMAIN, f"{DOMAIN}_{cpe}_{sensor_key}"
+        )
+        assert entity_id is not None
+        entry = registry.async_get(entity_id)
+        assert entry is not None
+        assert entry.entity_category == EntityCategory.DIAGNOSTIC
+        assert entry.disabled_by == er.RegistryEntryDisabler.INTEGRATION
+        assert hass.states.get(entity_id) is None
 
 
 async def test_contracted_power_exceeded_sensor_on_when_over_100(
@@ -120,6 +135,9 @@ async def test_contracted_power_exceeded_sensor_on_when_over_100(
 
     client = await hass_client()
     cpe = "CPE_USAGE_TEST_2"
+    ent_id = _pre_enable_problem_sensor(
+        hass, config_entry, cpe, "contracted_power_exceeded"
+    )
 
     # Send webhook data with load over 100% (5750W / 230V = 25A, with 20A limit = 125%)
     payload = {
@@ -136,13 +154,6 @@ async def test_contracted_power_exceeded_sensor_on_when_over_100(
     await hass.async_block_till_done()  # Second wait for async signal
     await _select_contracted_power(hass, cpe)
 
-    entity_registry = er.async_get(hass)
-
-    # Check that the contracted-power exceeded sensor exists.
-    unique_id = f"{DOMAIN}_{cpe}_contracted_power_exceeded"
-    ent_id = entity_registry.async_get_entity_id("binary_sensor", DOMAIN, unique_id)
-    assert ent_id is not None
-
     # Get the state
     state = hass.states.get(ent_id)
     assert state is not None
@@ -158,6 +169,9 @@ async def test_contracted_power_exceeded_sensor_updates_with_usage_changes(
 
     client = await hass_client()
     cpe = "CPE_USAGE_TEST_3"
+    ent_id = _pre_enable_problem_sensor(
+        hass, config_entry, cpe, "contracted_power_exceeded"
+    )
 
     # Start with normal load (under 100%)
     payload = {
@@ -173,11 +187,6 @@ async def test_contracted_power_exceeded_sensor_updates_with_usage_changes(
     await hass.async_block_till_done()
     await hass.async_block_till_done()  # Second wait for async signal
     await _select_contracted_power(hass, cpe)
-
-    entity_registry = er.async_get(hass)
-    unique_id = f"{DOMAIN}_{cpe}_contracted_power_exceeded"
-    ent_id = entity_registry.async_get_entity_id("binary_sensor", DOMAIN, unique_id)
-    assert ent_id is not None
 
     # Should be OFF
     state = hass.states.get(ent_id)
@@ -228,6 +237,9 @@ async def test_contracted_power_exceeded_sensor_updates_with_selection_changes(
 
     client = await hass_client()
     cpe = "CPE_USAGE_TEST_4"
+    ent_id = _pre_enable_problem_sensor(
+        hass, config_entry, cpe, "contracted_power_exceeded"
+    )
 
     # Send webhook data with normal load (5290W / 230V = 23A, with 20A limit = 115%)
     payload = {
@@ -243,11 +255,6 @@ async def test_contracted_power_exceeded_sensor_updates_with_selection_changes(
     await hass.async_block_till_done()
     await hass.async_block_till_done()  # Second wait for async signal
     await _select_contracted_power(hass, cpe)
-
-    entity_registry = er.async_get(hass)
-    unique_id = f"{DOMAIN}_{cpe}_contracted_power_exceeded"
-    ent_id = entity_registry.async_get_entity_id("binary_sensor", DOMAIN, unique_id)
-    assert ent_id is not None
 
     # With default 20A limit, 23A = 115% -> should be ON
     state = hass.states.get(ent_id)
@@ -283,6 +290,15 @@ async def test_contracted_power_problem_levels_and_status(
         assert response.status == 200
         await hass.async_block_till_done()
 
+    sensor_keys = (
+        "contracted_power_usage_warning",
+        "contracted_power_usage_critical",
+        "contracted_power_exceeded",
+    )
+    binary_entity_ids = {
+        sensor_key: _pre_enable_problem_sensor(hass, config_entry, cpe, sensor_key)
+        for sensor_key in sensor_keys
+    }
     await send_load(70)
     await _select_contracted_power(hass, cpe)
 
@@ -292,21 +308,13 @@ async def test_contracted_power_problem_levels_and_status(
         (97, ("on", "on", "off"), "critical"),
         (100, ("on", "on", "on"), "exceeded"),
     )
-    sensor_keys = (
-        "contracted_power_usage_warning",
-        "contracted_power_usage_critical",
-        "contracted_power_exceeded",
-    )
 
     for load, expected_binary_states, expected_status in expected_levels:
         await send_load(load)
         for sensor_key, expected_state in zip(
             sensor_keys, expected_binary_states, strict=True
         ):
-            entity_id = entity_registry.async_get_entity_id(
-                "binary_sensor", DOMAIN, f"{DOMAIN}_{cpe}_{sensor_key}"
-            )
-            assert entity_id is not None
+            entity_id = binary_entity_ids[sensor_key]
             state = hass.states.get(entity_id)
             assert state is not None
             assert state.state == expected_state

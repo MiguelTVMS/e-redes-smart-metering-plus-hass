@@ -99,18 +99,23 @@ For each unique CPE (meter), the following entities are automatically created:
 
 ### Sensors
 
-- **Instantaneous Active Power Import** (W) - Real-time power consumption
-- **Max Active Power Import** (W) - Maximum power imported
-- **Active Energy Import** (Wh) - Total energy consumed (Home Assistant converts to kWh automatically)
-- **Instantaneous Active Power Export** (W) - Real-time power generation
-- **Max Active Power Export** (W) - Maximum power exported  
-- **Active Energy Export** (Wh) - Total energy produced (Home Assistant converts to kWh automatically)
+- **Import Power** (W) - Real-time power consumption
+- **Peak Import Power** (W) - Maximum power imported
+- **Imported Energy** (Wh) - Total energy consumed (Home Assistant converts to kWh automatically)
+- **Export Power** (W) - Real-time power generation
+- **Peak Export Power** (W) - Maximum power exported
+- **Exported Energy** (Wh) - Total energy produced (Home Assistant converts to kWh automatically)
 - **Voltage L1/L2/L3** (V) - Available phase voltages
-- **Per-phase Instantaneous Active Power Import/Export** (W) - Created when supplied by a three-phase meter
-- **Instantaneous Active Current Import** (A) - Created for single-phase payloads from total power and L1 voltage
-- **Instantaneous Active Current Import L1/L2/L3** (A) - Created for three-phase payloads from matching per-phase power and voltage
+- **Import/Export Power L1/L2/L3** (W) - Created when supplied by a three-phase meter
+- **Import Current** (A) - Created for single-phase payloads from total power and L1 voltage
+- **Import Current L1/L2/L3** (A) - Created for three-phase payloads from matching per-phase power and voltage
 - **Power Usage** (%) - Active current relative to the nominal current for the selected tier; three-phase payloads use the most-loaded measured phase
 - **Power Usage Status** - Normal, Warning, Critical, or Exceeded
+
+### Diagnostic Alerts
+
+> Diagnostic alerts are **disabled by default**. Enable them from the device page when required.
+
 - **Power Usage Warning** - Problem sensor active at 80% and above
 - **Critical Power Usage** - Problem sensor active at 95% and above
 - **Power Usage Exceeded** - Problem sensor active at 100% and above
