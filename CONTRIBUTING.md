@@ -72,6 +72,7 @@ This hook automatically runs before each commit and validates:
 - ✅ Black formatting
 - ✅ isort import ordering
 - ✅ Ruff linting
+- ✅ Mypy type checking
 - ✅ Pytest tests
 
 If any check fails, the commit will be blocked until you fix the issues.

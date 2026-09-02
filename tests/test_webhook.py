@@ -14,8 +14,7 @@ from custom_components.e_redes_smart_metering_plus.const import (
 )
 from custom_components.e_redes_smart_metering_plus.webhook import handle_webhook
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers import device_registry as dr, entity_registry as er
 
 pytestmark = pytest.mark.asyncio
 
@@ -83,6 +82,7 @@ async def test_webhook_creates_and_updates_sensors(
     # Attributes
     assert state.attributes.get("cpe") == payload["cpe"]
 
+
 async def test_webhook_missing_cpe_returns_400(
     hass: HomeAssistant, config_entry
 ) -> None:
@@ -140,9 +140,7 @@ async def test_webhook_rejects_unconfigured_cpe(
     response = await handle_webhook(
         hass,
         WEBHOOK_ID,
-        DummyRequest(
-            {"cpe": "NOT_ALLOWED", "instantaneousActivePowerImport": 100}
-        ),
+        DummyRequest({"cpe": "NOT_ALLOWED", "instantaneousActivePowerImport": 100}),
         config_entry,
     )
 
@@ -170,14 +168,10 @@ async def test_payload_changes_keep_supported_values(
 
     with caplog.at_level(logging.DEBUG):
         assert (
-            await handle_webhook(
-                hass, WEBHOOK_ID, DummyRequest(first), config_entry
-            )
+            await handle_webhook(hass, WEBHOOK_ID, DummyRequest(first), config_entry)
         ).status == 200
         assert (
-            await handle_webhook(
-                hass, WEBHOOK_ID, DummyRequest(second), config_entry
-            )
+            await handle_webhook(hass, WEBHOOK_ID, DummyRequest(second), config_entry)
         ).status == 200
     await hass.async_block_till_done()
 

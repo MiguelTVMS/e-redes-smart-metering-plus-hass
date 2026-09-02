@@ -194,7 +194,7 @@ async def test_calculated_current_sensor(
     # Send power and voltage data
     power = 2300.0  # W
     voltage = 230.0  # V
-    # Expected current: 2300 / 230 = 10.0 A
+    # Expected active-current estimate: 2300 / 230 = 10.0 A
 
     payload = {
         "cpe": cpe,
@@ -210,7 +210,7 @@ async def test_calculated_current_sensor(
 
     entity_registry = er.async_get(hass)
 
-    # Check that calculated current sensor was created
+    # Check that the calculated current estimate was created.
     calculated_sensor_key = "instantaneous_active_current_import"
     unique_id = f"{DOMAIN}_{cpe}_{calculated_sensor_key}"
     ent_id = entity_registry.async_get_entity_id("sensor", DOMAIN, unique_id)
@@ -224,7 +224,7 @@ async def test_calculated_current_sensor(
     # Test with different values
     power = 4600.0  # W
     voltage = 230.0  # V
-    # Expected current: 4600 / 230 = 20.0 A
+    # Expected active-current estimate: 4600 / 230 = 20.0 A
 
     payload = {
         "cpe": cpe,
@@ -247,6 +247,8 @@ async def test_calculated_current_sensor(
     assert state.attributes.get("unit_of_measurement") == "A"
     assert state.attributes.get("device_class") == "current"
     assert state.attributes.get("cpe") == cpe
+    assert state.attributes["estimated"] is True
+    assert state.attributes["estimate_basis"] == "active_power_divided_by_voltage"
 
 
 async def test_calculated_current_sensor_unknown_when_missing_data(
@@ -455,6 +457,9 @@ async def test_contracted_power_usage_sensor(
     assert state.attributes.get("unit_of_measurement") == "%"
     assert state.attributes.get("cpe") == cpe
     assert state.attributes.get("calculation_type") == "contracted_power_usage"
+    assert state.attributes["estimated"] is True
+    assert state.attributes["estimate_basis"] == "active_power_and_voltage"
+    assert state.attributes["power_factor_assumption"] == 1.0
 
     # Select 6.90 kVA, corresponding to 30A for a single-phase installation.
     await hass.services.async_call(

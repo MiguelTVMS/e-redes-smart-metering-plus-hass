@@ -19,9 +19,9 @@
   "entity": {
     "select": { "contracted_power": { "name": "Potência contratada" } },
     "binary_sensor": {
-      "contracted_power_usage_warning": { "name": "Aviso de utilização de potência" },
-      "contracted_power_usage_critical": { "name": "Utilização crítica de potência" },
-      "contracted_power_exceeded": { "name": "Limite de potência excedido" }
+      "contracted_power_usage_warning": { "name": "Aviso de utilização de potência estimada" },
+      "contracted_power_usage_critical": { "name": "Utilização crítica de potência estimada" },
+      "contracted_power_exceeded": { "name": "Limite estimado de potência excedido" }
     },
     "sensor": {
       "instantaneous_active_power_import": { "name": "Potência importada" },
@@ -37,13 +37,13 @@
       "instantaneous_active_power_export_l1": { "name": "Potência exportada L1" },
       "instantaneous_active_power_export_l2": { "name": "Potência exportada L2" },
       "instantaneous_active_power_export_l3": { "name": "Potência exportada L3" },
-      "instantaneous_active_current_import": { "name": "Corrente importada" },
-      "instantaneous_active_current_import_l1": { "name": "Corrente importada L1" },
-      "instantaneous_active_current_import_l2": { "name": "Corrente importada L2" },
-      "instantaneous_active_current_import_l3": { "name": "Corrente importada L3" },
-      "contracted_power_usage": { "name": "Utilização de potência" },
+      "instantaneous_active_current_import": { "name": "Corrente ativa importada estimada" },
+      "instantaneous_active_current_import_l1": { "name": "Corrente ativa importada estimada L1" },
+      "instantaneous_active_current_import_l2": { "name": "Corrente ativa importada estimada L2" },
+      "instantaneous_active_current_import_l3": { "name": "Corrente ativa importada estimada L3" },
+      "contracted_power_usage": { "name": "Utilização de potência estimada" },
       "contracted_power_usage_status": {
-        "name": "Estado da utilização de potência",
+        "name": "Estado da utilização de potência estimada",
         "state": {
           "normal": "Normal",
           "warning": "Aviso",

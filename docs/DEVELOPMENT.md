@@ -130,7 +130,7 @@ Available scenarios are:
 
 - `household`: varied import with brief export periods
 - `solar`: a daytime-style transition from import to export
-- `contracted-power`: 50%, 82%, 96%, 105%, and 70% of a nominal current, exercising normal, warning, critical, exceeded, and recovery states
+- `contracted-power`: active-power samples equivalent to 50%, 82%, 96%, 105%, and 70% of a nominal current at power factor 1, exercising normal, warning, critical, exceeded, and recovery states
 
 For example, send ten three-phase contracted-power samples one second apart:
 
@@ -139,6 +139,8 @@ make simulate SIMULATOR_ARGS="--cpe PT000000000000000000 --scenario contracted-p
 ```
 
 Select the matching contracted-power tier in Home Assistant before using this scenario. A 20 A nominal current corresponds to 4.60 kVA for a single-phase installation or 13.80 kVA for a three-phase installation.
+
+The simulator and integration derive an active-current estimate from active power and voltage. The E-REDES pilot webhook does not expose current, apparent power, or power factor, so the estimate is a lower bound when power factor is below 1 and cannot predict meter or breaker operation.
 
 Use `--dry-run` to inspect one generated payload without sending it, or `--print-payload` to display every payload while sending. Run the complete option reference with:
 
@@ -156,9 +158,16 @@ On Windows, replace `.venv/bin/python` with `.venv\Scripts\python.exe`. The same
 black custom_components/
 isort custom_components/
 ruff check --fix custom_components/
+black tests/ scripts/
+isort tests/ scripts/
+ruff check --fix tests/ scripts/
 black --check --diff custom_components/
 isort --check-only --diff custom_components/
 ruff check custom_components/
+black --check --diff tests/ scripts/
+isort --check-only --diff tests/ scripts/
+ruff check tests/ scripts/
+mypy custom_components/
 pytest tests/ -q --tb=short
 ```
 

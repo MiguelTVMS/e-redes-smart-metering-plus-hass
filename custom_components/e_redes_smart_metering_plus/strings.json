@@ -25,9 +25,9 @@
   "entity": {
     "select": { "contracted_power": { "name": "Contracted power" } },
     "binary_sensor": {
-      "contracted_power_usage_warning": { "name": "Power usage warning" },
-      "contracted_power_usage_critical": { "name": "Critical power usage" },
-      "contracted_power_exceeded": { "name": "Power usage exceeded" }
+      "contracted_power_usage_warning": { "name": "Estimated power usage warning" },
+      "contracted_power_usage_critical": { "name": "Estimated critical power usage" },
+      "contracted_power_exceeded": { "name": "Estimated power usage exceeded" }
     },
     "sensor": {
       "instantaneous_active_power_import": { "name": "Import power" },
@@ -45,13 +45,13 @@
       "instantaneous_active_power_export_l1": { "name": "Export power L1" },
       "instantaneous_active_power_export_l2": { "name": "Export power L2" },
       "instantaneous_active_power_export_l3": { "name": "Export power L3" },
-      "instantaneous_active_current_import": { "name": "Import current" },
-      "instantaneous_active_current_import_l1": { "name": "Import current L1" },
-      "instantaneous_active_current_import_l2": { "name": "Import current L2" },
-      "instantaneous_active_current_import_l3": { "name": "Import current L3" },
-      "contracted_power_usage": { "name": "Power usage" },
+      "instantaneous_active_current_import": { "name": "Estimated active import current" },
+      "instantaneous_active_current_import_l1": { "name": "Estimated active import current L1" },
+      "instantaneous_active_current_import_l2": { "name": "Estimated active import current L2" },
+      "instantaneous_active_current_import_l3": { "name": "Estimated active import current L3" },
+      "contracted_power_usage": { "name": "Estimated power usage" },
       "contracted_power_usage_status": {
-        "name": "Power usage status",
+        "name": "Estimated power usage status",
         "state": {
           "normal": "Normal",
           "warning": "Warning",

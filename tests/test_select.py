@@ -93,6 +93,7 @@ async def test_three_phase_payload_uses_three_phase_options(
     assert state is not None
     assert state.attributes["installation_type"] == "three_phase"
     assert state.attributes["options"] == [
+        "3.45 kVA",
         "6.90 kVA",
         "10.35 kVA",
         "13.80 kVA",
@@ -102,6 +103,43 @@ async def test_three_phase_payload_uses_three_phase_options(
         "34.50 kVA",
         "41.40 kVA",
     ]
+
+
+async def test_three_phase_345_kva_uses_five_amp_limit(
+    hass: HomeAssistant, hass_client, config_entry
+) -> None:
+    """A valid non-residential three-phase 3.45 kVA tier is selectable."""
+    client = await hass_client()
+    response = await client.post(
+        f"/api/webhook/{config_entry.data['webhook_id']}",
+        json={
+            "cpe": "TEST345",
+            "voltageL1": 230,
+            "voltageL2": 230,
+            "voltageL3": 230,
+            "instantaneousActivePowerImportL1": 1150,
+            "instantaneousActivePowerImportL2": 0,
+            "instantaneousActivePowerImportL3": 0,
+        },
+    )
+    assert response.status == 200
+    await hass.async_block_till_done()
+
+    entity_id = _select_entity_id(hass, "TEST345")
+    await hass.services.async_call(
+        "select",
+        "select_option",
+        {"entity_id": entity_id, "option": "3.45 kVA"},
+        blocking=True,
+    )
+
+    usage_id = er.async_get(hass).async_get_entity_id(
+        "sensor", DOMAIN, f"{DOMAIN}_TEST345_contracted_power_usage"
+    )
+    assert usage_id is not None
+    usage = hass.states.get(usage_id)
+    assert usage is not None
+    assert float(usage.state) == pytest.approx(100.0)
 
 
 async def test_standard_legacy_current_limit_is_migrated(

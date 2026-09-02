@@ -7,8 +7,8 @@ import importlib.util
 import json
 from pathlib import Path
 import sys
-from urllib.error import HTTPError
 from unittest.mock import Mock
+from urllib.error import HTTPError
 
 import pytest
 
@@ -80,8 +80,7 @@ def test_contracted_power_scenario_crosses_alert_thresholds(phases: int) -> None
         )
         if phases == 1:
             ratios.append(
-                payload["instantaneousActivePowerImport"]
-                / (payload["voltageL1"] * 20)
+                payload["instantaneousActivePowerImport"] / (payload["voltageL1"] * 20)
             )
         else:
             ratios.append(

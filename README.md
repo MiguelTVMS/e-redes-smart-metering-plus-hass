@@ -60,13 +60,15 @@ For each CPE, Home Assistant creates a separate meter device. Available entities
 | --- | --- |
 | Energy | Imported energy and Exported energy |
 | Power | Import power, Export power, Peak import power, Peak export power, and per-phase power when available |
-| Electrical measurements | Voltage L1/L2/L3 and Import current L1/L2/L3 when the matching data is available |
-| Contract usage | Contracted power, Power usage, and Power usage status |
+| Electrical estimates | Voltage L1/L2/L3 and estimated active import current L1/L2/L3 when the matching data is available |
+| Contract usage | Contracted power, Estimated power usage, and Estimated power usage status |
 | Diagnostics | Last update and Update interval, disabled by default |
 
-The following diagnostic problem entities are also disabled by default: **Power usage warning**, **Critical power usage**, and **Power usage exceeded**. Enable them from the device page only if you need separate alert entities.
+The following diagnostic problem entities are also disabled by default: **Estimated power usage warning**, **Estimated critical power usage**, and **Estimated power usage exceeded**. Enable them from the device page only if you need separate alert entities.
 
-Power usage compares the current load with the nominal current for the selected contracted-power tier. For three-phase data, it uses the most-loaded reported phase. It does not predict the behavior of a physical breaker or other protection hardware.
+Estimated power usage compares the active-current component derived from active power and voltage with the nominal current for the selected contracted-power tier. For three-phase data, it uses the most-loaded reported phase. The Smart Metering Plus webhook does not provide current, apparent power, or power factor, so this is a lower-bound estimate whenever the power factor is below 1. It must not be used to predict the behavior of a physical breaker, the meter's control function, or other protection hardware.
+
+The three-phase list includes the 3.45 kVA tier used by eligible non-residential installations. New residential three-phase installations normally start at 6.90 kVA.
 
 ## Webhook data
 

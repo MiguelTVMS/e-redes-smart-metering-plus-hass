@@ -227,6 +227,13 @@ class ERedesCalculatedSensor(RestoreSensor):
             "calculation_type": self.entity_description.calculation,
             "source_sensors": self.entity_description.source_sensors,
         }
+        if self.entity_description.calculation == "power_voltage":
+            attributes.update(
+                {
+                    "estimated": True,
+                    "estimate_basis": "active_power_divided_by_voltage",
+                }
+            )
         if self.entity_description.key in {
             "contracted_power_usage",
             "contracted_power_usage_status",
@@ -248,6 +255,9 @@ class ERedesCalculatedSensor(RestoreSensor):
                         if is_three_phase(self._config_entry, self._cpe)
                         else "single_phase"
                     ),
+                    "estimated": True,
+                    "estimate_basis": "active_power_and_voltage",
+                    "power_factor_assumption": 1.0,
                 }
             )
             if current_and_phase := self._usage_current_and_phase():
@@ -362,7 +372,7 @@ class ERedesCalculatedSensor(RestoreSensor):
         return power, voltage
 
     def _calculate_current_from_power_voltage(self) -> float | None:
-        """Calculate active current from matching power and voltage values."""
+        """Estimate the active component of current from power and voltage."""
         if (
             self.entity_description.key == _SINGLE_PHASE_CURRENT_KEY
             and self._has_phase_power()
@@ -382,7 +392,7 @@ class ERedesCalculatedSensor(RestoreSensor):
         )
 
     def _phase_currents(self) -> list[tuple[float, str]]:
-        """Return active currents and names for phases with matching values."""
+        """Return estimated active currents for phases with matching values."""
         entities = self._config_entry.runtime_data.sensor_entities
         currents: list[tuple[float, str]] = []
         for phase in _PHASES:
@@ -407,7 +417,7 @@ class ERedesCalculatedSensor(RestoreSensor):
         return currents
 
     def _usage_current_and_phase(self) -> tuple[float, str] | None:
-        """Return the highest measured active current and its phase."""
+        """Return the highest estimated active current and its phase."""
         if is_three_phase(self._config_entry, self._cpe):
             if not (currents := self._phase_currents()):
                 return None
@@ -422,7 +432,7 @@ class ERedesCalculatedSensor(RestoreSensor):
         return power / voltage, "single_phase"
 
     def _calculate_contracted_power_usage(self) -> float | None:
-        """Calculate contracted-power usage percentage."""
+        """Estimate contracted-power usage from active power and voltage."""
         if (current_and_phase := self._usage_current_and_phase()) is None:
             return None
         current, _phase = current_and_phase

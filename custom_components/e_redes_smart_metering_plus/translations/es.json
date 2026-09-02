@@ -19,9 +19,9 @@
   "entity": {
     "select": { "contracted_power": { "name": "Potencia contratada" } },
     "binary_sensor": {
-      "contracted_power_usage_warning": { "name": "Aviso de uso de potencia" },
-      "contracted_power_usage_critical": { "name": "Uso crítico de potencia" },
-      "contracted_power_exceeded": { "name": "Límite de potencia excedido" }
+      "contracted_power_usage_warning": { "name": "Aviso de uso estimado de potencia" },
+      "contracted_power_usage_critical": { "name": "Uso crítico estimado de potencia" },
+      "contracted_power_exceeded": { "name": "Límite estimado de potencia excedido" }
     },
     "sensor": {
       "instantaneous_active_power_import": { "name": "Potencia importada" },
@@ -37,13 +37,13 @@
       "instantaneous_active_power_export_l1": { "name": "Potencia exportada L1" },
       "instantaneous_active_power_export_l2": { "name": "Potencia exportada L2" },
       "instantaneous_active_power_export_l3": { "name": "Potencia exportada L3" },
-      "instantaneous_active_current_import": { "name": "Corriente importada" },
-      "instantaneous_active_current_import_l1": { "name": "Corriente importada L1" },
-      "instantaneous_active_current_import_l2": { "name": "Corriente importada L2" },
-      "instantaneous_active_current_import_l3": { "name": "Corriente importada L3" },
-      "contracted_power_usage": { "name": "Uso de potencia" },
+      "instantaneous_active_current_import": { "name": "Corriente activa importada estimada" },
+      "instantaneous_active_current_import_l1": { "name": "Corriente activa importada estimada L1" },
+      "instantaneous_active_current_import_l2": { "name": "Corriente activa importada estimada L2" },
+      "instantaneous_active_current_import_l3": { "name": "Corriente activa importada estimada L3" },
+      "contracted_power_usage": { "name": "Uso estimado de potencia" },
       "contracted_power_usage_status": {
-        "name": "Estado del uso de potencia",
+        "name": "Estado del uso estimado de potencia",
         "state": {
           "normal": "Normal",
           "warning": "Aviso",

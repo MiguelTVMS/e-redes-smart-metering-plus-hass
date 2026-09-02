@@ -1,9 +1,8 @@
 """Tests for E-Redes icon translations."""
 
+from custom_components.e_redes_smart_metering_plus.const import DOMAIN
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.icon import async_get_icons
-
-from custom_components.e_redes_smart_metering_plus.const import DOMAIN
 
 
 async def test_contracted_power_icons_load_from_icon_translations(

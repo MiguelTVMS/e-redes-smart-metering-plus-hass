@@ -7,11 +7,13 @@ on:
     paths:
       - 'custom_components/e_redes_smart_metering_plus/**'
       - 'tests/**'
+      - 'scripts/**'
       - 'pyproject.toml'
       - 'pytest.ini'
       - 'requirements_dev.txt'
       - 'hacs.json'
       - '.github/workflows/lint.yml'
+      - '.github/workflows/tests.yml'
       - '.github/instructions/copilot-instructions.md'
   push:
     branches:
@@ -50,13 +52,16 @@ jobs:
 
       - name: Run black
         run: |
-          black --check --diff custom_components/
+          black --check --diff custom_components/ tests/ scripts/
       - name: Run isort
         run: |
-          isort --check-only --diff custom_components/
+          isort --check-only --diff custom_components/ tests/ scripts/
       - name: Run ruff
         run: |
-          ruff check custom_components/
+          ruff check custom_components/ tests/ scripts/
+      - name: Run mypy
+        run: |
+          mypy custom_components/
 
   hacs:
     runs-on: ubuntu-latest

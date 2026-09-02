@@ -33,7 +33,7 @@ Keep instructions here operational. Product setup belongs in `README.md`; contri
 - One accepted CPE creates and updates only its own device and entities. Preserve multi-meter isolation.
 - Prefer a configured Home Assistant external URL. Otherwise use a Home Assistant Cloud Cloudhook when available; otherwise expose the local generated webhook URL.
 - Preserve incoming measurement timestamps and reject older out-of-order data for a CPE.
-- Power usage is based on the selected contracted-power tier, never a physical breaker assumption. Diagnostic alert entities are disabled by default.
+- Estimated power usage is based on active power, voltage, and the selected contracted-power tier. Preserve its explicit power-factor limitation and never present it as a physical breaker prediction. Diagnostic alert entities are disabled by default.
 - Keep entity names, translations, icons, device classes, state classes, units, and entity categories consistent when adding or changing entities.
 
 ## Change workflow

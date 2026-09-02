@@ -22,8 +22,7 @@ from custom_components.e_redes_smart_metering_plus.sensor import (
     async_ensure_sensors_for_data,
 )
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers import device_registry as dr, entity_registry as er
 
 
 async def test_platforms_ready_before_webhook_registration(
@@ -168,9 +167,7 @@ async def test_migration_renames_contracted_power_entity_keys(
         assert registry.async_get(old_entity_id) is None
         migrated = registry.async_get(f"{domain}.meter_{new_key}")
         assert migrated is not None
-        assert migrated.unique_id == (
-            f"{DOMAIN}_PT000000000000000001_{new_key}"
-        )
+        assert migrated.unique_id == (f"{DOMAIN}_PT000000000000000001_{new_key}")
 
 
 async def test_migration_skips_conflicting_contracted_power_unique_id(

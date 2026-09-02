@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import re
+from typing import Any
 
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
@@ -111,7 +112,7 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ERedesConfigEntry) -> 
         ):
             for old_key, new_key in _CONTRACTED_POWER_ENTITY_KEY_MIGRATIONS.items():
                 suffix = f"_{old_key}"
-                update_kwargs: dict[str, str] = {}
+                update_kwargs: dict[str, Any] = {}
                 if entity.unique_id.endswith(suffix):
                     new_unique_id = f"{entity.unique_id[: -len(suffix)]}_{new_key}"
                     if (
