@@ -1,0 +1,13 @@
+FROM ghcr.io/home-assistant/home-assistant:2026.1.0
+
+WORKDIR /workspace
+
+COPY requirements_dev.txt /tmp/requirements_dev.txt
+
+RUN python -m pip install --no-cache-dir --root-user-action=ignore -r /tmp/requirements_dev.txt
+
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONPATH=/workspace
+
+ENTRYPOINT ["pytest"]
+CMD ["tests/", "-q", "--tb=short"]

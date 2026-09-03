@@ -328,13 +328,13 @@ async def async_ensure_device(
         _LOGGER.info("Created new device for CPE: %s", cpe)
 
     # Ensure companion entities even when the device predates those platforms.
-    from .number import async_create_breaker_limit_entity
+    from .select import async_create_contracted_power_entity
 
-    async_create_breaker_limit_entity(entry, cpe)
+    async_create_contracted_power_entity(entry, cpe)
 
-    from .binary_sensor import async_create_breaker_overload_sensor
+    from .binary_sensor import async_create_contracted_power_problem_sensors
 
-    async_create_breaker_overload_sensor(entry, cpe)
+    async_create_contracted_power_problem_sensors(entry, cpe)
 
 
 async def async_process_sensor_data(
@@ -372,12 +372,14 @@ async def _async_process_ordered_sensor_data(
     await async_ensure_sensors_for_data(entry, cpe, data, raw_timestamp)
 
     # Send update signal for each sensor type
+    updated_sensor_keys: set[str] = set()
     for field_name, field_value in data.items():
         if field_name == "cpe":
             continue
 
         if field_name in SENSOR_MAPPING:
             sensor_key = SENSOR_MAPPING[field_name].key
+            updated_sensor_keys.add(sensor_key)
 
             # Dispatch update to sensor entity
             async_dispatcher_send(
@@ -396,8 +398,22 @@ async def _async_process_ordered_sensor_data(
         else:
             _LOGGER.debug("Unknown field in webhook data: %s", field_name)
 
+    entry.runtime_data.latest_measurement_sensor_keys[cpe] = frozenset(
+        updated_sensor_keys
+    )
+
+    from .select import async_refresh_contracted_power_entity
+
+    async_refresh_contracted_power_entity(entry, cpe)
+
     # Ensure calculated sensors exist after processing source sensors
     await async_ensure_calculated_sensors(entry, cpe)
+
+    # Recalculate contracted-power usage only after the complete payload is applied.
+    async_dispatcher_send(
+        hass,
+        f"{DOMAIN}_{cpe}_measurement_batch_update",
+    )
 
     # Ensure diagnostic sensors exist
     from .sensor import async_ensure_diagnostic_sensors

@@ -6,17 +6,38 @@ PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$PROJECT_DIR"
 
 if ! command -v uv >/dev/null 2>&1; then
-    echo "Error: uv is required. Install it with: brew install uv"
+    case "$(uname -s)" in
+        Darwin)
+            echo "Error: uv is required. Install it with: brew install uv"
+            ;;
+        *)
+            echo "Error: uv is required. See https://docs.astral.sh/uv/getting-started/installation/"
+            ;;
+    esac
     exit 1
 fi
 
 if ! command -v docker >/dev/null 2>&1; then
-    echo "Error: Docker Desktop is required."
+    echo "Error: Docker Desktop or Docker Engine with Compose is required."
     exit 1
 fi
 
-echo "Installing Python 3.13..."
-uv python install 3.13
+if ! docker info >/dev/null 2>&1; then
+    echo "Error: Docker is installed but its engine is not running or is unavailable."
+    exit 1
+fi
+
+echo "Locating Python 3.13..."
+if ! uv python find 3.13 >/dev/null 2>&1; then
+    if ! uv python install 3.13; then
+        if ! uv python find 3.13 >/dev/null 2>&1; then
+            echo "Error: uv could not install or locate Python 3.13."
+            exit 1
+        fi
+
+        echo "Warning: uv reported an installation-link error, but Python 3.13 is available and will be used."
+    fi
+fi
 
 if [ -x ".venv/bin/python" ] && \
     .venv/bin/python -c 'import sys; raise SystemExit(sys.version_info[:2] != (3, 13))'; then

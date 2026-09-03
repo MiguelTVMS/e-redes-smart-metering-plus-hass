@@ -10,7 +10,9 @@ Bootstrap the local development environment from the repository root:
 make bootstrap
 ```
 
-This installs the Python 3.13 development dependencies and copies the pre-commit hook to `.git/hooks/pre-commit`.
+This installs the Python 3.13 development dependencies and copies the pre-commit hook to Git's resolved hooks directory, including in a linked worktree.
+
+On Windows, the same command delegates to the repository PowerShell bootstrap. See the [cross-platform development guide](DEVELOPMENT.md) for prerequisites and troubleshooting on every supported host.
 
 ## What It Does
 
@@ -19,7 +21,8 @@ The pre-commit hook runs the following checks on staged Python files:
 1. **Black** - Code formatting check
 2. **isort** - Import ordering check
 3. **Ruff** - Linting check
-4. **Pytest** - Unit tests (when Python files are staged)
+4. **Mypy** - Static type checking
+5. **Pytest** - Unit tests (when Python files are staged)
 
 These are the **same checks** that run in GitHub Actions, so you'll catch issues before pushing.
 
@@ -50,6 +53,9 @@ custom_components/e_redes_smart_metering_plus/sensor.py
 🔧 Running ruff...
 ✅ Ruff check passed
 
+🔎 Running mypy...
+✅ Mypy check passed
+
 🧪 Running pytest...
 ✅ Tests passed
 
@@ -70,9 +76,9 @@ custom_components/e_redes_smart_metering_plus/sensor.py
 ❌ Pre-commit checks failed! Please fix the issues above before committing.
 
 Quick fix commands:
-  black custom_components/
-  isort custom_components/
-  ruff check --fix custom_components/
+  black custom_components/ tests/ scripts/
+  isort custom_components/ tests/ scripts/
+  ruff check --fix custom_components/ tests/ scripts/
 ```
 
 ## Fixing Issues

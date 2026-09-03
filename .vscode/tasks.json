@@ -18,9 +18,28 @@
             "problemMatcher": []
         },
         {
+            "label": "Development: Test",
+            "type": "shell",
+            "command": "make test",
+            "group": "test",
+            "problemMatcher": []
+        },
+        {
+            "label": "Development: Doctor",
+            "type": "shell",
+            "command": "make doctor",
+            "problemMatcher": []
+        },
+        {
             "label": "Home Assistant: Start",
             "type": "shell",
             "command": "make ha-up",
+            "problemMatcher": []
+        },
+        {
+            "label": "Home Assistant: Stop",
+            "type": "shell",
+            "command": "make ha-down",
             "problemMatcher": []
         },
         {
@@ -40,6 +59,13 @@
             "label": "Home Assistant: Send test webhook",
             "type": "shell",
             "command": "make webhook",
+            "problemMatcher": []
+        },
+        {
+            "label": "Home Assistant: Simulate meter data",
+            "type": "shell",
+            "command": "make simulate",
+            "isBackground": true,
             "problemMatcher": []
         }
     ]

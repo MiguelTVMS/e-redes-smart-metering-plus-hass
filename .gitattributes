@@ -1,0 +1,12 @@
+* text=auto
+
+# Shell entry points must retain Unix line endings on every platform.
+Makefile text eol=lf
+scripts/bootstrap-local text eol=lf
+scripts/install-hooks.sh text eol=lf
+scripts/pre-commit text eol=lf
+scripts/send-test-webhook text eol=lf
+scripts/validate text eol=lf
+
+# PowerShell Core also runs these files correctly on macOS and Linux.
+*.ps1 text eol=lf

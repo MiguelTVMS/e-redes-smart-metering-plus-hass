@@ -7,6 +7,14 @@ on:
     paths:
       - 'custom_components/e_redes_smart_metering_plus/**'
       - 'tests/**'
+      - 'scripts/**'
+      - 'dev/home-assistant/**'
+      - '.vscode/**'
+      - '.dockerignore'
+      - '.gitattributes'
+      - 'Dockerfile.tests'
+      - 'Makefile'
+      - 'docker-compose.yml'
       - 'pyproject.toml'
       - 'pytest.ini'
       - 'requirements_dev.txt'
@@ -27,17 +35,23 @@ permissions:
 
 jobs:
   tests:
-    name: Pytest
-    runs-on: ubuntu-latest
+    name: Pytest (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
     env:
       PYTHONPATH: ${{ github.workspace }}
     steps:
       - name: Check out repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: '3.13'
           cache: 'pip'
@@ -52,21 +66,80 @@ jobs:
 
       - name: Run tests
         run: |
-          mkdir -p .reports
-          pytest -q \
-            --junitxml=.reports/pytest-junit.xml
+          python -c "from pathlib import Path; Path('.reports').mkdir(exist_ok=True)"
+          pytest -q --junitxml=.reports/pytest-junit.xml
 
       - name: Ensure test report exists
         if: always()
         run: |
-          if [ ! -f .reports/pytest-junit.xml ]; then
-            echo '<testsuite name="empty" tests="0"></testsuite>' > .reports/pytest-junit.xml
-          fi
+          python -c "from pathlib import Path; p = Path('.reports/pytest-junit.xml'); p.parent.mkdir(exist_ok=True); p.write_text('<testsuite/>', encoding='utf-8') if not p.exists() else None"
 
       - name: Upload test report artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
-          name: test-reports
+          name: test-reports-${{ matrix.os }}
           path: .reports/**
           if-no-files-found: ignore
+
+  container-tests:
+    name: Pytest (development container)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Build cached development test image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: Dockerfile.tests
+          load: true
+          tags: e-redes-smart-metering-plus-dev-tests:latest
+          cache-from: type=gha,scope=development-tests
+          cache-to: type=gha,mode=max,scope=development-tests
+
+      - name: Run tests in the development container
+        run: docker compose --profile tools run --rm tests
+
+  windows-tooling:
+    name: Windows tooling
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Parse PowerShell scripts
+        shell: pwsh
+        run: |
+          $parseErrors = @()
+          foreach ($file in Get-ChildItem scripts/*.ps1) {
+              $tokens = $null
+              $errors = $null
+              [System.Management.Automation.Language.Parser]::ParseFile(
+                  $file.FullName,
+                  [ref] $tokens,
+                  [ref] $errors
+              ) | Out-Null
+              $parseErrors += $errors
+          }
+          if ($parseErrors.Count -gt 0) {
+              $parseErrors | Format-List
+              exit 1
+          }
+
+      - name: Validate editor configuration and shell line endings
+        shell: pwsh
+        run: |
+          Get-Content -Raw .vscode/settings.json | ConvertFrom-Json | Out-Null
+          Get-Content -Raw .vscode/tasks.json | ConvertFrom-Json | Out-Null
+          $lineEndings = git ls-files --eol Makefile scripts/bootstrap-local scripts/install-hooks.sh scripts/pre-commit scripts/send-test-webhook scripts/validate
+          $lineEndings
+          if ($lineEndings -match "w/crlf") {
+              throw "A POSIX entry point was checked out with CRLF line endings."
+          }

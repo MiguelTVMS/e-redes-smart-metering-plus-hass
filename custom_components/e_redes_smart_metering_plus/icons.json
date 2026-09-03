@@ -1,0 +1,50 @@
+{
+  "entity": {
+    "binary_sensor": {
+      "contracted_power_usage_warning": {
+        "default": "mdi:alert-outline",
+        "state": {
+          "on": "mdi:alert"
+        }
+      },
+      "contracted_power_usage_critical": {
+        "default": "mdi:alert-circle-outline",
+        "state": {
+          "on": "mdi:alert-circle"
+        }
+      },
+      "contracted_power_exceeded": {
+        "default": "mdi:alert-octagon-outline",
+        "state": {
+          "on": "mdi:alert-octagon"
+        }
+      }
+    },
+    "select": {
+      "contracted_power": {
+        "default": "mdi:transmission-tower"
+      }
+    },
+    "sensor": {
+      "contracted_power_usage": {
+        "default": "mdi:gauge",
+        "range": {
+          "0": "mdi:gauge-empty",
+          "1": "mdi:gauge-low",
+          "80": "mdi:gauge",
+          "95": "mdi:gauge-full",
+          "100": "mdi:alert-octagon"
+        }
+      },
+      "contracted_power_usage_status": {
+        "default": "mdi:gauge",
+        "state": {
+          "normal": "mdi:check-circle-outline",
+          "warning": "mdi:alert-outline",
+          "critical": "mdi:alert-circle",
+          "exceeded": "mdi:alert-octagon"
+        }
+      }
+    }
+  }
+}

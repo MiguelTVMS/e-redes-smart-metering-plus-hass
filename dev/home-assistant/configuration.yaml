@@ -1,0 +1,49 @@
+# Development-only Home Assistant defaults. Production users configure these
+# values through their own Home Assistant instance.
+homeassistant:
+  name: E-Redes Smart Metering Plus Development
+  # Generic central-Portugal development coordinates, not a contributor's home.
+  latitude: 39.5572
+  longitude: -7.8537
+  elevation: 200
+  radius: 100
+  unit_system: metric
+  time_zone: Europe/Lisbon
+  country: PT
+  currency: EUR
+  language: en
+  internal_url: http://localhost:8123
+
+  # Passwordless development access is limited to exact host and Docker
+  # gateway addresses. Keep password authentication as a recovery path.
+  auth_providers:
+    - type: trusted_networks
+      trusted_networks:
+        - 127.0.0.1
+        - "::1"
+        - 172.31.252.1/32
+        - 192.168.65.1/32
+      allow_bypass_login: true
+    - type: homeassistant
+
+# Load Home Assistant's standard UI, config flow, cloud, webhook, and discovery
+# integrations.
+default_config:
+
+# Keep local development storage bounded.
+recorder:
+  purge_keep_days: 2
+
+# Show lifecycle messages from this integration without logging full webhook
+# payloads, which are emitted at debug level.
+logger:
+  default: warning
+  logs:
+    custom_components.e_redes_smart_metering_plus: info
+
+frontend:
+  themes: !include_dir_merge_named themes
+
+automation: !include automations.yaml
+script: !include scripts.yaml
+scene: !include scenes.yaml

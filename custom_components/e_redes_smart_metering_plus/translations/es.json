@@ -9,7 +9,7 @@
       "invalid_cpe": "Introduce al menos un CPE válido de 20 caracteres que comience por PT",
       "unknown": "[%key:common::config_flow::error::unknown%]"
     },
-    "abort": { "already_configured": "[%key:common::config_flow::abort::already_configured_device%]" }
+    "abort": { "already_configured": "Esta integración ya está configurada" }
   },
   "options": { "step": { "init": {
     "title": "Configuración del webhook E-Redes",
@@ -17,24 +17,41 @@
     "data": { "cpes": "CPE autorizado" }
   } } },
   "entity": {
-    "number": { "breaker_limit": { "name": "Límite del interruptor" } },
-    "binary_sensor": { "breaker_overload": { "name": "Sobrecarga del interruptor" } },
+    "select": { "contracted_power": { "name": "Potencia contratada" } },
+    "binary_sensor": {
+      "contracted_power_usage_warning": { "name": "Aviso de uso estimado de potencia" },
+      "contracted_power_usage_critical": { "name": "Uso crítico estimado de potencia" },
+      "contracted_power_exceeded": { "name": "Límite estimado de potencia excedido" }
+    },
     "sensor": {
-      "instantaneous_active_power_import": { "name": "Potencia activa importada instantánea" },
-      "max_active_power_import": { "name": "Potencia activa importada máxima" },
-      "active_energy_import": { "name": "Energía activa importada" },
-      "instantaneous_active_power_export": { "name": "Potencia activa exportada instantánea" },
-      "max_active_power_export": { "name": "Potencia activa exportada máxima" },
-      "active_energy_export": { "name": "Energía activa exportada" },
+      "instantaneous_active_power_import": { "name": "Potencia importada" },
+      "max_active_power_import": { "name": "Pico de potencia importada" },
+      "active_energy_import": { "name": "Energía importada" },
+      "instantaneous_active_power_export": { "name": "Potencia exportada" },
+      "max_active_power_export": { "name": "Pico de potencia exportada" },
+      "active_energy_export": { "name": "Energía exportada" },
       "voltage_l1": { "name": "Tensión L1" }, "voltage_l2": { "name": "Tensión L2" }, "voltage_l3": { "name": "Tensión L3" },
-      "instantaneous_active_power_import_l1": { "name": "Potencia activa importada instantánea L1" },
-      "instantaneous_active_power_import_l2": { "name": "Potencia activa importada instantánea L2" },
-      "instantaneous_active_power_import_l3": { "name": "Potencia activa importada instantánea L3" },
-      "instantaneous_active_power_export_l1": { "name": "Potencia activa exportada instantánea L1" },
-      "instantaneous_active_power_export_l2": { "name": "Potencia activa exportada instantánea L2" },
-      "instantaneous_active_power_export_l3": { "name": "Potencia activa exportada instantánea L3" },
-      "instantaneous_active_current_import": { "name": "Corriente activa importada instantánea" },
-      "breaker_load": { "name": "Carga del interruptor" }, "last_update": { "name": "Última actualización" }, "update_interval": { "name": "Intervalo de actualización" }
+      "instantaneous_active_power_import_l1": { "name": "Potencia importada L1" },
+      "instantaneous_active_power_import_l2": { "name": "Potencia importada L2" },
+      "instantaneous_active_power_import_l3": { "name": "Potencia importada L3" },
+      "instantaneous_active_power_export_l1": { "name": "Potencia exportada L1" },
+      "instantaneous_active_power_export_l2": { "name": "Potencia exportada L2" },
+      "instantaneous_active_power_export_l3": { "name": "Potencia exportada L3" },
+      "instantaneous_active_current_import": { "name": "Corriente activa importada estimada" },
+      "instantaneous_active_current_import_l1": { "name": "Corriente activa importada estimada L1" },
+      "instantaneous_active_current_import_l2": { "name": "Corriente activa importada estimada L2" },
+      "instantaneous_active_current_import_l3": { "name": "Corriente activa importada estimada L3" },
+      "contracted_power_usage": { "name": "Uso estimado de potencia" },
+      "contracted_power_usage_status": {
+        "name": "Estado del uso estimado de potencia",
+        "state": {
+          "normal": "Normal",
+          "warning": "Aviso",
+          "critical": "Crítico",
+          "exceeded": "Excedido"
+        }
+      },
+      "last_update": { "name": "Última actualización" }, "update_interval": { "name": "Intervalo de actualización" }
     }
   }
 }

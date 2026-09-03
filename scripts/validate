@@ -15,8 +15,15 @@ export PATH="$PROJECT_DIR/.venv/bin:$PATH"
 black custom_components/
 isort custom_components/
 ruff check --fix custom_components/
+black tests/ scripts/
+isort tests/ scripts/
+ruff check --fix tests/ scripts/
 
 black --check --diff custom_components/ && \
     isort --check-only --diff custom_components/ && \
     ruff check custom_components/ && \
+    black --check --diff tests/ scripts/ && \
+    isort --check-only --diff tests/ scripts/ && \
+    ruff check tests/ scripts/ && \
+    mypy custom_components/ && \
     pytest tests/ -q --tb=short

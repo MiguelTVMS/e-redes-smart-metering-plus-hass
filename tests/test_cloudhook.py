@@ -10,22 +10,21 @@ from unittest.mock import AsyncMock
 import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-import homeassistant.components as homeassistant_components
-from homeassistant.core import HomeAssistant
-
+from custom_components.e_redes_smart_metering_plus import webhook as webhook_module
 from custom_components.e_redes_smart_metering_plus.const import (
     CONF_CPES,
     DOMAIN,
     WEBHOOK_ID,
 )
 from custom_components.e_redes_smart_metering_plus.models import ERedesRuntimeData
-from custom_components.e_redes_smart_metering_plus import webhook as webhook_module
 from custom_components.e_redes_smart_metering_plus.webhook import (
     _async_create_cloudhook,
     _async_refresh_cloudhook,
     async_get_active_webhook_url,
     async_setup_webhook,
 )
+import homeassistant.components as homeassistant_components
+from homeassistant.core import HomeAssistant
 
 
 async def test_cloudhook_waits_for_cloud_connection(
@@ -40,9 +39,7 @@ async def test_cloudhook_waits_for_cloud_connection(
         async_get_or_create_cloudhook=get_or_create,
     )
     monkeypatch.setitem(sys.modules, "homeassistant.components.cloud", fake_cloud)
-    monkeypatch.setattr(
-        homeassistant_components, "cloud", fake_cloud, raising=False
-    )
+    monkeypatch.setattr(homeassistant_components, "cloud", fake_cloud, raising=False)
 
     assert await _async_create_cloudhook(hass, WEBHOOK_ID) is None
     get_or_create.assert_not_awaited()
@@ -73,9 +70,7 @@ async def test_cloudhook_failure_log_is_not_empty(
     )
 
     with caplog.at_level(logging.WARNING):
-        assert (
-            await _async_refresh_cloudhook(hass, config_entry, WEBHOOK_ID) is None
-        )
+        assert await _async_refresh_cloudhook(hass, config_entry, WEBHOOK_ID) is None
 
     assert "Failed to create cloud webhook (EmptyCloudError): no details" in caplog.text
 
@@ -141,9 +136,7 @@ async def test_configured_external_url_prevents_cloudhook_creation(
         async_get_or_create_cloudhook=get_or_create,
     )
     monkeypatch.setitem(sys.modules, "homeassistant.components.cloud", fake_cloud)
-    monkeypatch.setattr(
-        homeassistant_components, "cloud", fake_cloud, raising=False
-    )
+    monkeypatch.setattr(homeassistant_components, "cloud", fake_cloud, raising=False)
 
     assert await _async_create_cloudhook(hass, WEBHOOK_ID) is None
     get_or_create.assert_not_awaited()

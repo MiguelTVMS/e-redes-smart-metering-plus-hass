@@ -1,138 +1,98 @@
-# E-REDES Smart Metering Plus Home Assistant Integration
+# E-REDES Smart Metering Plus
 
-_Home Assistant integration for E-REDES Smart Metering Plus energy meters in Portugal._
+[![Open your Home Assistant instance and open this repository in HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=MiguelTVMS&repository=e-redes-smart-metering-plus-hass&category=integration)
 
-> [!IMPORTANT]  
-> Not affiliated with, sponsored by, or endorsed by **E-REDES – Distribuição de Eletricidade, S.A.** See the full [Disclaimer](DISCLAIMER.md).
+Monitor compatible E-REDES Smart Metering Plus meters in Home Assistant. The integration receives meter data by webhook, creates one device for each configured CPE, and needs no YAML or automations.
 
-> [!WARNING]  
-> **Smart Metering Plus is required**. The meter is provided by E-REDES and, for now, access is limited to a pilot program. Enrollment appears to be closed as E-REDES moves into final testing. Setup details are being tracked in [issue](https://github.com/MiguelTVMS/e-redes-smart-metering-plus-hass/issues/3). If you don't have a Smart Metering Plus meter or pilot access, this integration will not receive data.
+> [!IMPORTANT]
+> Smart Metering Plus must already be active for your E-REDES meter. This integration cannot request access to the service or retrieve your meter data itself.
 
-> [!NOTE]  
-> The webhook uses the fixed path `/api/webhook/e_redes_smart_metering_plus`. Configure every CPE that is allowed to use it. During upgrade, CPEs from existing integration devices are added automatically so their updates continue.
+> [!NOTE]
+> This project is not affiliated with, sponsored by, or endorsed by E-REDES - Distribuição de Eletricidade, S.A. Read the full [disclaimer](DISCLAIMER.md).
 
-**This integration will set up the following platforms.**
+## Before you install
 
-Platform | Description
--- | --
-`sensor` | Show info from E-REDES Smart Metering Plus webhook data.
-`number` | Configure breaker limit for monitoring.
-`binary_sensor` | Alert when breaker is overloaded.
-
-## Features
-
-- 🔄 **Real-time Energy Monitoring** - Receive live data from your E-REDES smart meters
-- 🌐 **Cloud Webhook Support** - Automatic secure webhook URL generation with Nabu Casa
-- 📊 **Multiple Meter Support** - Allow one or more known meters by CPE
-- ⚡ **UI Configuration** - No YAML configuration or automation setup required
-- 🏠 **Automatic Device Creation** - Devices and sensors created dynamically as data arrives
-- ⚙️ **Breaker Limit Configuration** - Set your breaker capacity per device
-- 🔋 **Breaker Load Monitoring** - Real-time monitoring of breaker load percentage
-- ⚠️ **Overload Alerts** - Automatic problem sensor when breaker load exceeds 100%
+- An active E-REDES Smart Metering Plus service.
+- The complete CPE for every meter you want to connect. A valid CPE starts with `PT` and has 20 characters.
+- A URL that E-REDES can reach. Home Assistant Cloud works automatically. Otherwise, configure an external Home Assistant URL or securely expose your instance.
 
 ## Installation
 
-### HACS (Recommended)
+### HACS
 
-1. Ensure that [HACS](https://hacs.xyz/) is installed.
-2. Search for and install the "E-Redes Smart Metering Plus" integration.
+1. Open the button above in your Home Assistant instance. If the repository is not already available in HACS, add `https://github.com/MiguelTVMS/e-redes-smart-metering-plus-hass` as a custom repository in the **Integration** category.
+2. Download **E-REDES Smart Metering Plus** from HACS.
 3. Restart Home Assistant.
-4. In the HA UI go to "Configuration" -> "Integrations" click "+" and search for "E-Redes Smart Metering Plus".
+4. Go to **Settings > Devices & services > Add integration**, then search for **E-REDES Smart Metering Plus**.
 
-### Manual Installation
+### Manual installation
 
-1. Using the tool of choice, open the directory (folder) for your HA configuration (where you find `configuration.yaml`).
-2. If you do not have a `custom_components` directory (folder) there, you need to create it.
-3. In the `custom_components` directory (folder), create a new folder called `e_redes_smart_metering_plus`.
-4. Download _all_ the files from the `custom_components/e_redes_smart_metering_plus/` directory (folder) in this repository.
-5. Place the files you downloaded in the new directory (folder) you created.
-6. Restart Home Assistant
-7. In the HA UI, go to "Configuration" -> "Integrations", click "+", and search for "E-Redes Smart Metering Plus"
+1. Copy `custom_components/e_redes_smart_metering_plus` from this repository to your Home Assistant `custom_components` directory.
+2. Restart Home Assistant.
+3. Add the integration from **Settings > Devices & services > Add integration**.
 
-## Configuration
+## Set up your meter
 
-1. Add the integration through the Home Assistant UI
-2. Add every complete CPE that should be accepted. You can edit this list later without removing existing CPEs.
-3. The integration creates the fixed webhook path `/api/webhook/e_redes_smart_metering_plus`.
-4. Open **Settings > Devices & services**, select the integration, then **Configure** to copy the active URL. The integration respects **Settings > System > Network > Home Assistant URL**: a configured external URL is used when Home Assistant Cloud is disabled there, otherwise the Cloudhook URL is shown.
-5. Configure E-REDES with that URL and start receiving data.
+1. During setup, enter every CPE that may send data to this Home Assistant instance.
+2. Open **Settings > Devices & services**, select the integration, then choose **Configure** to copy the active webhook URL.
+3. Configure that URL in E-REDES Smart Metering Plus.
+4. When the first payload arrives, Home Assistant creates a device for that CPE.
+5. On each meter device, select the **Contracted power** from your electricity contract. Power usage entities remain unavailable until you choose a tier.
 
-### Webhook URL Format
+The webhook path is always `/api/webhook/e_redes_smart_metering_plus`.
 
-- **Local URL**: `http://your-home-assistant:8123/api/webhook/e_redes_smart_metering_plus`
-- **Configured external URL**: `https://your-home-assistant.example/api/webhook/e_redes_smart_metering_plus`
-- **Home Assistant Cloud URL**: `https://hooks.nabu.casa/...` (generated automatically when Home Assistant Cloud is connected)
+### Choosing the webhook URL
 
-Reloading or restarting the integration reuses the existing Cloudhook. The Cloudhook is deleted only when the integration entry is removed.
+- If **Home Assistant Cloud** is connected and no external URL is configured, the integration creates a Cloudhook URL.
+- If an external Home Assistant URL is configured in **Settings > System > Network**, the integration uses it.
+- Otherwise, it shows the local Home Assistant URL. E-REDES must be able to reach that URL for updates to arrive.
+
+Reloading or restarting the integration preserves the existing Cloudhook. It is deleted only when you remove the integration entry.
 
 > [!CAUTION]
-> The CPE allowlist prevents other meter identifiers from creating or updating entities, but it is not sender authentication. The public E-REDES page mentions HTTP header authentication without publishing the header format. This integration does not guess or enforce an undocumented header.
+> The CPE list is an allowlist, not sender authentication. Keep the webhook URL private and do not include CPE values or complete payloads in public support requests.
 
-## Webhook Data Format
+## What Home Assistant creates
 
-The integration supports the current E-REDES single-phase and three-phase payloads. The current single-phase example is:
+For each CPE, Home Assistant creates a separate meter device. Available entities depend on the values that E-REDES sends.
 
-```json
-{
-    "LocalTimestamp": "2026-08-01 12:41:10",
-    "cpe": "PT000XXXXXXXXXXXXXXX",
-    "instantaneousActivePowerImport": 85.85,
-    "maxActivePowerImport": 85.75,
-    "maxActivePowerImportTime": "2024-04-29 12:41:10",
-    "activeEnergyImport": 198114.34,
-    "instantaneousActivePowerExport": 64.93,
-    "maxActivePowerExport": 96.86,
-    "maxActivePowerExportTime": "2024-04-29 12:41:10",
-    "activeEnergyExport": 612865.24,
-    "voltageL1": 231.58
-}
-```
+| Type | Entities |
+| --- | --- |
+| Energy | Imported energy and Exported energy |
+| Power | Import power, Export power, Peak import power, Peak export power, and per-phase power when available |
+| Electrical estimates | Voltage L1/L2/L3 and estimated active import current L1/L2/L3 when the matching data is available |
+| Contract usage | Contracted power, Estimated power usage, and Estimated power usage status |
+| Diagnostics | Last update and Update interval, disabled by default |
 
-Legacy timestamps (`SourceTimestamp` and `clock`) and the legacy `maxActivePowerImportTotalLastAverage` field remain supported. Three-phase payloads can also create voltage L2/L3 and per-phase import/export power sensors. See the [official E-REDES Smart Metering Plus documentation](https://www.e-redes.pt/en/smart-metering-plus).
+The following diagnostic problem entities are also disabled by default: **Estimated power usage warning**, **Estimated critical power usage**, and **Estimated power usage exceeded**. Enable them from the device page only if you need separate alert entities.
 
-Supported values are processed even when optional fields are missing or new unsupported fields appear. The integration warns when the payload field set changes.
+Estimated power usage compares the active-current component derived from active power and voltage with the nominal current for the selected contracted-power tier. For three-phase data, it uses the most-loaded reported phase. The Smart Metering Plus webhook does not provide current, apparent power, or power factor, so this is a lower-bound estimate whenever the power factor is below 1. It must not be used to predict the behavior of a physical breaker, the meter's control function, or other protection hardware.
 
-## Entities Created
+The three-phase list includes the 3.45 kVA tier used by eligible non-residential installations. New residential three-phase installations normally start at 6.90 kVA.
 
-For each unique CPE (meter), the following entities are automatically created:
+## Webhook data
 
-### Sensors
+The integration supports current E-REDES single-phase and three-phase payloads. It processes the following measurements when present:
 
-- **Instantaneous Active Power Import** (W) - Real-time power consumption
-- **Max Active Power Import** (W) - Maximum power imported
-- **Active Energy Import** (Wh) - Total energy consumed (Home Assistant converts to kWh automatically)
-- **Instantaneous Active Power Export** (W) - Real-time power generation
-- **Max Active Power Export** (W) - Maximum power exported  
-- **Active Energy Export** (Wh) - Total energy produced (Home Assistant converts to kWh automatically)
-- **Voltage L1/L2/L3** (V) - Available phase voltages
-- **Per-phase Instantaneous Active Power Import/Export** (W) - Created when supplied by a three-phase meter
-- **Instantaneous Active Current Import** (A) - Calculated current (Power / Voltage)
-- **Breaker Load** (%) - Current load relative to breaker limit
-- **Breaker Overload** - Problem sensor that alerts when breaker load exceeds 100%
+- cumulative imported and exported energy
+- instantaneous and peak imported and exported power
+- voltage and per-phase power
+- timestamps used to reject older out-of-order measurements
 
-### Configuration
-
-- **Breaker Limit** (A) - Configurable breaker capacity (default: 20A, range: 1-200A)
-
-### Diagnostic Sensors
-
-> [!NOTE]
-> Diagnostic sensors are **disabled by default**. Enable them in the device page if you need to monitor webhook activity.
-
-- **Last Update** - Timestamp of the last webhook received (displays as "X seconds/minutes/hours ago")
-- **Update Interval** (s) - Time between consecutive webhook updates in seconds
-
-These sensors help you monitor the health of your webhook connection and identify any issues with data delivery.
+Unknown fields and missing optional values do not stop supported values from being processed. The official service documentation is available from [E-REDES Smart Metering Plus](https://www.e-redes.pt/en/smart-metering-plus).
 
 ## Troubleshooting
 
-### Webhook Not Receiving Data
+### No meter device or updates
 
-1. Check that your webhook URL is correctly configured with E-REDES
-2. Verify your Home Assistant is accessible from the internet (if using local webhook)
-3. Check Home Assistant logs for webhook-related errors
+1. Confirm that the CPE is complete and listed in the integration's **Configure** dialog.
+2. Confirm that the exact active webhook URL was provided to E-REDES.
+3. Ensure E-REDES can reach the URL. A local URL requires appropriate network exposure.
+4. Check **Settings > System > Logs** for integration messages.
 
-To capture the first accepted payload after each restart and validate its fields, temporarily enable debug logging:
+Requests for a CPE that is not in the configured list are rejected with HTTP 403. Add all of your meters in **Configure**. Each CPE gets its own device once data arrives.
+
+To capture the first accepted payload after a restart, temporarily enable debug logging:
 
 ```yaml
 logger:
@@ -140,23 +100,13 @@ logger:
     custom_components.e_redes_smart_metering_plus: debug
 ```
 
-The complete first payload for each configured CPE is written at debug level. It may contain meter identifiers and energy data, so disable debug logging after validation and remove sensitive values before sharing logs.
+The logged payload can contain your CPE and energy data. Disable debug logging after checking it, and remove sensitive values before sharing logs.
 
-### Multiple Meters
+## Support and development
 
-Add every meter in the integration's **Configure** dialog. Each allowed CPE creates a separate device and set of entities when data arrives. Requests for CPEs outside this list receive HTTP 403.
+For a bug report or feature request, use the [issue tracker](https://github.com/MiguelTVMS/e-redes-smart-metering-plus-hass/issues). Do not publish CPE values, webhook URLs, or unredacted payloads.
 
-## Contributions are welcome
-
-If you want to contribute, please read the [Contribution Guidelines](CONTRIBUTING.md)
-
-### Development Tools
-
-- 🪝 **Pre-commit Hook** - Automatic code quality checks before each commit. See [Pre-commit Hook Documentation](docs/PRE_COMMIT_HOOK.md) for details.
-- 🐍 **Native Python 3.13** - Reproducible local tooling managed by `uv`.
-- 🐳 **Local Home Assistant** - Run Home Assistant 2026.1.0 with `make ha-up` and validate the integration at `http://localhost:8123`.
-
-Run `make bootstrap` once, then use `make validate` for formatting, linting, and tests. `make ha-up` and `make ha-restart` sync the current integration source into the development configuration before starting Home Assistant. See [Contributing](CONTRIBUTING.md) for the complete local workflow.
+Developers should use the [development guide](docs/DEVELOPMENT.md) and [contribution guidelines](CONTRIBUTING.md).
 
 ## Legal
 

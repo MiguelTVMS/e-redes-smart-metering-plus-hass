@@ -11,12 +11,12 @@
     "dependencies": [
         "webhook"
     ],
-    "documentation": "https://github.com/MiguelTVMS/e-redes-smart-metering-plus-hass?tab=readme-ov-file#readme",
+    "documentation": "https://github.com/MiguelTVMS/e-redes-smart-metering-plus-hass",
     "integration_type": "service",
     "iot_class": "cloud_push",
     "issue_tracker": "https://github.com/MiguelTVMS/e-redes-smart-metering-plus-hass/issues",
     "quality_scale": "bronze",
     "requirements": [],
     "single_config_entry": true,
-    "version": "1.6.1"
+    "version": "1.7.0"
 }

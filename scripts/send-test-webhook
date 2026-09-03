@@ -4,13 +4,14 @@ set -euo pipefail
 
 WEBHOOK_URL="${WEBHOOK_URL:-http://localhost:8123/api/webhook/e_redes_smart_metering_plus}"
 TEST_CPE="${TEST_CPE:-PT000000000000000000}"
+SOURCE_TIMESTAMP="$(date -u +"%Y-%m-%d %H:%M:%S")"
 
 curl --fail-with-body \
     --request POST \
     --header "Content-Type: application/json" \
     --data "{
         \"cpe\": \"${TEST_CPE}\",
-        \"SourceTimestamp\": \"2025-09-24 18:33:20\",
+        \"SourceTimestamp\": \"${SOURCE_TIMESTAMP}\",
         \"activeEnergyExport\": 0,
         \"activeEnergyImport\": 14817930,
         \"instantaneousActivePowerExport\": 0,
