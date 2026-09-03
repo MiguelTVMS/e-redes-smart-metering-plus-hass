@@ -15,12 +15,21 @@ from homeassistant.config_entries import (
     OptionsFlow,
 )
 from homeassistant.core import callback
-from homeassistant.helpers.selector import TextSelector, TextSelectorConfig
+from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers.selector import (
+    SelectOptionDict,
+    SelectSelector,
+    SelectSelectorConfig,
+    SelectSelectorMode,
+    TextSelector,
+    TextSelectorConfig,
+)
 
 from .const import CONF_CPES, DOMAIN, WEBHOOK_ID
 from .webhook import async_get_active_webhook_url
 
 _CPE_PATTERN = re.compile(r"^PT[A-Z0-9]{18}$")
+_CONF_METER = "meter"
 
 
 def _normalize_cpes(values: list[str]) -> list[str]:
@@ -98,7 +107,18 @@ class EredesSmartMeteringPlusConfigFlow(ConfigFlow, domain=DOMAIN):
 class EredesSmartMeteringPlusOptionsFlow(OptionsFlow):
     """Handle options flow for E-Redes Smart Metering Plus."""
 
+    _reset_cpe: str | None = None
+
     async def async_step_init(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Show the available integration management actions."""
+        return self.async_show_menu(
+            step_id="init",
+            menu_options=["manage_cpes", "reset_meter"],
+        )
+
+    async def async_step_manage_cpes(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Manage configured CPEs and display the active webhook URL."""
@@ -110,7 +130,7 @@ class EredesSmartMeteringPlusOptionsFlow(OptionsFlow):
                     self.hass, self.config_entry
                 )
                 return self.async_show_form(
-                    step_id="init",
+                    step_id="manage_cpes",
                     data_schema=_cpe_schema(user_input.get(CONF_CPES)),
                     errors={CONF_CPES: "invalid_cpe"},
                     description_placeholders={"webhook_url": webhook_url},
@@ -124,7 +144,83 @@ class EredesSmartMeteringPlusOptionsFlow(OptionsFlow):
 
         webhook_url = await async_get_active_webhook_url(self.hass, self.config_entry)
         return self.async_show_form(
-            step_id="init",
+            step_id="manage_cpes",
             data_schema=_cpe_schema(list(self.config_entry.data.get(CONF_CPES, ()))),
             description_placeholders={"webhook_url": webhook_url},
+        )
+
+    async def async_step_reset_meter(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Select a discovered meter to reset."""
+        devices = {
+            identifier: device
+            for device in dr.async_entries_for_config_entry(
+                dr.async_get(self.hass), self.config_entry.entry_id
+            )
+            for domain, identifier in device.identifiers
+            if domain == DOMAIN
+        }
+        if not devices:
+            return self.async_abort(reason="no_meters")
+
+        if user_input is not None:
+            cpe = user_input.get(_CONF_METER)
+            if cpe not in devices:
+                return self.async_abort(reason="meter_not_found")
+            self._reset_cpe = cpe
+            return await self.async_step_confirm_reset_meter()
+
+        options = [
+            SelectOptionDict(
+                value=cpe,
+                label=device.name_by_user or device.name or cpe,
+            )
+            for cpe, device in sorted(devices.items())
+        ]
+        return self.async_show_form(
+            step_id="reset_meter",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(_CONF_METER): SelectSelector(
+                        SelectSelectorConfig(
+                            options=options,
+                            mode=SelectSelectorMode.DROPDOWN,
+                        )
+                    )
+                }
+            ),
+        )
+
+    async def async_step_confirm_reset_meter(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Confirm resetting a meter's entities and names."""
+        if self._reset_cpe is None:
+            return self.async_abort(reason="meter_not_found")
+
+        device = dr.async_get(self.hass).async_get_device(
+            identifiers={(DOMAIN, self._reset_cpe)}
+        )
+        if device is None or self.config_entry.entry_id not in device.config_entries:
+            return self.async_abort(reason="meter_not_found")
+
+        if user_input is not None:
+            from . import async_reset_meter
+
+            if not await async_reset_meter(
+                self.hass,
+                self.config_entry,
+                device,
+                reset_entity_names=True,
+            ):
+                return self.async_abort(reason="meter_not_found")
+            return self.async_create_entry(data={})
+
+        return self.async_show_form(
+            step_id="confirm_reset_meter",
+            data_schema=vol.Schema({}),
+            description_placeholders={
+                "meter": device.name_by_user or device.name or self._reset_cpe
+            },
         )

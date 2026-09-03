@@ -11,11 +11,35 @@
     },
     "abort": { "already_configured": "Esta integración ya está configurada" }
   },
-  "options": { "step": { "init": {
-    "title": "Configuración del webhook E-Redes",
-    "description": "La URL activa del webhook es:\n\n**{webhook_url}**\n\nLos usuarios de Home Assistant Cloud también pueden encontrar la URL externa del webhook en [Ajustes > Home Assistant Cloud > Webhooks](/config/cloud/webhooks).\n\nMantén en la lista todos los CPE que deban seguir recibiendo actualizaciones, ya que se rechazarán los datos de CPE que no estén en esta lista.",
-    "data": { "cpes": "CPE autorizado" }
-  } } },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Configurar E-Redes Smart Metering Plus",
+        "menu_options": {
+          "manage_cpes": "Gestionar CPE autorizados y URL del webhook",
+          "reset_meter": "Restablecer un contador"
+        }
+      },
+      "manage_cpes": {
+        "title": "Configuración del webhook E-Redes",
+        "description": "La URL activa del webhook es:\n\n**{webhook_url}**\n\nLos usuarios de Home Assistant Cloud también pueden encontrar la URL externa del webhook en [Ajustes > Home Assistant Cloud > Webhooks](/config/cloud/webhooks).\n\nMantén en la lista todos los CPE que deban seguir recibiendo actualizaciones, ya que se rechazarán los datos de CPE que no estén en esta lista.",
+        "data": { "cpes": "CPE autorizado" }
+      },
+      "reset_meter": {
+        "title": "Restablecer un contador",
+        "description": "Selecciona el contador cuyos campos detectados y nombres de entidades deseas restablecer. El CPE y la URL del webhook permanecen configurados.",
+        "data": { "meter": "Contador" }
+      },
+      "confirm_reset_meter": {
+        "title": "Confirmar el restablecimiento del contador",
+        "description": "¿Restablecer **{meter}**? Su dispositivo y entidades se eliminarán. La siguiente carga del webhook recreará el contador con nombres generados y solo los campos recién recibidos. El historial del registrador y las estadísticas a largo plazo no se eliminan."
+      }
+    },
+    "abort": {
+      "no_meters": "No hay contadores detectados disponibles para restablecer",
+      "meter_not_found": "El contador seleccionado ya no está disponible"
+    }
+  },
   "entity": {
     "select": { "contracted_power": { "name": "Potencia contratada" } },
     "binary_sensor": {

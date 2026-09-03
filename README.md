@@ -66,6 +66,8 @@ For each CPE, Home Assistant creates a separate meter device. Available entities
 
 The following diagnostic problem entities are also disabled by default: **Estimated power usage warning**, **Estimated critical power usage**, and **Estimated power usage exceeded**. Enable them from the device page only if you need separate alert entities.
 
+To rediscover a meter's available fields, delete its device from Home Assistant. The integration keeps the CPE authorized and preserves the webhook URL. The next payload for that CPE recreates the device using only newly received fields while preserving existing entity IDs when those fields return. To also restore generated device and entity names and entity IDs, open the integration's **Configure** dialog and choose **Reset a meter**. Neither operation deletes recorder history or long-term statistics.
+
 Estimated power usage compares the active-current component derived from active power and voltage with the nominal current for the selected contracted-power tier. For three-phase data, it uses the most-loaded reported phase. The Smart Metering Plus webhook does not provide current, apparent power, or power factor, so this is a lower-bound estimate whenever the power factor is below 1. It must not be used to predict the behavior of a physical breaker, the meter's control function, or other protection hardware.
 
 The three-phase list includes the 3.45 kVA tier used by eligible non-residential installations. New residential three-phase installations normally start at 6.90 kVA.
