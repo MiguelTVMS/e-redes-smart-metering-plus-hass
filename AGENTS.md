@@ -1,162 +1,51 @@
-# E-Redes Smart Metering Plus Home Assistant Integration
+# E-REDES Smart Metering Plus agent guide
 
-## Project Description
+## Purpose
 
-This is a Home Assistant integration for the E-Redes Smart Metering Plus energy meters in Portugal. It allows users to monitor and manage their energy consumption through the Home Assistant platform. The Smart Metering Plus system provides real-time data on energy usage, enabling users to make informed decisions about their energy consumption. This data is delivered via a webhook that should be received by Home Assistant using a public URL. If the user has an active Nabu Casa subscription, the integration should make use of the public webhook URL provided automatically by Home Assistant Cloud.
+This repository contains a Home Assistant custom integration for E-REDES Smart Metering Plus meters in Portugal. It receives webhook payloads and creates a separate Home Assistant device for each allowed CPE.
 
-This integration is fully automatic. When the user installs it, it creates a webhook URL and begins listening for data without requiring any manual YAML configuration or automation setup. Webhook data is processed in real time, and a new device is created for each unique CPE (meter) detected.
+Keep instructions here operational. Product setup belongs in `README.md`; contributor setup belongs in `docs/DEVELOPMENT.md` and `CONTRIBUTING.md`.
 
-## Webhook Format
+## Working contract
 
-```json
-{
-  "cpe": "PT000XXXXXXXXXXXXXXX",
-  "SourceTimestamp": "2025-09-24 18:33:20",
-  "activeEnergyExport": 0,
-  "activeEnergyImport": 14817930,
-  "instantaneousActivePowerExport": 0,
-  "instantaneousActivePowerImport": 2518,
-  "maxActivePowerExport": 0,
-  "maxActivePowerExportTime": "0000-00-00 00:00:00",
-  "maxActivePowerImportTotalLastAverage": 3680,
-  "maxActivePowerImportTotalTime": "2025-09-09 11:45:00",
-  "voltageL1": 237.1,
-  "clock": "2025-09-24 19:33:20"
-}
-```
+- For questions, reviews, diagnosis, or plans, inspect the relevant files and report evidence. Do not implement a change unless requested.
+- For a requested change, make the smallest in-scope local change and run the relevant non-destructive validation without asking first.
+- Ask before external writes, destructive actions, new production dependencies, purchases, or a material expansion of scope.
+- Preserve user changes. Inspect `git status --short` before editing and do not discard, reformat, or include unrelated files.
+- Use `rg` for repository searches. Read the focused source and tests before changing behavior.
+- On Windows, use `winget` for any required tool installation. Do not install a tool that is already available.
+- Lead responses with the outcome. State assumptions, failures, and any required user action plainly.
 
-### Attention:
-The fields activeEnergyImport and activeEnergyExport are cumulative values in Wh (Watt-hour). The instantaneousActivePowerImport and instantaneousActivePowerExport fields represent the current power in W (Watt). The voltageL1 field represents the voltage in V (Volts).
+## Repository facts
 
-**Note:**
-The user may have **multiple meters**, each uniquely identified by the `cpe` field.
-All webhook requests will be sent to the **same endpoint**, but the integration must dynamically create and update **separate devices and entities** for each unique `cpe` value.
+- Target Home Assistant version: `2026.1.0`.
+- Python tooling: Python 3.13 managed by `uv` in `.venv`.
+- Home Assistant and Windows test execution use Docker Compose. Do not try to make native Windows pytest a supported path.
+- `config/` is ignored local Home Assistant state. It can contain credentials, tokens, CPEs, and recorder data. Never commit, copy, or expose its contents.
+- `make` is the cross-platform command surface. Use `make doctor`, `make bootstrap`, `make validate`, `make test`, and the `make ha-*` commands described in `docs/DEVELOPMENT.md`.
+- Feature branches and pull requests target `develop`. Do not push, create a pull request, or change GitHub repository settings unless the user explicitly asks.
 
-## Codex Instructions
+## Integration invariants
 
-Codex should help the developer build the following features for this custom Home Assistant integration:
+- The integration is UI-configured. Do not require user YAML or automations for normal operation.
+- `WEBHOOK_ID` is `DOMAIN`; the endpoint path is fixed at `/api/webhook/e_redes_smart_metering_plus`.
+- A CPE must match `PT` followed by 18 uppercase alphanumeric characters. Treat configured CPEs as an allowlist and reject all other payloads.
+- One accepted CPE creates and updates only its own device and entities. Preserve multi-meter isolation.
+- Prefer a configured Home Assistant external URL. Otherwise use a Home Assistant Cloud Cloudhook when available; otherwise expose the local generated webhook URL.
+- Preserve incoming measurement timestamps and reject older out-of-order data for a CPE.
+- Estimated power usage is based on active power, voltage, and the selected contracted-power tier. Preserve its explicit power-factor limitation and never present it as a physical breaker prediction. Diagnostic alert entities are disabled by default.
+- Keep entity names, translations, icons, device classes, state classes, units, and entity categories consistent when adding or changing entities.
 
-### 1. Component Structure
+## Change workflow
 
-Create a custom integration under `custom_components/e_redes_smart_metering_plus/`.
-Implement the following files:
+1. Locate the real code path and the nearest relevant tests.
+2. Change production code, tests, translations, documentation, and metadata together when behavior or user-visible text changes.
+3. Run `make validate` after any Python, translation, manifest, or integration behavior change. It formats, lints, and runs the full test suite.
+4. For documentation-only changes, run `git diff --check`; validate edited JSON with PowerShell `ConvertFrom-Json` when applicable.
+5. Report commands run and their result. Do not claim browser or Home Assistant behavior without observing it.
 
-* `__init__.py`: Setup logic
-* `manifest.json`: Integration metadata
-* `sensor.py`: Dynamic sensor entities
-* `webhook.py`: Webhook registration and data processing
-* `config_flow.py`: Optional UI configuration for Nabu Casa detection
+## Data handling and review rules
 
-### 2. Webhook Handling
-
-* Automatically register a webhook using `webhook.async_register()` with a **fixed webhook ID** (`e_redes_smart_metering_plus`).
-* The webhook URL should be **predictable and consistent** across restarts: `/api/webhook/e_redes_smart_metering_plus`
-* If the `cloud` integration is active, generate a public webhook URL with `cloud.async_create_cloudhook()` using the same fixed webhook ID.
-* If not, fall back to a local URL and optionally display instructions to expose it.
-* Each incoming request should:
-
-  * Identify the `cpe` from the payload
-  * If no matching device exists, create one dynamically
-  * Register sensor entities (one per metric)
-  * Update the states of those entities with the incoming values
-* No user automation or YAML configuration should be required.
-* Use `WEBHOOK_ID = DOMAIN` constant from `const.py` to ensure consistency.
-
-### 3. Sensors to Create
-
-Create sensor entities for each CPE:
-
-* `instantaneous_active_power_import` (W)
-* `max_active_power_import` (W)
-* `active_energy_import` (kWh)
-* `instantaneous_active_power_export` (W)
-* `max_active_power_export` (W)
-* `active_energy_export` (kWh)
-* `voltage_l1` (V)
-
-Each sensor should:
-
-* Belong to a device associated with its `cpe`
-* Have a unique entity ID (e.g., `sensor.e_redes_PT000XYZ_power_import`)
-* Use correct `device_class`, `state_class`, and `unit_of_measurement`
-* Be updated live via the webhook handler
-
-### 4. Cloud Support (Nabu Casa)
-
-* Detect whether the `cloud` integration is loaded
-* Use `cloud.async_create_cloudhook()` to generate a secure public webhook URL
-* Display this URL in the integration configuration panel
-* Allow users to copy it or configure their energy provider with it
-
-### 5. Options Flow (Optional)
-
-Allow the user to:
-
-* View the webhook URL
-* Force regeneration (e.g., reset if compromised)
-* Choose Nabu Casa vs local fallback
-
-### 6. HACS Compatibility
-
-Ensure HACS compatibility:
-
-* Include and keep `./hacs.json` updated based on the specifications in the [HACS documentation](https://www.hacs.xyz/docs/publish/start/#hacsjson).
-
-### 7. Testing
-
-Codex should assist in writing tests for:
-
-* Webhook handler logic
-* Sensor creation and updates
-* Multi-CPE device management
-* Cloudhook registration logic
-
-Use `pytest` with mocks for webhook events.
-All the tests should be in the `tests` directory.
-
-### 8. Dev Tools
-
-Support modern Python tooling:
-* All development will be done based on Home Assistant version 2026.1.0.
-* Local development using Python 3.13 managed by `uv`, with Home Assistant running through Docker Compose.
-* All the development requirements should be in `requirements_dev.txt`
-* GitHub Actions workflow for HACS lint + Tests
-
-### 9. Code Quality and Testing Requirements
-
-**CRITICAL:** After implementing any feature or making any code changes, you MUST run the **exact same validation commands as the pre-commit hook** (`scripts/pre-commit`):
-
-**ALWAYS RUN THESE COMMANDS AFTER EVERY IMPLEMENTATION:**
-
-```bash
-# 1. Format the code first
-black custom_components/
-isort custom_components/
-ruff check --fix custom_components/
-
-# 2. Validate with exact pre-commit commands
-black --check --diff custom_components/ && \
-isort --check-only --diff custom_components/ && \
-ruff check custom_components/ && \
-pytest tests/ -q --tb=short
-```
-
-**If validation fails:**
-- Re-run formatters: `black custom_components/` and `isort custom_components/`
-- Fix ruff issues: `ruff check --fix custom_components/`
-- Fix any test failures in `tests/`
-- Run validation commands again until all pass
-
-**Why this is critical:**
-- Ensures code passes the pre-commit hook before user attempts to commit
-- Matches exactly what CI/CD pipelines will check
-- Prevents commit failures and saves developer time
-- Maintains consistent code style across the project
-- Validates that changes don't break existing functionality
-
-**Note:** The pre-commit hook (`.git/hooks/pre-commit` symlinked from `scripts/pre-commit`) runs these exact commands on staged files. By running them during development, you catch issues early.
-
-## Documentation to help Codex
-
-[Home Assistant Developer Documentation](https://developers.home-assistant.io/docs)
-[HACS Documentation](https://www.hacs.xyz/docs/publish/start).
+- Never place webhook URLs, CPEs, access tokens, credentials, `.storage` data, or unredacted payloads in commits, issues, screenshots, or public documentation.
+- For a review, report only actionable correctness, security, regression, data-isolation, or test-coverage findings. Include file references and evidence. Leave formatting to the automated checks.
+- Keep examples minimal and use placeholders for identifiers and URLs.

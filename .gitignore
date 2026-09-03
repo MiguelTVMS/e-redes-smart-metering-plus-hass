@@ -128,7 +128,11 @@ dmypy.json
 # IDE
 .idea/
 *.swp
-.codex/
+# Keep shareable Codex configuration, but ignore local sessions and cache data.
+.codex/*
+!.codex/config.toml
+!.codex/agents/
+!.codex/agents/*.toml
 *.swo
 *~
 

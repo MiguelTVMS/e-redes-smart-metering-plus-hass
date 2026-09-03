@@ -3,16 +3,24 @@
 
 set -e
 
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$PROJECT_DIR"
+
 HOOK_SOURCE="scripts/pre-commit"
-HOOK_DEST=".git/hooks/pre-commit"
 
 echo "🔧 Installing pre-commit hook..."
 
-# Check if .git directory exists
-if [ ! -d ".git" ]; then
-    echo "❌ Error: .git directory not found. Are you in the repository root?"
+# Confirm that this is a Git checkout, including linked worktrees.
+if ! git rev-parse --show-toplevel >/dev/null 2>&1; then
+    echo "❌ Error: Git repository not found."
     exit 1
 fi
+
+HOOK_DEST="$(git rev-parse --git-path hooks/pre-commit)"
+case "$HOOK_DEST" in
+    /*) ;;
+    *) HOOK_DEST="$PROJECT_DIR/$HOOK_DEST" ;;
+esac
 
 # Check if hook source exists
 if [ ! -f "$HOOK_SOURCE" ]; then
@@ -20,8 +28,8 @@ if [ ! -f "$HOOK_SOURCE" ]; then
     exit 1
 fi
 
-# Create hooks directory if it doesn't exist
-mkdir -p .git/hooks
+# Create the resolved hooks directory if it doesn't exist.
+mkdir -p "$(dirname "$HOOK_DEST")"
 
 # Copy the hook
 cp "$HOOK_SOURCE" "$HOOK_DEST"

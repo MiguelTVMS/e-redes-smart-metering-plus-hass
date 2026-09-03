@@ -23,6 +23,7 @@ def _mock_cloud(monkeypatch: pytest.MonkeyPatch) -> None:
     Force cloud to appear logged out so the integration falls back to local webhook URLs
     and avoids cloudhook API calls.
     """
+
     async def mock_refresh_cloudhook(hass, entry, webhook_id):
         return None
 
@@ -57,17 +58,18 @@ async def config_entry(hass: HomeAssistant) -> AsyncGenerator[MockConfigEntry]:
                 "1234567890",
                 "ABCDEF",
                 "TEST123",
+                "TEST345",
                 "XYZ",
                 "CPE001",
                 "CPE_TEST_001",
                 "CPE_TEST_002",
                 "CPE_TEST_CALC",
                 "CPE_TEST_UNKNOWN",
-                "CPE_BREAKER_TEST",
-                "CPE_OVERLOAD_TEST_1",
-                "CPE_OVERLOAD_TEST_2",
-                "CPE_OVERLOAD_TEST_3",
-                "CPE_OVERLOAD_TEST_4",
+                "CPE_USAGE_TEST",
+                "CPE_USAGE_TEST_1",
+                "CPE_USAGE_TEST_2",
+                "CPE_USAGE_TEST_3",
+                "CPE_USAGE_TEST_4",
                 "PT0002000012345678900",
             ],
         },

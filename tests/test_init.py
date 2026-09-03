@@ -22,8 +22,7 @@ from custom_components.e_redes_smart_metering_plus.sensor import (
     async_ensure_sensors_for_data,
 )
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers import device_registry as dr, entity_registry as er
 
 
 async def test_platforms_ready_before_webhook_registration(
@@ -92,18 +91,126 @@ async def test_migration_adds_existing_device_cpes(hass: HomeAssistant) -> None:
         domain="sensor",
         platform=DOMAIN,
         config_entry=entry,
-        unique_id=(
-            f"{DOMAIN}_PT000000000000000003_instantaneous_active_power_import"
-        ),
+        unique_id=(f"{DOMAIN}_PT000000000000000003_instantaneous_active_power_import"),
     )
 
     assert await async_migrate_entry(hass, entry)
-    assert entry.version == 2
+    assert entry.version == 6
     assert entry.data[CONF_CPES] == [
         "PT000000000000000001",
         "PT000000000000000002",
         "PT000000000000000003",
     ]
+
+
+async def test_migration_disables_legacy_current_limit_number(
+    hass: HomeAssistant,
+) -> None:
+    """The retired free-form current-limit number is disabled during migration."""
+    entry = MockConfigEntry(domain=DOMAIN, data={CONF_CPES: []}, version=2)
+    entry.add_to_hass(hass)
+    registry = er.async_get(hass)
+    legacy = registry.async_get_or_create(
+        domain="number",
+        platform=DOMAIN,
+        config_entry=entry,
+        unique_id=f"{DOMAIN}_PT000000000000000001_breaker_limit",
+    )
+
+    assert await async_migrate_entry(hass, entry)
+
+    assert entry.version == 6
+    migrated = registry.async_get(legacy.entity_id)
+    assert migrated is not None
+    assert migrated.disabled_by is er.RegistryEntryDisabler.INTEGRATION
+
+
+async def test_migration_rejects_future_config_entry_version(
+    hass: HomeAssistant,
+) -> None:
+    """A future config entry must not be downgraded or changed."""
+    original_data = {CONF_CPES: ["PT000000000000000001"], "future_key": "value"}
+    entry = MockConfigEntry(domain=DOMAIN, data=original_data, version=7)
+    entry.add_to_hass(hass)
+
+    assert not await async_migrate_entry(hass, entry)
+    assert entry.version == 7
+    assert entry.data == original_data
+
+
+async def test_migration_renames_contracted_power_entity_keys(
+    hass: HomeAssistant,
+) -> None:
+    """Pre-release entity keys are migrated without creating duplicates."""
+    entry = MockConfigEntry(domain=DOMAIN, data={CONF_CPES: []}, version=5)
+    entry.add_to_hass(hass)
+    registry = er.async_get(hass)
+    old_keys = {
+        "breaker_load_warning": "contracted_power_usage_warning",
+        "breaker_load_critical": "contracted_power_usage_critical",
+        "breaker_overload": "contracted_power_exceeded",
+        "breaker_load": "contracted_power_usage",
+        "breaker_load_status": "contracted_power_usage_status",
+    }
+    entities = []
+    for old_key, new_key in old_keys.items():
+        domain = (
+            "binary_sensor"
+            if old_key
+            in {
+                "breaker_load_warning",
+                "breaker_load_critical",
+                "breaker_overload",
+            }
+            else "sensor"
+        )
+        entity = registry.async_get_or_create(
+            domain=domain,
+            platform=DOMAIN,
+            config_entry=entry,
+            unique_id=f"{DOMAIN}_PT000000000000000001_{old_key}",
+            suggested_object_id=f"meter_{old_key}",
+        )
+        entities.append((entity.entity_id, domain, new_key))
+
+    assert await async_migrate_entry(hass, entry)
+
+    assert entry.version == 6
+    for old_entity_id, domain, new_key in entities:
+        assert registry.async_get(old_entity_id) is None
+        migrated = registry.async_get(f"{domain}.meter_{new_key}")
+        assert migrated is not None
+        assert migrated.unique_id == (f"{DOMAIN}_PT000000000000000001_{new_key}")
+
+
+async def test_migration_skips_conflicting_contracted_power_unique_id(
+    hass: HomeAssistant,
+) -> None:
+    """A conflicting renamed unique ID must not prevent integration setup."""
+    entry = MockConfigEntry(domain=DOMAIN, data={CONF_CPES: []}, version=5)
+    entry.add_to_hass(hass)
+    registry = er.async_get(hass)
+    cpe = "PT000000000000000001"
+    legacy = registry.async_get_or_create(
+        domain="sensor",
+        platform=DOMAIN,
+        config_entry=entry,
+        unique_id=f"{DOMAIN}_{cpe}_breaker_load",
+        suggested_object_id="legacy_breaker_load",
+    )
+    current = registry.async_get_or_create(
+        domain="sensor",
+        platform=DOMAIN,
+        config_entry=entry,
+        unique_id=f"{DOMAIN}_{cpe}_contracted_power_usage",
+        suggested_object_id="current_contracted_power_usage",
+    )
+
+    assert await async_migrate_entry(hass, entry)
+
+    assert entry.version == 6
+    assert registry.async_get(legacy.entity_id).unique_id == legacy.unique_id
+    assert registry.async_get(current.entity_id).unique_id == current.unique_id
 
 
 async def test_unload_does_not_remove_cloudhook(

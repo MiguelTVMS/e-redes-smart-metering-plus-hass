@@ -11,7 +11,7 @@
       "invalid_cpe": "Enter at least one valid 20-character CPE beginning with PT",
       "unknown": "[%key:common::config_flow::error::unknown%]"
     },
-    "abort": { "already_configured": "[%key:common::config_flow::abort::already_configured_device%]" }
+    "abort": { "already_configured": "This integration is already configured" }
   },
   "options": {
     "step": {
@@ -23,26 +23,42 @@
     }
   },
   "entity": {
-    "number": { "breaker_limit": { "name": "Breaker limit" } },
-    "binary_sensor": { "breaker_overload": { "name": "Breaker overload" } },
+    "select": { "contracted_power": { "name": "Contracted power" } },
+    "binary_sensor": {
+      "contracted_power_usage_warning": { "name": "Estimated power usage warning" },
+      "contracted_power_usage_critical": { "name": "Estimated critical power usage" },
+      "contracted_power_exceeded": { "name": "Estimated power usage exceeded" }
+    },
     "sensor": {
-      "instantaneous_active_power_import": { "name": "Instantaneous active power import" },
-      "max_active_power_import": { "name": "Maximum active power import" },
-      "active_energy_import": { "name": "Active energy import" },
-      "instantaneous_active_power_export": { "name": "Instantaneous active power export" },
-      "max_active_power_export": { "name": "Maximum active power export" },
-      "active_energy_export": { "name": "Active energy export" },
+      "instantaneous_active_power_import": { "name": "Import power" },
+      "max_active_power_import": { "name": "Peak import power" },
+      "active_energy_import": { "name": "Imported energy" },
+      "instantaneous_active_power_export": { "name": "Export power" },
+      "max_active_power_export": { "name": "Peak export power" },
+      "active_energy_export": { "name": "Exported energy" },
       "voltage_l1": { "name": "Voltage L1" },
       "voltage_l2": { "name": "Voltage L2" },
       "voltage_l3": { "name": "Voltage L3" },
-      "instantaneous_active_power_import_l1": { "name": "Instantaneous active power import L1" },
-      "instantaneous_active_power_import_l2": { "name": "Instantaneous active power import L2" },
-      "instantaneous_active_power_import_l3": { "name": "Instantaneous active power import L3" },
-      "instantaneous_active_power_export_l1": { "name": "Instantaneous active power export L1" },
-      "instantaneous_active_power_export_l2": { "name": "Instantaneous active power export L2" },
-      "instantaneous_active_power_export_l3": { "name": "Instantaneous active power export L3" },
-      "instantaneous_active_current_import": { "name": "Instantaneous active current import" },
-      "breaker_load": { "name": "Breaker load" },
+      "instantaneous_active_power_import_l1": { "name": "Import power L1" },
+      "instantaneous_active_power_import_l2": { "name": "Import power L2" },
+      "instantaneous_active_power_import_l3": { "name": "Import power L3" },
+      "instantaneous_active_power_export_l1": { "name": "Export power L1" },
+      "instantaneous_active_power_export_l2": { "name": "Export power L2" },
+      "instantaneous_active_power_export_l3": { "name": "Export power L3" },
+      "instantaneous_active_current_import": { "name": "Estimated active import current" },
+      "instantaneous_active_current_import_l1": { "name": "Estimated active import current L1" },
+      "instantaneous_active_current_import_l2": { "name": "Estimated active import current L2" },
+      "instantaneous_active_current_import_l3": { "name": "Estimated active import current L3" },
+      "contracted_power_usage": { "name": "Estimated power usage" },
+      "contracted_power_usage_status": {
+        "name": "Estimated power usage status",
+        "state": {
+          "normal": "Normal",
+          "warning": "Warning",
+          "critical": "Critical",
+          "exceeded": "Exceeded"
+        }
+      },
       "last_update": { "name": "Last update" },
       "update_interval": { "name": "Update interval" }
     }
