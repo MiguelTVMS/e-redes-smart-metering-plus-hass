@@ -19,10 +19,11 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+$sourceTimestamp = [DateTime]::UtcNow.ToString("yyyy-MM-dd HH:mm:ss")
 
 $payload = @{
     cpe                                  = $TestCpe
-    SourceTimestamp                      = "2025-09-24 18:33:20"
+    SourceTimestamp                      = $sourceTimestamp
     activeEnergyExport                   = 0
     activeEnergyImport                   = 14817930
     instantaneousActivePowerExport       = 0

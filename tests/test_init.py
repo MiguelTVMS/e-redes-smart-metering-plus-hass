@@ -125,6 +125,19 @@ async def test_migration_disables_legacy_current_limit_number(
     assert migrated.disabled_by is er.RegistryEntryDisabler.INTEGRATION
 
 
+async def test_migration_rejects_future_config_entry_version(
+    hass: HomeAssistant,
+) -> None:
+    """A future config entry must not be downgraded or changed."""
+    original_data = {CONF_CPES: ["PT000000000000000001"], "future_key": "value"}
+    entry = MockConfigEntry(domain=DOMAIN, data=original_data, version=7)
+    entry.add_to_hass(hass)
+
+    assert not await async_migrate_entry(hass, entry)
+    assert entry.version == 7
+    assert entry.data == original_data
+
+
 async def test_migration_renames_contracted_power_entity_keys(
     hass: HomeAssistant,
 ) -> None:

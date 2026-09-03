@@ -11,10 +11,7 @@ from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.restore_state import (
-    RestoreEntity,
-    async_get as async_get_restore,
-)
+from homeassistant.helpers.restore_state import RestoreEntity
 
 from .const import (
     CONTRACTED_POWER_OPTIONS,
@@ -151,8 +148,6 @@ class ERedesContractedPowerSelect(SelectEntity, RestoreEntity):
         self._attr_unique_id = f"{DOMAIN}_{cpe}_contracted_power"
         self._attr_options = list(CONTRACTED_POWER_OPTIONS)
         self._attr_current_option = None
-        self._legacy_current_limit: float | None = None
-        self._legacy_migration_warning_logged = False
 
     @property
     def device_info(self) -> DeviceInfo:
@@ -172,38 +167,17 @@ class ERedesContractedPowerSelect(SelectEntity, RestoreEntity):
         }
 
     async def async_added_to_hass(self) -> None:
-        """Restore the selection or migrate the legacy current limit."""
+        """Restore an explicitly selected contracted-power option."""
         await super().async_added_to_hass()
         if (last_state := await self.async_get_last_state()) and (
             last_state.state in CONTRACTED_POWER_OPTIONS
         ):
             self._attr_current_option = last_state.state
-        else:
-            self._legacy_current_limit = self._legacy_current_limit_from_state()
         self.async_refresh_options()
-
-    def _legacy_current_limit_from_state(self) -> float | None:
-        """Return the previous number entity value when available."""
-        registry = er.async_get(self.hass)
-        entity_id = registry.async_get_entity_id(
-            "number", DOMAIN, f"{DOMAIN}_{self._cpe}_breaker_limit"
-        )
-        if entity_id is None:
-            return None
-        state = self.hass.states.get(entity_id)
-        if state is None:
-            stored = async_get_restore(self.hass).last_states.get(entity_id)
-            state = stored.state if stored else None
-        if state is None:
-            return None
-        try:
-            return float(state.state)
-        except (TypeError, ValueError):
-            return None
 
     @callback
     def async_refresh_options(self) -> None:
-        """Update phase-appropriate options and migrate a matching legacy value."""
+        """Update phase-appropriate options."""
         self._attr_options = list(
             contracted_power_options(self._config_entry, self._cpe)
         )
@@ -214,35 +188,6 @@ class ERedesContractedPowerSelect(SelectEntity, RestoreEntity):
                     self._cpe,
                 )
             self._attr_current_option = None
-
-        if self._attr_current_option is None and self._legacy_current_limit is not None:
-            mapping = (
-                THREE_PHASE_CONTRACTED_POWER_AMPS
-                if is_three_phase(self._config_entry, self._cpe)
-                else SINGLE_PHASE_CONTRACTED_POWER_AMPS
-            )
-            self._attr_current_option = next(
-                (
-                    option
-                    for option, amps in mapping.items()
-                    if amps == self._legacy_current_limit
-                ),
-                None,
-            )
-            if self._attr_current_option is not None:
-                _LOGGER.info(
-                    "Migrated legacy current limit for %s to contracted power %s",
-                    self._cpe,
-                    self._attr_current_option,
-                )
-                self._legacy_current_limit = None
-            elif not self._legacy_migration_warning_logged:
-                _LOGGER.warning(
-                    "Legacy current limit %.2f A for %s does not match an official contracted-power tier; select the value shown on the electricity contract",
-                    self._legacy_current_limit,
-                    self._cpe,
-                )
-                self._legacy_migration_warning_logged = True
 
         if self.hass is not None:
             self.async_write_ha_state()

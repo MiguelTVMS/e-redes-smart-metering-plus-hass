@@ -142,10 +142,10 @@ async def test_three_phase_345_kva_uses_five_amp_limit(
     assert float(usage.state) == pytest.approx(100.0)
 
 
-async def test_standard_legacy_current_limit_is_migrated(
+async def test_legacy_default_current_limit_requires_explicit_choice(
     hass: HomeAssistant, config_entry
 ) -> None:
-    """A standard legacy amp value becomes its matching contracted-power tier."""
+    """The legacy default cannot be treated as the user's contracted power."""
     registry = er.async_get(hass)
     legacy = registry.async_get_or_create(
         domain="number",
@@ -160,4 +160,4 @@ async def test_standard_legacy_current_limit_is_migrated(
 
     state = hass.states.get(_select_entity_id(hass, TEST_CPE))
     assert state is not None
-    assert state.state == "4.60 kVA"
+    assert state.state == "unknown"

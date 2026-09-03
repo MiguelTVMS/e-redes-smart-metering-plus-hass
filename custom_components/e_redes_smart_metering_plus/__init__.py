@@ -20,6 +20,7 @@ from .webhook import (
 
 _LOGGER = logging.getLogger(__name__)
 
+_CONFIG_ENTRY_VERSION = 6
 _PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.SELECT, Platform.BINARY_SENSOR]
 _CPE_UNIQUE_ID_PATTERN = re.compile(rf"^{DOMAIN}_(PT[A-Z0-9]{{18}})_")
 _CONTRACTED_POWER_ENTITY_KEY_MIGRATIONS = {
@@ -68,6 +69,14 @@ async def async_remove_entry(hass: HomeAssistant, entry: ERedesConfigEntry) -> N
 
 async def async_migrate_entry(hass: HomeAssistant, entry: ERedesConfigEntry) -> bool:
     """Migrate existing config entries to the current schema."""
+    if entry.version > _CONFIG_ENTRY_VERSION:
+        _LOGGER.error(
+            "Cannot migrate config entry from version %d because this integration only supports version %d",
+            entry.version,
+            _CONFIG_ENTRY_VERSION,
+        )
+        return False
+
     data = dict(entry.data)
     if entry.version < 2:
         configured_cpes = set(entry.data.get(CONF_CPES, ()))
@@ -160,7 +169,7 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ERedesConfigEntry) -> 
     hass.config_entries.async_update_entry(
         entry,
         data=data,
-        version=6,
+        version=_CONFIG_ENTRY_VERSION,
     )
     return True
 
