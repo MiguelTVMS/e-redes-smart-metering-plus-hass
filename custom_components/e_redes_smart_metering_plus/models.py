@@ -30,6 +30,9 @@ class ERedesRuntimeData:
     select_add_entities: AddConfigEntryEntitiesCallback | None = None
     binary_sensor_add_entities: AddConfigEntryEntitiesCallback | None = None
     last_source_timestamps: dict[str, datetime] = field(default_factory=dict)
+    latest_measurement_sensor_keys: dict[str, frozenset[str]] = field(
+        default_factory=dict
+    )
     webhook_locks: dict[str, asyncio.Lock] = field(default_factory=dict)
     payload_fields: dict[str, frozenset[str]] = field(default_factory=dict)
     rejected_cpe_warning_logged: bool = False

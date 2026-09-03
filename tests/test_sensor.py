@@ -5,7 +5,8 @@ from __future__ import annotations
 import pytest
 
 from custom_components.e_redes_smart_metering_plus.const import DOMAIN, SENSOR_MAPPING
-from homeassistant.core import HomeAssistant
+from homeassistant.const import EVENT_STATE_CHANGED
+from homeassistant.core import Event, EventStateChangedData, HomeAssistant
 from homeassistant.helpers import entity_registry as er
 
 pytestmark = pytest.mark.asyncio
@@ -361,6 +362,132 @@ async def test_three_phase_current_sensors_use_matching_phase_data(
     usage = hass.states.get(usage_id)
     assert usage is not None
     assert float(usage.state) == pytest.approx(100.0)
+
+
+async def test_three_phase_usage_updates_once_after_complete_payload(
+    hass: HomeAssistant, hass_client, config_entry
+) -> None:
+    """Moving load between phases must not publish an intermediate recovery."""
+    client = await hass_client()
+    cpe = "TEST123"
+    initial_payload = {
+        "cpe": cpe,
+        "SourceTimestamp": "2026-09-03 10:00:00",
+        "instantaneousActivePowerImportL1": 4600.0,
+        "voltageL1": 230.0,
+        "instantaneousActivePowerImportL2": 0.0,
+        "voltageL2": 230.0,
+        "instantaneousActivePowerImportL3": 0.0,
+        "voltageL3": 230.0,
+    }
+    response = await client.post(
+        f"/api/webhook/{config_entry.data['webhook_id']}", json=initial_payload
+    )
+    assert response.status == 200
+    await hass.async_block_till_done()
+
+    registry = er.async_get(hass)
+    contracted_power_id = registry.async_get_entity_id(
+        "select", DOMAIN, f"{DOMAIN}_{cpe}_contracted_power"
+    )
+    usage_id = registry.async_get_entity_id(
+        "sensor", DOMAIN, f"{DOMAIN}_{cpe}_contracted_power_usage"
+    )
+    assert contracted_power_id is not None
+    assert usage_id is not None
+    await hass.services.async_call(
+        "select",
+        "select_option",
+        {"entity_id": contracted_power_id, "option": "13.80 kVA"},
+        blocking=True,
+    )
+
+    published_usage: list[float] = []
+
+    def capture_usage(event: Event[EventStateChangedData]) -> None:
+        if event.data["entity_id"] != usage_id:
+            return
+        if (new_state := event.data["new_state"]) is not None:
+            published_usage.append(float(new_state.state))
+
+    unsubscribe = hass.bus.async_listen(EVENT_STATE_CHANGED, capture_usage)
+    shifted_payload = {
+        "cpe": cpe,
+        "SourceTimestamp": "2026-09-03 10:01:00",
+        "instantaneousActivePowerImportL1": 230.0,
+        "voltageL1": 230.0,
+        "instantaneousActivePowerImportL2": 0.0,
+        "voltageL2": 230.0,
+        "instantaneousActivePowerImportL3": 4600.0,
+        "voltageL3": 230.0,
+    }
+    response = await client.post(
+        f"/api/webhook/{config_entry.data['webhook_id']}", json=shifted_payload
+    )
+    assert response.status == 200
+    await hass.async_block_till_done()
+    unsubscribe()
+
+    assert published_usage == pytest.approx([100.0])
+    state = hass.states.get(usage_id)
+    assert state is not None
+    assert state.attributes["limiting_phase"] == "L3"
+
+
+async def test_three_phase_usage_excludes_phases_omitted_from_latest_payload(
+    hass: HomeAssistant, hass_client, config_entry
+) -> None:
+    """A stale omitted phase must not keep contracted-power usage elevated."""
+    client = await hass_client()
+    cpe = "TEST123"
+    response = await client.post(
+        f"/api/webhook/{config_entry.data['webhook_id']}",
+        json={
+            "cpe": cpe,
+            "SourceTimestamp": "2026-09-03 11:00:00",
+            "instantaneousActivePowerImportL1": 230.0,
+            "voltageL1": 230.0,
+            "instantaneousActivePowerImportL2": 4600.0,
+            "voltageL2": 230.0,
+            "instantaneousActivePowerImportL3": 0.0,
+            "voltageL3": 230.0,
+        },
+    )
+    assert response.status == 200
+    await hass.async_block_till_done()
+
+    registry = er.async_get(hass)
+    contracted_power_id = registry.async_get_entity_id(
+        "select", DOMAIN, f"{DOMAIN}_{cpe}_contracted_power"
+    )
+    usage_id = registry.async_get_entity_id(
+        "sensor", DOMAIN, f"{DOMAIN}_{cpe}_contracted_power_usage"
+    )
+    assert contracted_power_id is not None
+    assert usage_id is not None
+    await hass.services.async_call(
+        "select",
+        "select_option",
+        {"entity_id": contracted_power_id, "option": "13.80 kVA"},
+        blocking=True,
+    )
+
+    response = await client.post(
+        f"/api/webhook/{config_entry.data['webhook_id']}",
+        json={
+            "cpe": cpe,
+            "SourceTimestamp": "2026-09-03 11:01:00",
+            "instantaneousActivePowerImportL1": 230.0,
+            "voltageL1": 230.0,
+        },
+    )
+    assert response.status == 200
+    await hass.async_block_till_done()
+
+    usage = hass.states.get(usage_id)
+    assert usage is not None
+    assert float(usage.state) == pytest.approx(5.0)
+    assert usage.attributes["limiting_phase"] == "L1"
 
 
 async def test_three_phase_usage_requires_phase_power_measurements(

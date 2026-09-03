@@ -178,6 +178,8 @@ class ERedesContractedPowerSelect(SelectEntity, RestoreEntity):
     @callback
     def async_refresh_options(self) -> None:
         """Update phase-appropriate options."""
+        previous_options = self._attr_options
+        previous_option = self._attr_current_option
         self._attr_options = list(
             contracted_power_options(self._config_entry, self._cpe)
         )
@@ -189,7 +191,10 @@ class ERedesContractedPowerSelect(SelectEntity, RestoreEntity):
                 )
             self._attr_current_option = None
 
-        if self.hass is not None:
+        if self.hass is not None and (
+            self._attr_options != previous_options
+            or self._attr_current_option != previous_option
+        ):
             self.async_write_ha_state()
             self._notify_dependants()
 

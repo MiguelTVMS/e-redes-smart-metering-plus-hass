@@ -270,11 +270,19 @@ class ERedesCalculatedSensor(RestoreSensor):
         if restored := await self.async_get_last_sensor_data():
             self._attr_native_value = restored.native_value
 
-        source_sensors = set(self.entity_description.source_sensors)
-        if self.entity_description.key in {
-            _SINGLE_PHASE_CURRENT_KEY,
-            "contracted_power_usage",
-        }:
+        if self.entity_description.key == "contracted_power_usage":
+            self.async_on_remove(
+                async_dispatcher_connect(
+                    self.hass,
+                    f"{DOMAIN}_{self._cpe}_measurement_batch_update",
+                    self._handle_source_update,
+                )
+            )
+            source_sensors: set[str] = set()
+        else:
+            source_sensors = set(self.entity_description.source_sensors)
+
+        if self.entity_description.key == _SINGLE_PHASE_CURRENT_KEY:
             for phase in _PHASES:
                 source_sensors.update(
                     {
@@ -392,14 +400,21 @@ class ERedesCalculatedSensor(RestoreSensor):
         )
 
     def _phase_currents(self) -> list[tuple[float, str]]:
-        """Return estimated active currents for phases with matching values."""
+        """Return phase currents whose power and voltage share the latest payload."""
         entities = self._config_entry.runtime_data.sensor_entities
+        latest_sensor_keys = (
+            self._config_entry.runtime_data.latest_measurement_sensor_keys.get(
+                self._cpe, frozenset()
+            )
+        )
         currents: list[tuple[float, str]] = []
         for phase in _PHASES:
-            power_sensor = entities.get(
-                f"{self._cpe}_instantaneous_active_power_import_l{phase}"
-            )
-            voltage_sensor = entities.get(f"{self._cpe}_voltage_l{phase}")
+            power_key = f"instantaneous_active_power_import_l{phase}"
+            voltage_key = f"voltage_l{phase}"
+            if not {power_key, voltage_key} <= latest_sensor_keys:
+                continue
+            power_sensor = entities.get(f"{self._cpe}_{power_key}")
+            voltage_sensor = entities.get(f"{self._cpe}_{voltage_key}")
             if (
                 power_sensor is None
                 or power_sensor.native_value is None
