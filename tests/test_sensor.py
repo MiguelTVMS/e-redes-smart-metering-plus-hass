@@ -619,3 +619,53 @@ async def test_contracted_power_usage_sensor(
     state = hass.states.get(ent_id)
     assert state is not None
     assert float(state.state) == pytest.approx(33.33, rel=0.01)
+
+
+async def test_single_phase_usage_requires_sources_from_same_payload(
+    hass: HomeAssistant, hass_client, config_entry
+) -> None:
+    """An incomplete payload must not combine new and retained measurements."""
+    client = await hass_client()
+    cpe = "CPE_USAGE_TEST"
+    response = await client.post(
+        f"/api/webhook/{config_entry.data['webhook_id']}",
+        json={
+            "cpe": cpe,
+            "SourceTimestamp": "2026-09-03 12:00:00",
+            "instantaneousActivePowerImport": 4600.0,
+            "voltageL1": 230.0,
+        },
+    )
+    assert response.status == 200
+    await hass.async_block_till_done()
+
+    registry = er.async_get(hass)
+    contracted_power_id = registry.async_get_entity_id(
+        "select", DOMAIN, f"{DOMAIN}_{cpe}_contracted_power"
+    )
+    usage_id = registry.async_get_entity_id(
+        "sensor", DOMAIN, f"{DOMAIN}_{cpe}_contracted_power_usage"
+    )
+    assert contracted_power_id is not None
+    assert usage_id is not None
+    await hass.services.async_call(
+        "select",
+        "select_option",
+        {"entity_id": contracted_power_id, "option": "4.60 kVA"},
+        blocking=True,
+    )
+
+    response = await client.post(
+        f"/api/webhook/{config_entry.data['webhook_id']}",
+        json={
+            "cpe": cpe,
+            "SourceTimestamp": "2026-09-03 12:01:00",
+            "instantaneousActivePowerImport": 5750.0,
+        },
+    )
+    assert response.status == 200
+    await hass.async_block_till_done()
+
+    usage = hass.states.get(usage_id)
+    assert usage is not None
+    assert usage.state == "unavailable"

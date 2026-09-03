@@ -437,6 +437,19 @@ class ERedesCalculatedSensor(RestoreSensor):
             if not (currents := self._phase_currents()):
                 return None
             return max(currents, key=lambda value: value[0])
+        latest_sensor_keys = (
+            self._config_entry.runtime_data.latest_measurement_sensor_keys.get(
+                self._cpe, frozenset()
+            )
+        )
+        if (
+            not {
+                "instantaneous_active_power_import",
+                "voltage_l1",
+            }
+            <= latest_sensor_keys
+        ):
+            return None
         if (
             values := self._sensor_values(
                 "instantaneous_active_power_import", "voltage_l1"
