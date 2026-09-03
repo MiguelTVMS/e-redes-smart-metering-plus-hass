@@ -211,13 +211,8 @@ class ERedesCalculatedSensor(RestoreSensor):
 
     @property
     def available(self) -> bool:
-        """Return whether load entities have valid configured inputs."""
-        if self.entity_description.key in {
-            "contracted_power_usage",
-            "contracted_power_usage_status",
-        }:
-            return self.native_value is not None
-        return True
+        """Return whether the calculated entity has valid matching inputs."""
+        return self.native_value is not None
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
@@ -270,7 +265,10 @@ class ERedesCalculatedSensor(RestoreSensor):
         if restored := await self.async_get_last_sensor_data():
             self._attr_native_value = restored.native_value
 
-        if self.entity_description.key == "contracted_power_usage":
+        if self.entity_description.calculation in {
+            "contracted_power_usage",
+            "power_voltage",
+        }:
             self.async_on_remove(
                 async_dispatcher_connect(
                     self.hass,
@@ -281,15 +279,6 @@ class ERedesCalculatedSensor(RestoreSensor):
             source_sensors: set[str] = set()
         else:
             source_sensors = set(self.entity_description.source_sensors)
-
-        if self.entity_description.key == _SINGLE_PHASE_CURRENT_KEY:
-            for phase in _PHASES:
-                source_sensors.update(
-                    {
-                        f"instantaneous_active_power_import_l{phase}",
-                        f"voltage_l{phase}",
-                    }
-                )
 
         for source_sensor in source_sensors:
             self.async_on_remove(
@@ -309,12 +298,7 @@ class ERedesCalculatedSensor(RestoreSensor):
                 )
             )
 
-        calculated = self._calculate_value()
-        if calculated is not None or self.entity_description.key in {
-            "contracted_power_usage",
-            "contracted_power_usage_status",
-        }:
-            self._attr_native_value = calculated
+        self._attr_native_value = self._calculate_value()
         self._notify_contracted_power_usage_update()
 
     @callback
@@ -386,6 +370,10 @@ class ERedesCalculatedSensor(RestoreSensor):
             and self._has_phase_power()
         ):
             return None
+        if not self._latest_payload_has_sources(
+            *self.entity_description.source_sensors[:2]
+        ):
+            return None
         if (values := self._power_and_voltage()) is None:
             return None
         power, voltage = values
@@ -402,16 +390,11 @@ class ERedesCalculatedSensor(RestoreSensor):
     def _phase_currents(self) -> list[tuple[float, str]]:
         """Return phase currents whose power and voltage share the latest payload."""
         entities = self._config_entry.runtime_data.sensor_entities
-        latest_sensor_keys = (
-            self._config_entry.runtime_data.latest_measurement_sensor_keys.get(
-                self._cpe, frozenset()
-            )
-        )
         currents: list[tuple[float, str]] = []
         for phase in _PHASES:
             power_key = f"instantaneous_active_power_import_l{phase}"
             voltage_key = f"voltage_l{phase}"
-            if not {power_key, voltage_key} <= latest_sensor_keys:
+            if not self._latest_payload_has_sources(power_key, voltage_key):
                 continue
             power_sensor = entities.get(f"{self._cpe}_{power_key}")
             voltage_sensor = entities.get(f"{self._cpe}_{voltage_key}")
@@ -431,23 +414,24 @@ class ERedesCalculatedSensor(RestoreSensor):
                 currents.append((power / voltage, f"L{phase}"))
         return currents
 
+    def _latest_payload_has_sources(self, *source_keys: str) -> bool:
+        """Return whether all sources belong to the latest accepted payload."""
+        latest_sensor_keys = (
+            self._config_entry.runtime_data.latest_measurement_sensor_keys.get(
+                self._cpe, frozenset()
+            )
+        )
+        return set(source_keys) <= latest_sensor_keys
+
     def _usage_current_and_phase(self) -> tuple[float, str] | None:
         """Return the highest estimated active current and its phase."""
         if is_three_phase(self._config_entry, self._cpe):
             if not (currents := self._phase_currents()):
                 return None
             return max(currents, key=lambda value: value[0])
-        latest_sensor_keys = (
-            self._config_entry.runtime_data.latest_measurement_sensor_keys.get(
-                self._cpe, frozenset()
-            )
-        )
-        if (
-            not {
-                "instantaneous_active_power_import",
-                "voltage_l1",
-            }
-            <= latest_sensor_keys
+        if not self._latest_payload_has_sources(
+            "instantaneous_active_power_import",
+            "voltage_l1",
         ):
             return None
         if (

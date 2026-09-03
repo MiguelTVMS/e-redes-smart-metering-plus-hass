@@ -252,10 +252,10 @@ async def test_calculated_current_sensor(
     assert state.attributes["estimate_basis"] == "active_power_divided_by_voltage"
 
 
-async def test_calculated_current_sensor_unknown_when_missing_data(
+async def test_calculated_current_sensor_unavailable_until_matching_data(
     hass: HomeAssistant, hass_client, config_entry
 ) -> None:
-    """Test that calculated current sensor shows unknown when source data is missing."""
+    """Calculated current requires power and voltage in the same payload."""
 
     client = await hass_client()
     cpe = "CPE_TEST_UNKNOWN"
@@ -298,10 +298,26 @@ async def test_calculated_current_sensor_unknown_when_missing_data(
     ent_id = entity_registry.async_get_entity_id("sensor", DOMAIN, unique_id)
     assert ent_id is not None
 
-    # Verify calculated value
+    # The retained power and new voltage are not one measurement.
     state = hass.states.get(ent_id)
     assert state is not None
-    # Should be calculated now: 2300W / 230V = 10A
+    assert state.state == "unavailable"
+
+    # A complete payload provides a valid current estimate.
+    payload = {
+        "cpe": cpe,
+        "instantaneousActivePowerImport": 2300.0,
+        "voltageL1": 230.0,
+    }
+    resp = await client.post(
+        f"/api/webhook/{config_entry.data['webhook_id']}",
+        json=payload,
+    )
+    assert resp.status == 200
+    await hass.async_block_till_done()
+
+    state = hass.states.get(ent_id)
+    assert state is not None
     assert float(state.state) == pytest.approx(10.0, rel=0.01)
 
 
@@ -362,6 +378,51 @@ async def test_three_phase_current_sensors_use_matching_phase_data(
     usage = hass.states.get(usage_id)
     assert usage is not None
     assert float(usage.state) == pytest.approx(100.0)
+
+
+async def test_phase_current_requires_sources_from_same_payload(
+    hass: HomeAssistant, hass_client, config_entry
+) -> None:
+    """A phase current must not combine new power with retained voltage."""
+    client = await hass_client()
+    cpe = "TEST123"
+    response = await client.post(
+        f"/api/webhook/{config_entry.data['webhook_id']}",
+        json={
+            "cpe": cpe,
+            "SourceTimestamp": "2026-09-03 09:00:00",
+            "instantaneousActivePowerImportL1": 2300.0,
+            "voltageL1": 230.0,
+        },
+    )
+    assert response.status == 200
+    await hass.async_block_till_done()
+
+    registry = er.async_get(hass)
+    current_id = registry.async_get_entity_id(
+        "sensor",
+        DOMAIN,
+        f"{DOMAIN}_{cpe}_instantaneous_active_current_import_l1",
+    )
+    assert current_id is not None
+    current = hass.states.get(current_id)
+    assert current is not None
+    assert float(current.state) == pytest.approx(10.0)
+
+    response = await client.post(
+        f"/api/webhook/{config_entry.data['webhook_id']}",
+        json={
+            "cpe": cpe,
+            "SourceTimestamp": "2026-09-03 09:01:00",
+            "instantaneousActivePowerImportL1": 4600.0,
+        },
+    )
+    assert response.status == 200
+    await hass.async_block_till_done()
+
+    current = hass.states.get(current_id)
+    assert current is not None
+    assert current.state == "unavailable"
 
 
 async def test_three_phase_usage_updates_once_after_complete_payload(
