@@ -147,6 +147,12 @@ class EredesSmartMeteringPlusOptionsFlow(OptionsFlow):
                     auth_token=auth_token,
                     errors={CONF_WEBHOOK_AUTH_TOKEN: "auth_token_required"},
                 )
+            if auth_token and not auth_token.isascii():
+                return await self._async_show_webhook_settings_form(
+                    auth_enabled=auth_enabled,
+                    auth_token=auth_token,
+                    errors={CONF_WEBHOOK_AUTH_TOKEN: "auth_token_invalid"},
+                )
 
             self.hass.config_entries.async_update_entry(
                 self.config_entry,
@@ -235,6 +241,7 @@ class EredesSmartMeteringPlusOptionsFlow(OptionsFlow):
             )
             for domain, identifier in device.identifiers
             if domain == DOMAIN
+            and identifier in self.config_entry.runtime_data.allowed_cpes
         }
         if not devices:
             return self.async_abort(reason="no_meters")

@@ -269,10 +269,12 @@ def _is_request_authorized(request: Request, entry: ERedesConfigEntry) -> bool:
         return True
 
     expected = entry.data.get(CONF_WEBHOOK_AUTH_TOKEN)
-    if not isinstance(expected, str) or not expected:
+    if not isinstance(expected, str) or not expected or not expected.isascii():
         return False
 
     supplied = request.headers.get("Authorization", "")
+    if not supplied.isascii():
+        return False
     candidates = [supplied]
     scheme, separator, credentials = supplied.partition(" ")
     if separator and scheme.casefold() == "bearer":

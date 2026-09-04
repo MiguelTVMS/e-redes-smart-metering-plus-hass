@@ -160,6 +160,32 @@ async def test_webhook_authentication_accepts_raw_or_bearer_token(
     assert response.status == 200
 
 
+async def test_webhook_authentication_rejects_non_ascii_token_safely(
+    hass: HomeAssistant, config_entry
+) -> None:
+    """A legacy non-ASCII token fails closed instead of returning HTTP 500."""
+    hass.config_entries.async_update_entry(
+        config_entry,
+        data={
+            **config_entry.data,
+            CONF_WEBHOOK_AUTH_ENABLED: True,
+            CONF_WEBHOOK_AUTH_TOKEN: "inválido",
+        },
+    )
+
+    response = await handle_webhook(
+        hass,
+        WEBHOOK_ID,
+        DummyRequest(
+            {"cpe": "ABCDEF", "activeEnergyImport": 1000},
+            {"Authorization": "inválido"},
+        ),
+        config_entry,
+    )
+
+    assert response.status == 401
+
+
 async def test_webhook_invalid_json_returns_400(
     hass: HomeAssistant, config_entry
 ) -> None:

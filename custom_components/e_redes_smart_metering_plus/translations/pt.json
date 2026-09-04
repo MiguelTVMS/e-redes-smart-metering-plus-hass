@@ -51,6 +51,7 @@
       }
     },
     "error": {
+      "auth_token_invalid": "Utilize apenas caracteres ASCII no token de autenticação",
       "auth_token_required": "Introduza ou gere um token quando a autenticação está ativada"
     },
     "abort": {

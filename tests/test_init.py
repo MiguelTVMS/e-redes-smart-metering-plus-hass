@@ -283,16 +283,22 @@ async def test_remove_device_resets_meter_and_preserves_configuration(
     assert await async_remove_config_entry_device(hass, entry, device_entry)
 
     assert entry.data == {"webhook_id": WEBHOOK_ID, CONF_CPES: [cpe, other_cpe]}
-    assert device_registry.async_get(device_entry.id) is None
+    assert device_registry.async_get(device_entry.id) is not None
     assert entity_registry.async_get(entity_entry.entity_id) is None
     assert set(entry.runtime_data.sensor_entities) == {f"{other_cpe}_power"}
     assert set(entry.runtime_data.select_entities) == {other_cpe}
     assert not entry.runtime_data.binary_sensor_entities
-    assert cpe not in entry.runtime_data.last_source_timestamps
+    assert cpe in entry.runtime_data.last_source_timestamps
     assert cpe not in entry.runtime_data.latest_measurement_sensor_keys
     assert cpe not in entry.runtime_data.webhook_locks
     assert cpe not in entry.runtime_data.payload_fields
     reload_entry.assert_awaited_once_with(entry.entry_id)
+
+    device_registry.async_update_device(
+        device_entry.id,
+        remove_config_entry_id=entry.entry_id,
+    )
+    assert device_registry.async_get(device_entry.id) is None
 
 
 async def test_remove_device_rejects_unconfigured_meter(
@@ -323,7 +329,11 @@ async def test_deleted_meter_is_recreated_from_next_payload(
     cpe = "CPE001"
     initial_request = Mock()
     initial_request.json = AsyncMock(
-        return_value={"cpe": cpe, "activeEnergyImport": 12345}
+        return_value={
+            "cpe": cpe,
+            "SourceTimestamp": "2026-09-04 10:00:00",
+            "activeEnergyImport": 12345,
+        }
     )
     response = await handle_webhook(hass, WEBHOOK_ID, initial_request, config_entry)
     assert response.status == 200
@@ -343,14 +353,45 @@ async def test_deleted_meter_is_recreated_from_next_payload(
     assert await async_remove_config_entry_device(hass, config_entry, device_entry)
     await hass.async_block_till_done()
 
+    assert device_registry.async_get(device_entry.id) is not None
+    device_registry.async_update_device(
+        device_entry.id,
+        remove_config_entry_id=config_entry.entry_id,
+    )
+
     assert config_entry.state is ConfigEntryState.LOADED
     assert config_entry.data == original_data
     assert config_entry.runtime_data.webhook_url == original_webhook_url
     assert device_registry.async_get(device_entry.id) is None
     assert entity_registry.async_get_entity_id("sensor", DOMAIN, old_unique_id) is None
+    assert cpe in config_entry.runtime_data.last_source_timestamps
+
+    stale_request = Mock()
+    stale_request.json = AsyncMock(
+        return_value={
+            "cpe": cpe,
+            "SourceTimestamp": "2026-09-04 09:59:59",
+            "voltageL1": 229.0,
+        }
+    )
+    response = await handle_webhook(hass, WEBHOOK_ID, stale_request, config_entry)
+    assert response.status == 200
+    await hass.async_block_till_done()
+    assert (
+        entity_registry.async_get_entity_id(
+            "sensor", DOMAIN, f"{DOMAIN}_{cpe}_voltage_l1"
+        )
+        is None
+    )
 
     next_request = Mock()
-    next_request.json = AsyncMock(return_value={"cpe": cpe, "voltageL1": 231.5})
+    next_request.json = AsyncMock(
+        return_value={
+            "cpe": cpe,
+            "SourceTimestamp": "2026-09-04 10:00:01",
+            "voltageL1": 231.5,
+        }
+    )
     response = await handle_webhook(hass, WEBHOOK_ID, next_request, config_entry)
     assert response.status == 200
     await hass.async_block_till_done()

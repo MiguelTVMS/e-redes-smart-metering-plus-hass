@@ -174,6 +174,55 @@ async def test_options_requires_token_when_authentication_is_enabled(
     assert result["errors"] == {CONF_WEBHOOK_AUTH_TOKEN: "auth_token_required"}
 
 
+async def test_options_rejects_non_ascii_authentication_token(
+    hass: HomeAssistant, config_entry
+) -> None:
+    """Authorization tokens are restricted to HTTP-safe ASCII text."""
+    result = await hass.config_entries.options.async_init(config_entry.entry_id)
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], user_input={"next_step_id": "webhook_settings"}
+    )
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"],
+        user_input={
+            CONF_WEBHOOK_AUTH_ENABLED: True,
+            CONF_WEBHOOK_AUTH_TOKEN: "inválido",
+            "generate_auth_token": False,
+        },
+    )
+
+    assert result["type"] == "form"
+    assert result["errors"] == {CONF_WEBHOOK_AUTH_TOKEN: "auth_token_invalid"}
+
+
+async def test_options_reset_meter_excludes_unconfigured_devices(
+    hass: HomeAssistant, config_entry
+) -> None:
+    """Only devices whose CPE remains allowed are offered for reset."""
+    configured_cpe = config_entry.data[CONF_CPES][0]
+    unconfigured_cpe = "PT000000000000000099"
+    device_registry = dr.async_get(hass)
+    device_registry.async_get_or_create(
+        config_entry_id=config_entry.entry_id,
+        identifiers={(DOMAIN, configured_cpe)},
+    )
+    device_registry.async_get_or_create(
+        config_entry_id=config_entry.entry_id,
+        identifiers={(DOMAIN, unconfigured_cpe)},
+    )
+
+    result = await hass.config_entries.options.async_init(config_entry.entry_id)
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], user_input={"next_step_id": "reset_meter"}
+    )
+
+    schema = result["data_schema"].schema
+    selector = next(iter(schema.values()))
+    option_values = {option["value"] for option in selector.config["options"]}
+    assert configured_cpe in option_values
+    assert unconfigured_cpe not in option_values
+
+
 async def test_options_reset_meter_requires_confirmation(
     hass: HomeAssistant, config_entry, monkeypatch: pytest.MonkeyPatch
 ) -> None:

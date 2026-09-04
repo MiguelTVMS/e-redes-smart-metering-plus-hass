@@ -68,8 +68,13 @@ async def async_remove_config_entry_device(
     entry: ERedesConfigEntry,
     device_entry: dr.DeviceEntry,
 ) -> bool:
-    """Reset a meter while preserving its CPE and webhook configuration."""
-    return await async_reset_meter(hass, entry, device_entry)
+    """Clear a meter and let Home Assistant remove its registry device."""
+    return await async_reset_meter(
+        hass,
+        entry,
+        device_entry,
+        remove_device=False,
+    )
 
 
 async def async_reset_meter(
@@ -78,6 +83,7 @@ async def async_reset_meter(
     device_entry: dr.DeviceEntry,
     *,
     reset_entity_names: bool = False,
+    remove_device: bool = True,
 ) -> bool:
     """Delete a meter's discovered data so its next payload recreates it."""
     cpes = {
@@ -89,6 +95,7 @@ async def async_reset_meter(
         return False
 
     cpe = cpes.pop()
+    last_source_timestamp = entry.runtime_data.last_source_timestamps.get(cpe)
     entity_registry = er.async_get(hass)
     device_registry = dr.async_get(hass)
     if reset_entity_names:
@@ -133,7 +140,7 @@ async def async_reset_meter(
                 )
             entity_registry.async_remove(entity_entry.entity_id)
 
-    if device_registry.async_get(device_entry.id) is not None:
+    if remove_device and device_registry.async_get(device_entry.id) is not None:
         device_registry.async_remove_device(device_entry.id)
 
     runtime_data = entry.runtime_data
@@ -147,7 +154,6 @@ async def async_reset_meter(
                 entities.pop(key)
 
     for values in (
-        runtime_data.last_source_timestamps,
         runtime_data.latest_measurement_sensor_keys,
         runtime_data.webhook_locks,
         runtime_data.payload_fields,
@@ -155,6 +161,8 @@ async def async_reset_meter(
         values.pop(cpe, None)
 
     await hass.config_entries.async_reload(entry.entry_id)
+    if last_source_timestamp is not None:
+        entry.runtime_data.last_source_timestamps[cpe] = last_source_timestamp
     return True
 
 
