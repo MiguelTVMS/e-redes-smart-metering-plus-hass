@@ -106,12 +106,18 @@ def test_post_payload_sends_json(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(webhook_simulator, "urlopen", urlopen)
 
     payload = {"cpe": "TEST", "voltageL1": 230.0}
-    assert webhook_simulator.post_payload("http://localhost/webhook", payload, 5) == 200
+    assert (
+        webhook_simulator.post_payload(
+            "http://localhost/webhook", payload, 5, "configured-token"
+        )
+        == 200
+    )
 
     request = urlopen.call_args.args[0]
     assert request.full_url == "http://localhost/webhook"
     assert request.method == "POST"
     assert json.loads(request.data) == payload
+    assert request.headers["Authorization"] == "Bearer configured-token"
     assert urlopen.call_args.kwargs["timeout"] == 5
 
 

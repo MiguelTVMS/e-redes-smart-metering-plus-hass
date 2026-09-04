@@ -8,6 +8,8 @@ import pytest
 
 from custom_components.e_redes_smart_metering_plus.const import (
     CONF_CPES,
+    CONF_WEBHOOK_AUTH_ENABLED,
+    CONF_WEBHOOK_AUTH_TOKEN,
     DOMAIN,
     WEBHOOK_ID,
 )
@@ -52,10 +54,10 @@ async def test_create_entry(hass: HomeAssistant) -> None:
     assert data[CONF_CPES] == [TEST_CPE]
 
 
-async def test_options_show_active_url_and_update_cpes(
+async def test_options_separate_webhook_information_and_cpe_management(
     hass: HomeAssistant, config_entry, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Options expose the active URL and replace the allowed CPE list."""
+    """Webhook information and CPE management use separate options steps."""
     active_url = "https://hooks.nabu.casa/test"
 
     async def mock_active_url(hass_instance, entry):
@@ -68,13 +70,27 @@ async def test_options_show_active_url_and_update_cpes(
     result = await hass.config_entries.options.async_init(config_entry.entry_id)
 
     assert result["type"] == "menu"
-    assert result["menu_options"] == ["manage_cpes", "reset_meter"]
+    assert result["menu_options"] == [
+        "webhook_settings",
+        "manage_cpes",
+        "reset_meter",
+    ]
+
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], user_input={"next_step_id": "webhook_settings"}
+    )
+    assert result["type"] == "form"
+    assert result["step_id"] == "webhook_settings"
+    assert result["description_placeholders"]["webhook_url"] == active_url
+
+    result = await hass.config_entries.options.async_init(config_entry.entry_id)
 
     result = await hass.config_entries.options.async_configure(
         result["flow_id"], user_input={"next_step_id": "manage_cpes"}
     )
     assert result["type"] == "form"
-    assert result["description_placeholders"]["webhook_url"] == active_url
+    assert result["step_id"] == "manage_cpes"
+    assert not result.get("description_placeholders")
 
     updated_cpes = [TEST_CPE, "PT000000000000000001"]
     result = await hass.config_entries.options.async_configure(
@@ -83,6 +99,79 @@ async def test_options_show_active_url_and_update_cpes(
 
     assert result["type"] == "create_entry"
     assert config_entry.data[CONF_CPES] == sorted(updated_cpes)
+
+
+async def test_options_configure_webhook_authentication(
+    hass: HomeAssistant, config_entry
+) -> None:
+    """Webhook authentication can be enabled with a visible token."""
+    result = await hass.config_entries.options.async_init(config_entry.entry_id)
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], user_input={"next_step_id": "webhook_settings"}
+    )
+
+    defaults = result["data_schema"]({})
+    assert defaults[CONF_WEBHOOK_AUTH_ENABLED] is False
+    assert defaults[CONF_WEBHOOK_AUTH_TOKEN] == ""
+
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"],
+        user_input={
+            CONF_WEBHOOK_AUTH_ENABLED: True,
+            CONF_WEBHOOK_AUTH_TOKEN: "configured-token",
+            "generate_auth_token": False,
+        },
+    )
+
+    assert result["type"] == "create_entry"
+    assert config_entry.data[CONF_WEBHOOK_AUTH_ENABLED] is True
+    assert config_entry.data[CONF_WEBHOOK_AUTH_TOKEN] == "configured-token"
+
+
+async def test_options_generate_webhook_authentication_token(
+    hass: HomeAssistant, config_entry
+) -> None:
+    """A random token is shown before the user saves it."""
+    result = await hass.config_entries.options.async_init(config_entry.entry_id)
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], user_input={"next_step_id": "webhook_settings"}
+    )
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"],
+        user_input={
+            CONF_WEBHOOK_AUTH_ENABLED: False,
+            CONF_WEBHOOK_AUTH_TOKEN: "",
+            "generate_auth_token": True,
+        },
+    )
+
+    assert result["type"] == "form"
+    generated = result["data_schema"]({})
+    assert generated[CONF_WEBHOOK_AUTH_ENABLED] is True
+    assert len(generated[CONF_WEBHOOK_AUTH_TOKEN]) >= 32
+    assert generated["generate_auth_token"] is False
+    assert CONF_WEBHOOK_AUTH_ENABLED not in config_entry.data
+
+
+async def test_options_requires_token_when_authentication_is_enabled(
+    hass: HomeAssistant, config_entry
+) -> None:
+    """Authentication cannot be enabled without a token."""
+    result = await hass.config_entries.options.async_init(config_entry.entry_id)
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], user_input={"next_step_id": "webhook_settings"}
+    )
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"],
+        user_input={
+            CONF_WEBHOOK_AUTH_ENABLED: True,
+            CONF_WEBHOOK_AUTH_TOKEN: "",
+            "generate_auth_token": False,
+        },
+    )
+
+    assert result["type"] == "form"
+    assert result["errors"] == {CONF_WEBHOOK_AUTH_TOKEN: "auth_token_required"}
 
 
 async def test_options_reset_meter_requires_confirmation(

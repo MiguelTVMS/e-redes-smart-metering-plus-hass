@@ -26,6 +26,8 @@ WEBHOOK_ID = DOMAIN
 WEBHOOK_PATH = f"/api/webhook/{WEBHOOK_ID}"
 
 CONF_CPES = "cpes"
+CONF_WEBHOOK_AUTH_ENABLED = "webhook_auth_enabled"
+CONF_WEBHOOK_AUTH_TOKEN = "webhook_auth_token"
 
 # Device info
 MANUFACTURER = "E-Redes"

@@ -34,8 +34,8 @@ Monitor compatible E-REDES Smart Metering Plus meters in Home Assistant. The int
 ## Set up your meter
 
 1. During setup, enter every CPE that may send data to this Home Assistant instance.
-2. Open **Settings > Devices & services**, select the integration, then choose **Configure** to copy the active webhook URL.
-3. Configure that URL in E-REDES Smart Metering Plus.
+2. Open **Settings > Devices & services**, select the integration, choose **Configure**, then open **Webhook URL and Authentication**.
+3. Copy the active URL into E-REDES Smart Metering Plus. Authentication is disabled by default. To enable it, generate or enter a token, save it in Home Assistant, and provide the same token to E-REDES as the HTTP Header Authentication value.
 4. When the first payload arrives, Home Assistant creates a device for that CPE.
 5. On each meter device, select the **Contracted power** from your electricity contract. Power usage entities remain unavailable until you choose a tier.
 
@@ -50,7 +50,7 @@ The webhook path is always `/api/webhook/e_redes_smart_metering_plus`.
 Reloading or restarting the integration preserves the existing Cloudhook. It is deleted only when you remove the integration entry.
 
 > [!CAUTION]
-> The CPE list is an allowlist, not sender authentication. Keep the webhook URL private and do not include CPE values or complete payloads in public support requests.
+> The CPE list is an allowlist, not sender authentication. Optional authentication checks the `Authorization` header and accepts the configured token either verbatim or as `Bearer <token>`. E-REDES publicly requests an HTTP Header Authentication value but does not document its exact header format, so confirm the setting with E-REDES if delivery fails. Keep the webhook URL and token private, and do not include CPE values or complete payloads in public support requests.
 
 ## What Home Assistant creates
 

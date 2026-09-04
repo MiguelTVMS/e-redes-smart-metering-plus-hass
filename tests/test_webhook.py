@@ -8,6 +8,8 @@ import logging
 import pytest
 
 from custom_components.e_redes_smart_metering_plus.const import (
+    CONF_WEBHOOK_AUTH_ENABLED,
+    CONF_WEBHOOK_AUTH_TOKEN,
     DOMAIN,
     SENSOR_MAPPING,
     WEBHOOK_ID,
@@ -22,9 +24,10 @@ pytestmark = pytest.mark.asyncio
 class DummyRequest:
     """A minimal request object exposing only an async json() method."""
 
-    def __init__(self, payload):
+    def __init__(self, payload, headers=None):
         """Initialize with a JSON payload."""
         self._payload = payload
+        self.headers = headers or {}
 
     async def json(self):
         """Return the JSON payload."""
@@ -96,6 +99,65 @@ async def test_webhook_missing_cpe_returns_400(
     )
     assert resp.status == 400
     assert resp.text == "Missing 'cpe' field"
+
+
+async def test_webhook_authentication_rejects_missing_or_wrong_header(
+    hass: HomeAssistant, config_entry
+) -> None:
+    """Enabled authentication rejects requests without the configured token."""
+    hass.config_entries.async_update_entry(
+        config_entry,
+        data={
+            **config_entry.data,
+            CONF_WEBHOOK_AUTH_ENABLED: True,
+            CONF_WEBHOOK_AUTH_TOKEN: "expected-token",
+        },
+    )
+
+    payload = {"cpe": "ABCDEF", "activeEnergyImport": 1000}
+    missing = await handle_webhook(
+        hass, WEBHOOK_ID, DummyRequest(payload), config_entry
+    )
+    wrong = await handle_webhook(
+        hass,
+        WEBHOOK_ID,
+        DummyRequest(payload, {"Authorization": "wrong-token"}),
+        config_entry,
+    )
+
+    assert missing.status == 401
+    assert wrong.status == 401
+    assert missing.headers["WWW-Authenticate"] == "Bearer"
+
+
+@pytest.mark.parametrize(
+    "authorization",
+    ["expected-token", "Bearer expected-token", "bearer expected-token"],
+)
+async def test_webhook_authentication_accepts_raw_or_bearer_token(
+    hass: HomeAssistant, config_entry, authorization: str
+) -> None:
+    """The configured token supports the likely E-REDES header formats."""
+    hass.config_entries.async_update_entry(
+        config_entry,
+        data={
+            **config_entry.data,
+            CONF_WEBHOOK_AUTH_ENABLED: True,
+            CONF_WEBHOOK_AUTH_TOKEN: "expected-token",
+        },
+    )
+
+    response = await handle_webhook(
+        hass,
+        WEBHOOK_ID,
+        DummyRequest(
+            {"cpe": "ABCDEF", "activeEnergyImport": 1000},
+            {"Authorization": authorization},
+        ),
+        config_entry,
+    )
+
+    assert response.status == 200
 
 
 async def test_webhook_invalid_json_returns_400(

@@ -9,6 +9,7 @@ from http import HTTPStatus
 import json
 import logging
 import math
+import secrets
 from typing import Any
 
 from aiohttp.hdrs import METH_POST
@@ -20,6 +21,8 @@ from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 
 from .const import (
+    CONF_WEBHOOK_AUTH_ENABLED,
+    CONF_WEBHOOK_AUTH_TOKEN,
     DOMAIN,
     KNOWN_PAYLOAD_FIELDS,
     MANUFACTURER,
@@ -201,6 +204,13 @@ async def handle_webhook(
 ) -> Response:
     """Handle incoming webhook data."""
     try:
+        if not _is_request_authorized(request, entry):
+            return Response(
+                status=HTTPStatus.UNAUTHORIZED,
+                text="Invalid Authorization header",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
         data = await request.json()
 
         if not isinstance(data, dict):
@@ -251,6 +261,23 @@ async def handle_webhook(
         return Response(
             status=HTTPStatus.INTERNAL_SERVER_ERROR, text="Internal Server Error"
         )
+
+
+def _is_request_authorized(request: Request, entry: ERedesConfigEntry) -> bool:
+    """Return whether the request satisfies the configured Authorization check."""
+    if not entry.data.get(CONF_WEBHOOK_AUTH_ENABLED, False):
+        return True
+
+    expected = entry.data.get(CONF_WEBHOOK_AUTH_TOKEN)
+    if not isinstance(expected, str) or not expected:
+        return False
+
+    supplied = request.headers.get("Authorization", "")
+    candidates = [supplied]
+    scheme, separator, credentials = supplied.partition(" ")
+    if separator and scheme.casefold() == "bearer":
+        candidates.append(credentials)
+    return any(secrets.compare_digest(candidate, expected) for candidate in candidates)
 
 
 def _validated_sensor_data(data: dict[str, Any]) -> dict[str, Any]:
