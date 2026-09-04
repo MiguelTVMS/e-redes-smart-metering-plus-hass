@@ -102,7 +102,7 @@ Both operations keep the integration, webhook URL, authentication settings, and 
 
 Before a full reset, update dashboards, automations, scripts, and external consumers that refer to the old entity IDs. Neither operation deletes recorder history or long-term statistics. Home Assistant may associate retained statistics with their previous statistic IDs, so a reset is not a recorder purge.
 
-Removing a CPE under **Manage allowed CPEs** is different. It immediately rejects future payloads for that CPE, but it does not delete the existing device. Delete or reset the device separately if you no longer want it shown.
+Removing a CPE under **Manage allowed CPEs** is different. It rejects future payloads for that CPE, but it does not delete the existing device. If you want to remove the device as well, delete or reset the meter first, then remove its CPE from the allowlist. If the CPE was already removed, add it back, wait for the integration to reload, delete or reset the device, and then remove the CPE again.
 
 Estimated power usage compares the active-current component derived from active power and voltage with the nominal current for the selected contracted-power tier. For three-phase data, it uses the most-loaded reported phase. The Smart Metering Plus webhook does not provide current, apparent power, or power factor, so this is a lower-bound estimate whenever the power factor is below 1. It must not be used to predict the behavior of a physical breaker, the meter's control function, or other protection hardware.
 
