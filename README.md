@@ -68,9 +68,10 @@ Authentication is disabled by default. To enable it:
 
 1. Open **Webhook URL and Authentication**.
 2. Enable **Require Authorization header**.
-3. Enter an ASCII token or select **Generate a new random token** and submit the form once.
-4. Copy the visible generated token, then submit the form again to save it.
-5. Provide the same token to E-REDES as the HTTP Header Authentication value.
+3. Choose one token path:
+   - To use your own token, enter an ASCII value and submit once to save it.
+   - To generate a token, select **Generate a new random token** and submit once. Copy the generated value shown in the refreshed form, then submit again to save it.
+4. Provide the saved token to E-REDES as the HTTP Header Authentication value.
 
 The token is intentionally displayed as plain text so it can be copied. Home Assistant does not provide a separate copy button for this selector. The integration accepts either the exact token or `Bearer <token>` in the HTTP `Authorization` header. Disabling **Require Authorization header** stops checking the header after the form is saved, even if a token remains in the token field. Changing or disabling authentication does not change the webhook URL.
 
