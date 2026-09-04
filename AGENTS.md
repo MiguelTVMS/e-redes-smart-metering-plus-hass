@@ -18,8 +18,8 @@ Keep instructions here operational. Product setup belongs in `README.md`; contri
 
 ## Repository facts
 
-- Target Home Assistant version: `2026.1.0`.
-- Python tooling: Python 3.13 managed by `uv` in `.venv`.
+- Primary Home Assistant target: `2026.9.0`; minimum supported and CI-tested version: `2026.1.0`.
+- Python tooling: Python 3.14 managed by `uv` in `.venv`; minimum-version CI uses Python 3.13.
 - Home Assistant and Windows test execution use Docker Compose. Do not try to make native Windows pytest a supported path.
 - `config/` is ignored local Home Assistant state. It can contain credentials, tokens, CPEs, and recorder data. Never commit, copy, or expose its contents.
 - `make` is the cross-platform command surface. Use `make doctor`, `make bootstrap`, `make validate`, `make test`, and the `make ha-*` commands described in `docs/DEVELOPMENT.md`.

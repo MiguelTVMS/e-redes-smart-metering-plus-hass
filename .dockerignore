@@ -1,3 +1,4 @@
 **
 !Dockerfile.tests
+!requirements_dev_base.txt
 !requirements_dev.txt

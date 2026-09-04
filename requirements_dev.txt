@@ -1,18 +1,4 @@
-# Development requirements
-black>=24.0.0
-ruff>=0.1.0
-isort>=5.13.0
-mypy>=1.8.0
-pytest>=7.4.0
-pytest-asyncio>=0.21.0
-pytest-homeassistant-custom-component>=0.13.0
-homeassistant==2026.1.0
+-r requirements_dev_base.txt
 
-# Match transitive versions shipped in the Home Assistant 2026.1.0 image.
-litellm==1.80.5
-openai==2.11.0
-
-# Python 3.13 compatibility fixes
-# Pin pycares to avoid breaking changes in 4.11.0+
-pycares>=4.4.0,<4.11.0
-aiodns>=3.2.0
+# Primary development and production-compatibility baseline.
+homeassistant==2026.9.0

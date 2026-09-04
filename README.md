@@ -12,6 +12,7 @@ Monitor compatible E-REDES Smart Metering Plus meters in Home Assistant. The int
 
 ## Before you install
 
+- Home Assistant 2026.1.0 or newer.
 - An active E-REDES Smart Metering Plus service.
 - The complete CPE for every meter you want to connect. A valid CPE starts with `PT` and has 20 characters.
 - A URL that E-REDES can reach. Home Assistant Cloud works automatically. Otherwise, configure an external Home Assistant URL or securely expose your instance.

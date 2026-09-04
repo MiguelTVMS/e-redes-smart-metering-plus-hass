@@ -1,6 +1,6 @@
 # Development environment
 
-The repository provides the same development commands on Windows, macOS, and Linux. Python 3.13 and all Python packages are isolated in `.venv`; Home Assistant 2026.1.0 runs in Docker Compose.
+The repository provides the same development commands on Windows, macOS, and Linux. Python 3.14 and all Python packages are isolated in `.venv`; Home Assistant 2026.9.0 runs in Docker Compose. CI also tests the minimum supported Home Assistant 2026.1.0 release with Python 3.13.
 
 ## Prerequisites
 
@@ -49,7 +49,7 @@ make bootstrap
 The command:
 
 1. Verifies that Docker is installed and running.
-2. Installs or locates Python 3.13 through `uv`.
+2. Installs or locates Python 3.14 through `uv`.
 3. Creates a platform-native `.venv` when needed.
 4. Installs `requirements_dev.txt` into that environment.
 5. Installs the repository pre-commit hook in the Git-resolved hooks directory.
@@ -68,7 +68,7 @@ make doctor
 
 Command | Purpose
 -- | --
-`make bootstrap` | Create or refresh the Python 3.13 environment and Git hook
+`make bootstrap` | Create or refresh the Python 3.14 environment and Git hook
 `make doctor` | Verify `uv`, Python, Docker Compose, Docker Engine, and Compose configuration
 `make validate` | Format source code, lint it, and run the complete test suite
 `make test` | Run the complete test suite without formatting
@@ -100,7 +100,7 @@ The one-shot `homeassistant-onboarding` service waits for Home Assistant, create
 
 Local browser access is passwordless through Home Assistant's trusted-network provider. Trust is limited to loopback, the fixed Compose gateway at `172.31.252.1`, and Docker Desktop's internal host gateway at `192.168.65.1`. The normal Home Assistant password provider remains enabled to prevent lockout, and port 8123 remains bound only to the host loopback interface.
 
-The helper is idempotent and does not store access or refresh tokens. It uses Home Assistant 2026.1.0's internal onboarding API, so keep the Compose image pinned and validate the helper when changing that version. The E-Redes integration still uses Home Assistant's UI config-entry storage, so add it after Home Assistant opens and enter the real CPE values you intend to test. Do not copy or commit files from `config/.storage/`; they contain internal state and authentication data.
+The helper is idempotent and does not store access or refresh tokens. It uses Home Assistant 2026.9.0's internal onboarding API, so keep the Compose image pinned and validate the helper when changing that version. The E-Redes integration still uses Home Assistant's UI config-entry storage, so add it after Home Assistant opens and enter the real CPE values you intend to test. Do not copy or commit files from `config/.storage/`; they contain internal state and authentication data.
 
 Start Home Assistant and open `http://localhost:8123`:
 
@@ -173,6 +173,8 @@ pytest tests/ -q --tb=short
 
 Run it before every commit. The installed Git hook runs the non-mutating checks when Python files are staged.
 
+The primary environment uses `requirements_dev.txt`, Home Assistant 2026.9.0, and Python 3.14. CI also installs `requirements_dev_minimum.txt` with Home Assistant 2026.1.0 and Python 3.13 to protect the minimum version declared in `hacs.json`. The minimum requirements file contains compatibility constraints that are intentionally absent from the current environment.
+
 On macOS and Linux, pytest runs from `.venv`. On Windows, Docker Compose executes the exact `pytest tests/ -q --tb=short` command inside the test image.
 
 ## Platform details
@@ -196,8 +198,8 @@ Stop the conflicting service or change the host-side port in `docker-compose.yml
 
 ### Recreate the Python environment
 
-The bootstrap command automatically replaces `.venv` when it is missing or is not using Python 3.13. To refresh installed dependencies without deleting it, run `make bootstrap` again.
+The bootstrap command automatically replaces `.venv` when it is missing or is not using Python 3.14. To refresh installed dependencies without deleting it, run `make bootstrap` again.
 
 ### Windows reports a uv installation-link error
 
-The bootstrap checks `uv python find 3.13` after that error. It proceeds only when the requested runtime is actually available.
+The bootstrap checks `uv python find 3.14` after that error. It proceeds only when the requested runtime is actually available.
