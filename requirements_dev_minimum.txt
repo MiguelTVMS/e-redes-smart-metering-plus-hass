@@ -1,0 +1,10 @@
+-r requirements_dev_base.txt
+
+# Oldest Home Assistant version supported by hacs.json.
+homeassistant==2026.1.0
+
+# Compatibility constraints required by the minimum-version environment.
+litellm==1.80.5
+openai==2.11.0
+pycares>=4.4.0,<4.11.0
+aiodns>=3.2.0

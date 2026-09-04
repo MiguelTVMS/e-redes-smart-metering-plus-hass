@@ -10,7 +10,7 @@ Bootstrap the local development environment from the repository root:
 make bootstrap
 ```
 
-This installs the Python 3.13 development dependencies and copies the pre-commit hook to Git's resolved hooks directory, including in a linked worktree.
+This installs the Python 3.14 development dependencies and copies the pre-commit hook to Git's resolved hooks directory, including in a linked worktree.
 
 On Windows, the same command delegates to the repository PowerShell bootstrap. See the [cross-platform development guide](DEVELOPMENT.md) for prerequisites and troubleshooting on every supported host.
 
@@ -24,7 +24,7 @@ The pre-commit hook runs the following checks on staged Python files:
 4. **Mypy** - Static type checking
 5. **Pytest** - Unit tests (when Python files are staged)
 
-These are the **same checks** that run in GitHub Actions, so you'll catch issues before pushing.
+These are the same primary-environment checks that run in GitHub Actions, so you'll catch issues before pushing. CI additionally runs the full test suite against the minimum supported Home Assistant version.
 
 ## How It Works
 
@@ -135,7 +135,7 @@ Or reinstall it:
 Make sure you're in the correct Python environment:
 
 ```bash
-.venv/bin/python --version  # Should be Python 3.13
+.venv/bin/python --version  # Should be Python 3.14
 make bootstrap
 ```
 
@@ -145,7 +145,7 @@ make bootstrap
 - ✅ **Consistent code quality** - Automatic formatting and linting
 - ✅ **Faster feedback** - No need to wait for CI/CD
 - ✅ **Less review friction** - Code already meets standards
-- ✅ **Same as CI** - Uses identical checks as GitHub Actions
+- ✅ **Matches primary CI** - Uses the current Home Assistant checks from GitHub Actions
 
 ## Uninstalling
 

@@ -11,7 +11,6 @@ from typing import Any
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.helpers.entity_platform import async_calculate_suggested_object_id
 
 from .const import CONF_CPES, DOMAIN
 from .models import ERedesConfigEntry, ERedesRuntimeData
@@ -42,6 +41,25 @@ class _PendingReloadState:
 
     last_source_timestamps: dict[str, datetime]
     latest_measurement_sensor_keys: dict[str, frozenset[str]]
+
+
+def _legacy_suggested_object_id(entity: Any, device: dr.DeviceEntry) -> str | None:
+    """Calculate a generated object ID on Home Assistant before 2026.9."""
+    suggested_object_id = entity.suggested_object_id
+    calculated_object_id: str | None = None
+    if entity.has_entity_name:
+        device_name = device.name_by_user or device.name
+        if getattr(entity, "use_device_name", False):
+            calculated_object_id = device_name
+        elif device_name and suggested_object_id:
+            calculated_object_id = f"{device_name} {suggested_object_id}"
+    if not calculated_object_id:
+        calculated_object_id = suggested_object_id
+
+    platform = getattr(entity, "platform", None)
+    if platform and platform.entity_namespace is not None:
+        calculated_object_id = f"{platform.entity_namespace} {calculated_object_id}"
+    return calculated_object_id
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ERedesConfigEntry) -> bool:
@@ -135,26 +153,35 @@ async def async_reset_meter(
         entity_registry, device_entry.id, include_disabled_entities=True
     ):
         if entity_entry.config_entry_id == entry.entry_id:
-            if reset_entity_names and (
-                runtime_entity := runtime_entities.get(entity_entry.unique_id)
-            ):
-                suggested_object_id = async_calculate_suggested_object_id(
-                    runtime_entity, device_entry
-                )
-                new_entity_id = (
-                    entity_registry.async_generate_entity_id(
-                        entity_entry.domain,
-                        suggested_object_id,
-                        current_entity_id=entity_entry.entity_id,
-                    )
-                    if suggested_object_id
-                    else entity_entry.entity_id
-                )
+            if reset_entity_names:
                 entity_entry = entity_registry.async_update_entity(
                     entity_entry.entity_id,
                     name=None,
-                    new_entity_id=new_entity_id,
                 )
+                if regenerate_entity_id := getattr(
+                    entity_registry, "async_regenerate_entity_id", None
+                ):
+                    new_entity_id = regenerate_entity_id(entity_entry)
+                elif runtime_entity := runtime_entities.get(entity_entry.unique_id):
+                    suggested_object_id = _legacy_suggested_object_id(
+                        runtime_entity, device_entry
+                    )
+                    new_entity_id = (
+                        entity_registry.async_generate_entity_id(
+                            entity_entry.domain,
+                            suggested_object_id,
+                            current_entity_id=entity_entry.entity_id,
+                        )
+                        if suggested_object_id
+                        else entity_entry.entity_id
+                    )
+                else:
+                    new_entity_id = entity_entry.entity_id
+                if new_entity_id != entity_entry.entity_id:
+                    entity_entry = entity_registry.async_update_entity(
+                        entity_entry.entity_id,
+                        new_entity_id=new_entity_id,
+                    )
             entity_registry.async_remove(entity_entry.entity_id)
 
     if remove_device and device_registry.async_get(device_entry.id) is not None:

@@ -35,6 +35,7 @@ from .const import (
     DOMAIN,
     WEBHOOK_ID,
 )
+from .models import device_entry_for_cpe
 from .webhook import async_get_active_webhook_url
 
 _CPE_PATTERN = re.compile(r"^PT[A-Z0-9]{18}$")
@@ -281,8 +282,10 @@ class EredesSmartMeteringPlusOptionsFlow(OptionsFlow):
         if self._reset_cpe is None:
             return self.async_abort(reason="meter_not_found")
 
-        device = dr.async_get(self.hass).async_get_device(
-            identifiers={(DOMAIN, self._reset_cpe)}
+        device = device_entry_for_cpe(
+            dr.async_get(self.hass),
+            self._reset_cpe,
+            self.config_entry.entry_id,
         )
         if device is None or self.config_entry.entry_id not in device.config_entries:
             return self.async_abort(reason="meter_not_found")

@@ -2,7 +2,7 @@ name: e-redes-smart-metering-plus-dev
 
 services:
   homeassistant-config:
-    image: ghcr.io/home-assistant/home-assistant:2026.1.0
+    image: ghcr.io/home-assistant/home-assistant:2026.9.0
     volumes:
       - ./config:/config
       - ./dev/home-assistant:/defaults:ro
@@ -19,7 +19,7 @@ services:
     restart: "no"
 
   homeassistant:
-    image: ghcr.io/home-assistant/home-assistant:2026.1.0
+    image: ghcr.io/home-assistant/home-assistant:2026.9.0
     depends_on:
       homeassistant-config:
         condition: service_completed_successfully
@@ -34,7 +34,7 @@ services:
     restart: unless-stopped
 
   homeassistant-onboarding:
-    image: ghcr.io/home-assistant/home-assistant:2026.1.0
+    image: ghcr.io/home-assistant/home-assistant:2026.9.0
     depends_on:
       homeassistant:
         condition: service_started

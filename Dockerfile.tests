@@ -1,8 +1,8 @@
-FROM ghcr.io/home-assistant/home-assistant:2026.1.0
+FROM ghcr.io/home-assistant/home-assistant:2026.9.0
 
 WORKDIR /workspace
 
-COPY requirements_dev.txt /tmp/requirements_dev.txt
+COPY requirements_dev_base.txt requirements_dev.txt /tmp/
 
 RUN python -m pip install --no-cache-dir --root-user-action=ignore -r /tmp/requirements_dev.txt
 

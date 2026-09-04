@@ -31,7 +31,7 @@ from .const import (
     TIMESTAMP_FIELDS,
     WEBHOOK_ID,
 )
-from .models import ERedesConfigEntry
+from .models import ERedesConfigEntry, device_entry_for_cpe
 from .sensor import async_ensure_calculated_sensors, async_ensure_sensors_for_data
 
 _LOGGER = logging.getLogger(__name__)
@@ -342,7 +342,7 @@ async def async_ensure_device(
     device_registry = dr.async_get(hass)
 
     # Check if device already exists
-    device = device_registry.async_get_device(identifiers={(DOMAIN, cpe)})
+    device = device_entry_for_cpe(device_registry, cpe, entry.entry_id)
 
     if not device:
         # Create new device
