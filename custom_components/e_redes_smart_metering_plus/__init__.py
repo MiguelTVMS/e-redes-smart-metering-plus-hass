@@ -164,16 +164,7 @@ async def async_reset_meter(
     ):
         values.pop(cpe, None)
 
-    pending_watermarks = hass.data.setdefault(_PENDING_RESET_WATERMARKS, {})
-    watermarks = runtime_data.last_source_timestamps
-    pending_watermarks[entry.entry_id] = watermarks
-    try:
-        await hass.config_entries.async_reload(entry.entry_id)
-    finally:
-        if pending_watermarks.get(entry.entry_id) is watermarks:
-            pending_watermarks.pop(entry.entry_id, None)
-        if not pending_watermarks:
-            hass.data.pop(_PENDING_RESET_WATERMARKS, None)
+    await _async_reload_entry(hass, entry)
     return True
 
 
@@ -290,5 +281,14 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ERedesConfigEntry) -> 
 
 
 async def _async_reload_entry(hass: HomeAssistant, entry: ERedesConfigEntry) -> None:
-    """Reload the integration after its configuration changes."""
-    await hass.config_entries.async_reload(entry.entry_id)
+    """Reload the integration without reopening the webhook without watermarks."""
+    pending_watermarks = hass.data.setdefault(_PENDING_RESET_WATERMARKS, {})
+    watermarks = entry.runtime_data.last_source_timestamps
+    pending_watermarks[entry.entry_id] = watermarks
+    try:
+        await hass.config_entries.async_reload(entry.entry_id)
+    finally:
+        if pending_watermarks.get(entry.entry_id) is watermarks:
+            pending_watermarks.pop(entry.entry_id, None)
+        if not pending_watermarks:
+            hass.data.pop(_PENDING_RESET_WATERMARKS, None)

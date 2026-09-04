@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock
 
 import pytest
@@ -113,6 +114,9 @@ async def test_options_configure_webhook_authentication(
     defaults = result["data_schema"]({})
     assert defaults[CONF_WEBHOOK_AUTH_ENABLED] is False
     assert defaults[CONF_WEBHOOK_AUTH_TOKEN] == ""
+    cpe = next(iter(config_entry.runtime_data.allowed_cpes))
+    watermark = datetime(2026, 9, 4, 10, 0, tzinfo=UTC)
+    config_entry.runtime_data.last_source_timestamps[cpe] = watermark
 
     result = await hass.config_entries.options.async_configure(
         result["flow_id"],
@@ -124,8 +128,10 @@ async def test_options_configure_webhook_authentication(
     )
 
     assert result["type"] == "create_entry"
+    await hass.async_block_till_done()
     assert config_entry.data[CONF_WEBHOOK_AUTH_ENABLED] is True
     assert config_entry.data[CONF_WEBHOOK_AUTH_TOKEN] == "configured-token"
+    assert config_entry.runtime_data.last_source_timestamps[cpe] == watermark
 
 
 async def test_options_generate_webhook_authentication_token(
