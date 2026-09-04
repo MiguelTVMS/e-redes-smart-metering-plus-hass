@@ -114,7 +114,7 @@ Onboarding completes automatically. Use `make ha-credentials` to retrieve the ge
 make ha-restart
 ```
 
-The test webhook defaults to `http://localhost:8123/api/webhook/e_redes_smart_metering_plus`. Override its destination or CPE with `WEBHOOK_URL` and `TEST_CPE` environment variables.
+The test webhook defaults to `http://localhost:8123/api/webhook/e_redes_smart_metering_plus`. Override its destination or CPE with `WEBHOOK_URL` and `TEST_CPE`. If webhook authentication is enabled, set `WEBHOOK_AUTH_TOKEN` to the configured token.
 
 ### Simulate meter data
 
@@ -148,7 +148,7 @@ Use `--dry-run` to inspect one generated payload without sending it, or `--print
 .venv/bin/python scripts/simulate-webhook.py --help
 ```
 
-On Windows, replace `.venv/bin/python` with `.venv\Scripts\python.exe`. The same settings are available through the `WEBHOOK_URL`, `TEST_CPE`, `SIMULATION_SCENARIO`, `SIMULATION_INTERVAL`, `SIMULATION_COUNT`, `SIMULATION_PHASES`, and `SIMULATION_NOMINAL_CURRENT_AMPS` environment variables.
+On Windows, replace `.venv/bin/python` with `.venv\Scripts\python.exe`. The same settings are available through the `WEBHOOK_URL`, `WEBHOOK_AUTH_TOKEN`, `TEST_CPE`, `SIMULATION_SCENARIO`, `SIMULATION_INTERVAL`, `SIMULATION_COUNT`, `SIMULATION_PHASES`, and `SIMULATION_NOMINAL_CURRENT_AMPS` environment variables.
 
 ## Validation contract
 

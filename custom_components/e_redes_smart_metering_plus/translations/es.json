@@ -11,11 +11,54 @@
     },
     "abort": { "already_configured": "Esta integración ya está configurada" }
   },
-  "options": { "step": { "init": {
-    "title": "Configuración del webhook E-Redes",
-    "description": "La URL activa del webhook es:\n\n**{webhook_url}**\n\nLos usuarios de Home Assistant Cloud también pueden encontrar la URL externa del webhook en [Ajustes > Home Assistant Cloud > Webhooks](/config/cloud/webhooks).\n\nMantén en la lista todos los CPE que deban seguir recibiendo actualizaciones, ya que se rechazarán los datos de CPE que no estén en esta lista.",
-    "data": { "cpes": "CPE autorizado" }
-  } } },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Configurar E-Redes Smart Metering Plus",
+        "menu_options": {
+          "webhook_settings": "URL del webhook y autenticación",
+          "manage_cpes": "Gestionar CPE autorizados",
+          "reset_meter": "Restablecer un contador"
+        }
+      },
+      "webhook_settings": {
+        "title": "URL del webhook y autenticación",
+        "description": "La URL activa del webhook es:\n\n**{webhook_url}**\n\nLos usuarios de Home Assistant Cloud también pueden encontrar la URL externa del webhook en [Ajustes > Home Assistant Cloud > Webhooks](/config/cloud/webhooks).\n\n**Autenticación**\n\nE-REDES solicita un valor de autenticación en cabecera HTTP, pero no especifica públicamente el formato. Cuando está habilitada, esta integración comprueba la cabecera `Authorization` y acepta el token configurado exactamente o como `Bearer TOKEN`. Proporciona el mismo token a E-REDES.\n\nPara crear un token, selecciona **Generar un nuevo token aleatorio** y envía el formulario. El formulario se actualiza con el token generado visible para que puedas copiarlo. Vuelve a enviarlo para guardar. Mantén privados la URL del webhook y el token.",
+        "data": {
+          "webhook_auth_enabled": "Exigir cabecera Authorization",
+          "webhook_auth_token": "Token de autorización",
+          "generate_auth_token": "Generar un nuevo token aleatorio"
+        },
+        "data_description": {
+          "webhook_auth_enabled": "Deshabilitado de forma predeterminada. Habilítalo solo después de configurar E-REDES para enviar el token.",
+          "webhook_auth_token": "Texto visible para que se pueda copiar en la configuración de activación de E-REDES.",
+          "generate_auth_token": "Envía una vez para generar y mostrar un nuevo token. Vuelve a enviar para guardarlo."
+        }
+      },
+      "manage_cpes": {
+        "title": "Gestionar CPE autorizados",
+        "description": "Mantén en la lista todos los CPE que deban seguir recibiendo actualizaciones, ya que se rechazarán los datos de CPE que no estén en esta lista.",
+        "data": { "cpes": "CPE autorizado" }
+      },
+      "reset_meter": {
+        "title": "Restablecer un contador",
+        "description": "Selecciona el contador cuyos campos detectados y nombres de entidades deseas restablecer. El CPE y la URL del webhook permanecen configurados.",
+        "data": { "meter": "Contador" }
+      },
+      "confirm_reset_meter": {
+        "title": "Confirmar el restablecimiento del contador",
+        "description": "¿Restablecer **{meter}**? Su dispositivo y entidades se eliminarán. La siguiente carga del webhook recreará el contador con nombres generados y solo los campos recién recibidos. El historial del registrador y las estadísticas a largo plazo no se eliminan."
+      }
+    },
+    "error": {
+      "auth_token_invalid": "Utiliza solo caracteres ASCII en el token de autenticación",
+      "auth_token_required": "Introduce o genera un token cuando la autenticación esté habilitada"
+    },
+    "abort": {
+      "no_meters": "No hay contadores detectados disponibles para restablecer",
+      "meter_not_found": "El contador seleccionado ya no está disponible"
+    }
+  },
   "entity": {
     "select": { "contracted_power": { "name": "Potencia contratada" } },
     "binary_sensor": {

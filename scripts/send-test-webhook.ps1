@@ -15,11 +15,17 @@ param(
         else {
             "PT000000000000000000"
         }
-    )
+    ),
+    [string] $WebhookAuthToken = $env:WEBHOOK_AUTH_TOKEN
 )
 
 $ErrorActionPreference = "Stop"
 $sourceTimestamp = [DateTime]::UtcNow.ToString("yyyy-MM-dd HH:mm:ss")
+
+$headers = @{}
+if ($WebhookAuthToken) {
+    $headers.Authorization = "Bearer $WebhookAuthToken"
+}
 
 $payload = @{
     cpe                                  = $TestCpe
@@ -39,6 +45,7 @@ $payload = @{
 Invoke-RestMethod `
     -Method Post `
     -Uri $WebhookUrl `
+    -Headers $headers `
     -ContentType "application/json" `
     -Body $payload | Out-Null
 

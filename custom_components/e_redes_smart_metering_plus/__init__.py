@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+from datetime import datetime
 import logging
 import re
 from typing import Any
@@ -9,6 +11,7 @@ from typing import Any
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr, entity_registry as er
+from homeassistant.helpers.entity_platform import async_calculate_suggested_object_id
 
 from .const import CONF_CPES, DOMAIN
 from .models import ERedesConfigEntry, ERedesRuntimeData
@@ -21,6 +24,7 @@ from .webhook import (
 _LOGGER = logging.getLogger(__name__)
 
 _CONFIG_ENTRY_VERSION = 6
+_PENDING_RELOAD_STATE = f"{DOMAIN}_pending_reload_state"
 _PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.SELECT, Platform.BINARY_SENSOR]
 _CPE_UNIQUE_ID_PATTERN = re.compile(rf"^{DOMAIN}_(PT[A-Z0-9]{{18}})_")
 _CONTRACTED_POWER_ENTITY_KEY_MIGRATIONS = {
@@ -32,10 +36,25 @@ _CONTRACTED_POWER_ENTITY_KEY_MIGRATIONS = {
 }
 
 
+@dataclass(frozen=True)
+class _PendingReloadState:
+    """Runtime metadata that must survive a config-entry reload."""
+
+    last_source_timestamps: dict[str, datetime]
+    latest_measurement_sensor_keys: dict[str, frozenset[str]]
+
+
 async def async_setup_entry(hass: HomeAssistant, entry: ERedesConfigEntry) -> bool:
     """Set up E-Redes Smart Metering Plus from a config entry."""
+    pending_state = hass.data.get(_PENDING_RELOAD_STATE, {}).get(entry.entry_id)
     entry.runtime_data = ERedesRuntimeData(
-        allowed_cpes=frozenset(entry.data.get(CONF_CPES, ()))
+        allowed_cpes=frozenset(entry.data.get(CONF_CPES, ())),
+        last_source_timestamps=(
+            dict(pending_state.last_source_timestamps) if pending_state else {}
+        ),
+        latest_measurement_sensor_keys=(
+            dict(pending_state.latest_measurement_sensor_keys) if pending_state else {}
+        ),
     )
 
     # Platforms must provide their entity callbacks before the webhook can receive data.
@@ -59,6 +78,106 @@ async def async_unload_entry(hass: HomeAssistant, entry: ERedesConfigEntry) -> b
         return False
 
     async_unload_webhook(hass, entry.runtime_data.webhook_id)
+    return True
+
+
+async def async_remove_config_entry_device(
+    hass: HomeAssistant,
+    entry: ERedesConfigEntry,
+    device_entry: dr.DeviceEntry,
+) -> bool:
+    """Clear a meter and let Home Assistant remove its registry device."""
+    return await async_reset_meter(
+        hass,
+        entry,
+        device_entry,
+        remove_device=False,
+    )
+
+
+async def async_reset_meter(
+    hass: HomeAssistant,
+    entry: ERedesConfigEntry,
+    device_entry: dr.DeviceEntry,
+    *,
+    reset_entity_names: bool = False,
+    remove_device: bool = True,
+) -> bool:
+    """Delete a meter's discovered data so its next payload recreates it."""
+    cpes = {
+        identifier
+        for domain, identifier in device_entry.identifiers
+        if domain == DOMAIN and identifier in entry.runtime_data.allowed_cpes
+    }
+    if entry.entry_id not in device_entry.config_entries or len(cpes) != 1:
+        return False
+
+    cpe = cpes.pop()
+    entity_registry = er.async_get(hass)
+    device_registry = dr.async_get(hass)
+    if reset_entity_names:
+        device_entry = (
+            device_registry.async_update_device(device_entry.id, name_by_user=None)
+            or device_entry
+        )
+
+    runtime_entities = {
+        entity.unique_id: entity
+        for entities in (
+            entry.runtime_data.sensor_entities,
+            entry.runtime_data.select_entities,
+            entry.runtime_data.binary_sensor_entities,
+        )
+        for entity in entities.values()
+        if entity.unique_id is not None
+    }
+    for entity_entry in er.async_entries_for_device(
+        entity_registry, device_entry.id, include_disabled_entities=True
+    ):
+        if entity_entry.config_entry_id == entry.entry_id:
+            if reset_entity_names and (
+                runtime_entity := runtime_entities.get(entity_entry.unique_id)
+            ):
+                suggested_object_id = async_calculate_suggested_object_id(
+                    runtime_entity, device_entry
+                )
+                new_entity_id = (
+                    entity_registry.async_generate_entity_id(
+                        entity_entry.domain,
+                        suggested_object_id,
+                        current_entity_id=entity_entry.entity_id,
+                    )
+                    if suggested_object_id
+                    else entity_entry.entity_id
+                )
+                entity_entry = entity_registry.async_update_entity(
+                    entity_entry.entity_id,
+                    name=None,
+                    new_entity_id=new_entity_id,
+                )
+            entity_registry.async_remove(entity_entry.entity_id)
+
+    if remove_device and device_registry.async_get(device_entry.id) is not None:
+        device_registry.async_remove_device(device_entry.id)
+
+    runtime_data = entry.runtime_data
+    for entities in (
+        runtime_data.sensor_entities,
+        runtime_data.select_entities,
+        runtime_data.binary_sensor_entities,
+    ):
+        for key in tuple(entities):
+            if key == cpe or key.startswith(f"{cpe}_"):
+                entities.pop(key)
+
+    for values in (
+        runtime_data.latest_measurement_sensor_keys,
+        runtime_data.webhook_locks,
+        runtime_data.payload_fields,
+    ):
+        values.pop(cpe, None)
+
+    await _async_reload_entry(hass, entry)
     return True
 
 
@@ -175,5 +294,19 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ERedesConfigEntry) -> 
 
 
 async def _async_reload_entry(hass: HomeAssistant, entry: ERedesConfigEntry) -> None:
-    """Reload the integration after its configuration changes."""
-    await hass.config_entries.async_reload(entry.entry_id)
+    """Reload the integration while preserving ordering and batch metadata."""
+    pending_states = hass.data.setdefault(_PENDING_RELOAD_STATE, {})
+    pending_state = _PendingReloadState(
+        last_source_timestamps=entry.runtime_data.last_source_timestamps,
+        latest_measurement_sensor_keys=(
+            entry.runtime_data.latest_measurement_sensor_keys
+        ),
+    )
+    pending_states[entry.entry_id] = pending_state
+    try:
+        await hass.config_entries.async_reload(entry.entry_id)
+    finally:
+        if pending_states.get(entry.entry_id) is pending_state:
+            pending_states.pop(entry.entry_id, None)
+        if not pending_states:
+            hass.data.pop(_PENDING_RELOAD_STATE, None)

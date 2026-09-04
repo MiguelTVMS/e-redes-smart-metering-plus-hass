@@ -34,8 +34,8 @@ Monitor compatible E-REDES Smart Metering Plus meters in Home Assistant. The int
 ## Set up your meter
 
 1. During setup, enter every CPE that may send data to this Home Assistant instance.
-2. Open **Settings > Devices & services**, select the integration, then choose **Configure** to copy the active webhook URL.
-3. Configure that URL in E-REDES Smart Metering Plus.
+2. Open **Settings > Devices & services**, select the integration, choose **Configure**, then open **Webhook URL and Authentication**.
+3. Copy the active URL into E-REDES Smart Metering Plus. Authentication is disabled by default. To enable it, generate or enter a token, save it in Home Assistant, and provide the same token to E-REDES as the HTTP Header Authentication value.
 4. When the first payload arrives, Home Assistant creates a device for that CPE.
 5. On each meter device, select the **Contracted power** from your electricity contract. Power usage entities remain unavailable until you choose a tier.
 
@@ -50,7 +50,7 @@ The webhook path is always `/api/webhook/e_redes_smart_metering_plus`.
 Reloading or restarting the integration preserves the existing Cloudhook. It is deleted only when you remove the integration entry.
 
 > [!CAUTION]
-> The CPE list is an allowlist, not sender authentication. Keep the webhook URL private and do not include CPE values or complete payloads in public support requests.
+> The CPE list is an allowlist, not sender authentication. Optional authentication checks the `Authorization` header and accepts the configured token either verbatim or as `Bearer <token>`. E-REDES publicly requests an HTTP Header Authentication value but does not document its exact header format, so confirm the setting with E-REDES if delivery fails. Keep the webhook URL and token private, and do not include CPE values or complete payloads in public support requests.
 
 ## What Home Assistant creates
 
@@ -65,6 +65,8 @@ For each CPE, Home Assistant creates a separate meter device. Available entities
 | Diagnostics | Last update and Update interval, disabled by default |
 
 The following diagnostic problem entities are also disabled by default: **Estimated power usage warning**, **Estimated critical power usage**, and **Estimated power usage exceeded**. Enable them from the device page only if you need separate alert entities.
+
+To rediscover a meter's available fields, delete its device from Home Assistant. The integration keeps the CPE authorized and preserves the webhook URL. The next payload for that CPE recreates the device using only newly received fields while preserving existing entity IDs when those fields return. To also restore generated device and entity names and entity IDs, open the integration's **Configure** dialog and choose **Reset a meter**. Neither operation deletes recorder history or long-term statistics.
 
 Estimated power usage compares the active-current component derived from active power and voltage with the nominal current for the selected contracted-power tier. For three-phase data, it uses the most-loaded reported phase. The Smart Metering Plus webhook does not provide current, apparent power, or power factor, so this is a lower-bound estimate whenever the power factor is below 1. It must not be used to predict the behavior of a physical breaker, the meter's control function, or other protection hardware.
 

@@ -167,12 +167,20 @@ def _split_power(total_watts: int) -> tuple[int, int, int]:
     return phase_1, phase_2, total_watts - phase_1 - phase_2
 
 
-def post_payload(url: str, payload: dict[str, Any], timeout: float) -> int:
+def post_payload(
+    url: str,
+    payload: dict[str, Any],
+    timeout: float,
+    auth_token: str | None = None,
+) -> int:
     """Post one payload and return the HTTP status code."""
+    headers = {"Accept": "text/plain", "Content-Type": "application/json"}
+    if auth_token:
+        headers["Authorization"] = f"Bearer {auth_token}"
     request = Request(
         url,
         data=json.dumps(payload).encode("utf-8"),
-        headers={"Accept": "text/plain", "Content-Type": "application/json"},
+        headers=headers,
         method="POST",
     )
     try:
@@ -200,6 +208,8 @@ def _http_error_hint(status_code: int, cpe: str) -> str:
             f"Add CPE {cpe} in the integration's Configure dialog, or pass the "
             "configured value with --cpe."
         )
+    if status_code == 401:
+        return "Pass the configured token with --auth-token."
     if status_code == 404:
         return "Add or reload the integration and verify the webhook URL."
     return "Check the Home Assistant logs for the request failure."
@@ -228,6 +238,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--url", default=os.environ.get("WEBHOOK_URL", DEFAULT_WEBHOOK_URL)
     )
     parser.add_argument("--cpe", default=os.environ.get("TEST_CPE", DEFAULT_CPE))
+    parser.add_argument(
+        "--auth-token",
+        default=os.environ.get("WEBHOOK_AUTH_TOKEN"),
+        help="Authorization token configured in Home Assistant",
+    )
     parser.add_argument(
         "--scenario",
         choices=("household", "solar", "contracted-power"),
@@ -305,7 +320,7 @@ def run(args: argparse.Namespace) -> int:
 
             status: int | str = "dry-run"
             if not args.dry_run:
-                status = post_payload(args.url, payload, args.timeout)
+                status = post_payload(args.url, payload, args.timeout, args.auth_token)
 
             sent += 1
             print(

@@ -16,10 +16,49 @@
   "options": {
     "step": {
       "init": {
-        "title": "E-Redes webhook configuration",
-        "description": "The active webhook URL is:\n\n**{webhook_url}**\n\nHome Assistant Cloud users can also find their external webhook URL under [Settings > Home Assistant Cloud > Webhooks](/config/cloud/webhooks).\n\nKeep all CPEs that should continue receiving updates in the list below, since payloads for CPEs not in this list are rejected.",
+        "title": "Configure E-Redes Smart Metering Plus",
+        "menu_options": {
+          "webhook_settings": "Webhook URL and Authentication",
+          "manage_cpes": "Manage allowed CPEs",
+          "reset_meter": "Reset a meter"
+        }
+      },
+      "webhook_settings": {
+        "title": "Webhook URL and Authentication",
+        "description": "The active webhook URL is:\n\n**{webhook_url}**\n\nHome Assistant Cloud users can also find their external webhook URL under [Settings > Home Assistant Cloud > Webhooks](/config/cloud/webhooks).\n\n**Authentication**\n\nE-REDES asks for an HTTP Header Authentication value but does not publicly specify its format. When enabled, this integration checks the `Authorization` header and accepts the configured token either exactly or as `Bearer TOKEN`. Give E-REDES the same token.\n\nTo create a token, select **Generate a new random token** and submit. The form refreshes with the generated token visible so you can copy it. Submit again to save. Keep the webhook URL and token private.",
+        "data": {
+          "webhook_auth_enabled": "Require Authorization header",
+          "webhook_auth_token": "Authorization token",
+          "generate_auth_token": "Generate a new random token"
+        },
+        "data_description": {
+          "webhook_auth_enabled": "Disabled by default. Enable only after E-REDES is configured to send the token.",
+          "webhook_auth_token": "Visible plain text so it can be copied into the E-REDES activation settings.",
+          "generate_auth_token": "Submit once to generate and display a new token. Submit again to save it."
+        }
+      },
+      "manage_cpes": {
+        "title": "Manage allowed CPEs",
+        "description": "Keep all CPEs that should continue receiving updates in the list below, since payloads for CPEs not in this list are rejected.",
         "data": { "cpes": "Allowed CPE" }
+      },
+      "reset_meter": {
+        "title": "Reset a meter",
+        "description": "Select the meter whose discovered fields and entity names you want to reset. The CPE and webhook URL remain configured.",
+        "data": { "meter": "Meter" }
+      },
+      "confirm_reset_meter": {
+        "title": "Confirm meter reset",
+        "description": "Reset **{meter}**? Its device and entities will be removed. The next webhook payload recreates the meter with generated names and only the newly received fields. Recorder history and long-term statistics are not deleted."
       }
+    },
+    "error": {
+      "auth_token_invalid": "Use only ASCII characters in the authentication token",
+      "auth_token_required": "Enter or generate a token when authentication is enabled"
+    },
+    "abort": {
+      "no_meters": "No discovered meters are available to reset",
+      "meter_not_found": "The selected meter is no longer available"
     }
   },
   "entity": {

@@ -4,11 +4,18 @@ set -euo pipefail
 
 WEBHOOK_URL="${WEBHOOK_URL:-http://localhost:8123/api/webhook/e_redes_smart_metering_plus}"
 TEST_CPE="${TEST_CPE:-PT000000000000000000}"
+WEBHOOK_AUTH_TOKEN="${WEBHOOK_AUTH_TOKEN:-}"
 SOURCE_TIMESTAMP="$(date -u +"%Y-%m-%d %H:%M:%S")"
+
+AUTH_ARGS=()
+if [[ -n "$WEBHOOK_AUTH_TOKEN" ]]; then
+    AUTH_ARGS+=(--header "Authorization: Bearer $WEBHOOK_AUTH_TOKEN")
+fi
 
 curl --fail-with-body \
     --request POST \
     --header "Content-Type: application/json" \
+    "${AUTH_ARGS[@]}" \
     --data "{
         \"cpe\": \"${TEST_CPE}\",
         \"SourceTimestamp\": \"${SOURCE_TIMESTAMP}\",
