@@ -116,6 +116,14 @@ make ha-restart
 
 The test webhook defaults to `http://localhost:8123/api/webhook/e_redes_smart_metering_plus`. Override its destination or CPE with `WEBHOOK_URL` and `TEST_CPE`. If webhook authentication is enabled, set `WEBHOOK_AUTH_TOKEN` to the configured token.
 
+For example, after adding the placeholder CPE to the development integration:
+
+```console
+TEST_CPE=PT000000000000000000 WEBHOOK_AUTH_TOKEN=replace-with-local-token make webhook
+```
+
+PowerShell users can set the same values as environment variables before running `make webhook`. The helper creates a fresh UTC `SourceTimestamp` on every invocation, so repeated tests are not silently ignored as older measurements.
+
 ### Simulate meter data
 
 First add the simulator's CPE to the integration through **Settings > Devices & services > E-Redes Smart Metering Plus > Configure**. Then start a continuous single-phase household simulation:
@@ -177,6 +185,16 @@ The primary environment uses `requirements_dev.txt`, Home Assistant 2026.9.0, an
 
 On macOS and Linux, pytest runs from `.venv`. On Windows, Docker Compose executes the exact `pytest tests/ -q --tb=short` command inside the test image.
 
+To reproduce the minimum-version CI job locally without replacing `.venv`, create a separate Python 3.13 virtual environment and install `requirements_dev_minimum.txt`. Do not mix the minimum constraints into the primary environment.
+
+Validate a development Home Assistant configuration after dependency or integration metadata changes:
+
+```console
+docker compose run --rm --no-deps homeassistant python -m homeassistant --script check_config --config /config
+```
+
+This uses the pinned Linux Home Assistant image and the same configuration and read-only custom-integration mounts as the development service on Windows, macOS, and Linux.
+
 ## Platform details
 
 - Windows virtual environments use `.venv\Scripts`; macOS and Linux use `.venv/bin`.
@@ -203,3 +221,11 @@ The bootstrap command automatically replaces `.venv` when it is missing or is no
 ### Windows reports a uv installation-link error
 
 The bootstrap checks `uv python find 3.14` after that error. It proceeds only when the requested runtime is actually available.
+
+### Webhook returns 200 but entities do not update
+
+The integration preserves incoming measurement timestamps and ignores data older than the latest accepted measurement for that CPE. Both webhook helper scripts generate a current UTC `SourceTimestamp`. When constructing a payload manually, update its timestamp before sending it again.
+
+### Webhook returns 401 or 403
+
+HTTP 401 means the configured authentication token did not match the `Authorization` header. Set `WEBHOOK_AUTH_TOKEN` for `make webhook`, or disable authentication in the integration while testing. HTTP 403 means `TEST_CPE` is not present under **Configure > Manage allowed CPEs**.

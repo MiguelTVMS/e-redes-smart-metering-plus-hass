@@ -22,7 +22,7 @@ See the [cross-platform development guide](docs/DEVELOPMENT.md) for verified Win
    make ha-up
    ```
 
-7. Open `http://localhost:8123` and complete Home Assistant onboarding if this is the first run.
+7. Open `http://localhost:8123`. The development stack completes onboarding automatically. Use `make ha-credentials` only if the trusted-network login is unavailable.
 
 The integration source is mounted directly into Home Assistant. Restart Home Assistant after changing Python code:
 
@@ -49,7 +49,7 @@ Command | Purpose
 
 The same commands are available from **Terminal > Run Task** in VS Code.
 
-The pre-commit hook automatically runs linting and tests before each commit, ensuring your code meets quality standards before pushing.
+The pre-commit hook automatically runs the primary Python 3.14 and Home Assistant 2026.9 checks before each commit. GitHub Actions also runs the full test suite on the minimum supported Python 3.13 and Home Assistant 2026.1 environment.
 
 ### Branching model (gitflow)
 
@@ -99,11 +99,13 @@ make validate
 ## Reporting Issues
 
 Please use the GitHub issue tracker to report bugs or request features.
-Include as much detail as possible:
+Include the following diagnostic information when it is relevant:
 
 - Home Assistant version
 - Integration version
 - Steps to reproduce
 - Error logs (if applicable)
+
+Remove CPEs, webhook URLs, authentication tokens, credentials, and unredacted payload data before posting. A payload can disclose household energy usage even when it contains no account credentials.
 
 Thank you for contributing!

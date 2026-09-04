@@ -5,7 +5,9 @@ on:
     branches:
       - develop
     paths:
+      - '*.md'
       - 'custom_components/e_redes_smart_metering_plus/**'
+      - 'docs/**'
       - 'tests/**'
       - 'scripts/**'
       - 'dev/home-assistant/**'
