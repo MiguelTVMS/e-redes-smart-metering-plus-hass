@@ -22,6 +22,7 @@ from .webhook import (
 _LOGGER = logging.getLogger(__name__)
 
 _CONFIG_ENTRY_VERSION = 6
+_PENDING_RESET_WATERMARKS = f"{DOMAIN}_pending_reset_watermarks"
 _PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.SELECT, Platform.BINARY_SENSOR]
 _CPE_UNIQUE_ID_PATTERN = re.compile(rf"^{DOMAIN}_(PT[A-Z0-9]{{18}})_")
 _CONTRACTED_POWER_ENTITY_KEY_MIGRATIONS = {
@@ -35,8 +36,12 @@ _CONTRACTED_POWER_ENTITY_KEY_MIGRATIONS = {
 
 async def async_setup_entry(hass: HomeAssistant, entry: ERedesConfigEntry) -> bool:
     """Set up E-Redes Smart Metering Plus from a config entry."""
+    preserved_watermarks = dict(
+        hass.data.get(_PENDING_RESET_WATERMARKS, {}).get(entry.entry_id, {})
+    )
     entry.runtime_data = ERedesRuntimeData(
-        allowed_cpes=frozenset(entry.data.get(CONF_CPES, ()))
+        allowed_cpes=frozenset(entry.data.get(CONF_CPES, ())),
+        last_source_timestamps=preserved_watermarks,
     )
 
     # Platforms must provide their entity callbacks before the webhook can receive data.
@@ -95,7 +100,6 @@ async def async_reset_meter(
         return False
 
     cpe = cpes.pop()
-    last_source_timestamp = entry.runtime_data.last_source_timestamps.get(cpe)
     entity_registry = er.async_get(hass)
     device_registry = dr.async_get(hass)
     if reset_entity_names:
@@ -160,9 +164,16 @@ async def async_reset_meter(
     ):
         values.pop(cpe, None)
 
-    await hass.config_entries.async_reload(entry.entry_id)
-    if last_source_timestamp is not None:
-        entry.runtime_data.last_source_timestamps[cpe] = last_source_timestamp
+    pending_watermarks = hass.data.setdefault(_PENDING_RESET_WATERMARKS, {})
+    watermarks = runtime_data.last_source_timestamps
+    pending_watermarks[entry.entry_id] = watermarks
+    try:
+        await hass.config_entries.async_reload(entry.entry_id)
+    finally:
+        if pending_watermarks.get(entry.entry_id) is watermarks:
+            pending_watermarks.pop(entry.entry_id, None)
+        if not pending_watermarks:
+            hass.data.pop(_PENDING_RESET_WATERMARKS, None)
     return True
 
 

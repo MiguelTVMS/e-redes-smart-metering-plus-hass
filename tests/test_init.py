@@ -7,6 +7,7 @@ from unittest.mock import AsyncMock, Mock
 import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
+import custom_components.e_redes_smart_metering_plus as integration
 from custom_components.e_redes_smart_metering_plus import (
     async_migrate_entry,
     async_remove_config_entry_device,
@@ -323,7 +324,7 @@ async def test_remove_device_rejects_unconfigured_meter(
 
 
 async def test_deleted_meter_is_recreated_from_next_payload(
-    hass: HomeAssistant, config_entry
+    hass: HomeAssistant, config_entry, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """The next payload must recreate a deleted meter with a fresh field set."""
     cpe = "CPE001"
@@ -344,8 +345,25 @@ async def test_deleted_meter_is_recreated_from_next_payload(
     device_entry = device_registry.async_get_device(identifiers={(DOMAIN, cpe)})
     assert device_entry is not None
     old_unique_id = f"{DOMAIN}_{cpe}_active_energy_import"
-    assert (
-        entity_registry.async_get_entity_id("sensor", DOMAIN, old_unique_id) is not None
+    old_entity_id = entity_registry.async_get_entity_id("sensor", DOMAIN, old_unique_id)
+    assert old_entity_id is not None
+    custom_entity_id = "sensor.preserved_custom_energy"
+    entity_registry.async_update_entity(
+        old_entity_id,
+        new_entity_id=custom_entity_id,
+    )
+
+    webhook_had_watermark: list[bool] = []
+    original_setup_webhook = integration.async_setup_webhook
+
+    async def assert_watermark_before_webhook(hass_instance, entry):
+        webhook_had_watermark.append(cpe in entry.runtime_data.last_source_timestamps)
+        return await original_setup_webhook(hass_instance, entry)
+
+    monkeypatch.setattr(
+        integration,
+        "async_setup_webhook",
+        assert_watermark_before_webhook,
     )
 
     original_data = dict(config_entry.data)
@@ -365,6 +383,7 @@ async def test_deleted_meter_is_recreated_from_next_payload(
     assert device_registry.async_get(device_entry.id) is None
     assert entity_registry.async_get_entity_id("sensor", DOMAIN, old_unique_id) is None
     assert cpe in config_entry.runtime_data.last_source_timestamps
+    assert webhook_had_watermark == [True]
 
     stale_request = Mock()
     stale_request.json = AsyncMock(
@@ -405,6 +424,22 @@ async def test_deleted_meter_is_recreated_from_next_payload(
         is not None
     )
     assert entity_registry.async_get_entity_id("sensor", DOMAIN, old_unique_id) is None
+
+    restored_request = Mock()
+    restored_request.json = AsyncMock(
+        return_value={
+            "cpe": cpe,
+            "SourceTimestamp": "2026-09-04 10:00:02",
+            "activeEnergyImport": 12346,
+        }
+    )
+    response = await handle_webhook(hass, WEBHOOK_ID, restored_request, config_entry)
+    assert response.status == 200
+    await hass.async_block_till_done()
+    assert (
+        entity_registry.async_get_entity_id("sensor", DOMAIN, old_unique_id)
+        == custom_entity_id
+    )
 
 
 async def test_full_meter_reset_restores_generated_entity_name_and_id(
