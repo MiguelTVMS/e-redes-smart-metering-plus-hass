@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+from datetime import datetime
 import logging
 import re
 from typing import Any
@@ -22,7 +24,7 @@ from .webhook import (
 _LOGGER = logging.getLogger(__name__)
 
 _CONFIG_ENTRY_VERSION = 6
-_PENDING_RESET_WATERMARKS = f"{DOMAIN}_pending_reset_watermarks"
+_PENDING_RELOAD_STATE = f"{DOMAIN}_pending_reload_state"
 _PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.SELECT, Platform.BINARY_SENSOR]
 _CPE_UNIQUE_ID_PATTERN = re.compile(rf"^{DOMAIN}_(PT[A-Z0-9]{{18}})_")
 _CONTRACTED_POWER_ENTITY_KEY_MIGRATIONS = {
@@ -34,14 +36,25 @@ _CONTRACTED_POWER_ENTITY_KEY_MIGRATIONS = {
 }
 
 
+@dataclass(frozen=True)
+class _PendingReloadState:
+    """Runtime metadata that must survive a config-entry reload."""
+
+    last_source_timestamps: dict[str, datetime]
+    latest_measurement_sensor_keys: dict[str, frozenset[str]]
+
+
 async def async_setup_entry(hass: HomeAssistant, entry: ERedesConfigEntry) -> bool:
     """Set up E-Redes Smart Metering Plus from a config entry."""
-    preserved_watermarks = dict(
-        hass.data.get(_PENDING_RESET_WATERMARKS, {}).get(entry.entry_id, {})
-    )
+    pending_state = hass.data.get(_PENDING_RELOAD_STATE, {}).get(entry.entry_id)
     entry.runtime_data = ERedesRuntimeData(
         allowed_cpes=frozenset(entry.data.get(CONF_CPES, ())),
-        last_source_timestamps=preserved_watermarks,
+        last_source_timestamps=(
+            dict(pending_state.last_source_timestamps) if pending_state else {}
+        ),
+        latest_measurement_sensor_keys=(
+            dict(pending_state.latest_measurement_sensor_keys) if pending_state else {}
+        ),
     )
 
     # Platforms must provide their entity callbacks before the webhook can receive data.
@@ -281,14 +294,19 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ERedesConfigEntry) -> 
 
 
 async def _async_reload_entry(hass: HomeAssistant, entry: ERedesConfigEntry) -> None:
-    """Reload the integration without reopening the webhook without watermarks."""
-    pending_watermarks = hass.data.setdefault(_PENDING_RESET_WATERMARKS, {})
-    watermarks = entry.runtime_data.last_source_timestamps
-    pending_watermarks[entry.entry_id] = watermarks
+    """Reload the integration while preserving ordering and batch metadata."""
+    pending_states = hass.data.setdefault(_PENDING_RELOAD_STATE, {})
+    pending_state = _PendingReloadState(
+        last_source_timestamps=entry.runtime_data.last_source_timestamps,
+        latest_measurement_sensor_keys=(
+            entry.runtime_data.latest_measurement_sensor_keys
+        ),
+    )
+    pending_states[entry.entry_id] = pending_state
     try:
         await hass.config_entries.async_reload(entry.entry_id)
     finally:
-        if pending_watermarks.get(entry.entry_id) is watermarks:
-            pending_watermarks.pop(entry.entry_id, None)
-        if not pending_watermarks:
-            hass.data.pop(_PENDING_RESET_WATERMARKS, None)
+        if pending_states.get(entry.entry_id) is pending_state:
+            pending_states.pop(entry.entry_id, None)
+        if not pending_states:
+            hass.data.pop(_PENDING_RELOAD_STATE, None)

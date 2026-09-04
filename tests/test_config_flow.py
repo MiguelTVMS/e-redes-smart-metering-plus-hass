@@ -116,7 +116,9 @@ async def test_options_configure_webhook_authentication(
     assert defaults[CONF_WEBHOOK_AUTH_TOKEN] == ""
     cpe = next(iter(config_entry.runtime_data.allowed_cpes))
     watermark = datetime(2026, 9, 4, 10, 0, tzinfo=UTC)
+    measurement_keys = frozenset({"active_power", "voltage"})
     config_entry.runtime_data.last_source_timestamps[cpe] = watermark
+    config_entry.runtime_data.latest_measurement_sensor_keys[cpe] = measurement_keys
 
     result = await hass.config_entries.options.async_configure(
         result["flow_id"],
@@ -132,6 +134,10 @@ async def test_options_configure_webhook_authentication(
     assert config_entry.data[CONF_WEBHOOK_AUTH_ENABLED] is True
     assert config_entry.data[CONF_WEBHOOK_AUTH_TOKEN] == "configured-token"
     assert config_entry.runtime_data.last_source_timestamps[cpe] == watermark
+    assert (
+        config_entry.runtime_data.latest_measurement_sensor_keys[cpe]
+        == measurement_keys
+    )
 
 
 async def test_options_generate_webhook_authentication_token(
