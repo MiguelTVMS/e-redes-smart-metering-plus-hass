@@ -7,14 +7,14 @@ from pathlib import Path
 import re
 
 ROOT = Path(__file__).resolve().parents[1]
-DOCUMENTATION = (
-    ROOT / "README.md",
-    ROOT / "CONTRIBUTING.md",
-    ROOT / "DISCLAIMER.md",
-    ROOT / "CHANGELOG.md",
-    ROOT / "docs" / "DEVELOPMENT.md",
-    ROOT / "docs" / "PRE_COMMIT_HOOK.md",
-    ROOT / "tests" / "README.md",
+DOCUMENTATION = tuple(
+    sorted(
+        (
+            *ROOT.glob("*.md"),
+            *(ROOT / "docs").rglob("*.md"),
+            *(ROOT / "tests").rglob("*.md"),
+        )
+    )
 )
 MARKDOWN_LINK = re.compile(r"(?<!!)\[[^]]+]\(([^)]+)\)")
 
