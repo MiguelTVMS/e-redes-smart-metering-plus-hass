@@ -20,7 +20,10 @@ from custom_components.e_redes_smart_metering_plus.const import (
     DOMAIN,
     WEBHOOK_ID,
 )
-from custom_components.e_redes_smart_metering_plus.models import ERedesRuntimeData
+from custom_components.e_redes_smart_metering_plus.models import (
+    ERedesRuntimeData,
+    device_entry_for_cpe,
+)
 from custom_components.e_redes_smart_metering_plus.sensor import (
     async_ensure_sensors_for_data,
 )
@@ -295,10 +298,7 @@ async def test_remove_device_resets_meter_and_preserves_configuration(
     assert cpe not in entry.runtime_data.payload_fields
     reload_entry.assert_awaited_once_with(entry.entry_id)
 
-    device_registry.async_update_device(
-        device_entry.id,
-        remove_config_entry_id=entry.entry_id,
-    )
+    device_registry.async_remove_device(device_entry.id)
     assert device_registry.async_get(device_entry.id) is None
 
 
@@ -342,7 +342,7 @@ async def test_deleted_meter_is_recreated_from_next_payload(
 
     device_registry = dr.async_get(hass)
     entity_registry = er.async_get(hass)
-    device_entry = device_registry.async_get_device(identifiers={(DOMAIN, cpe)})
+    device_entry = device_entry_for_cpe(device_registry, cpe, config_entry.entry_id)
     assert device_entry is not None
     old_unique_id = f"{DOMAIN}_{cpe}_active_energy_import"
     old_entity_id = entity_registry.async_get_entity_id("sensor", DOMAIN, old_unique_id)
@@ -372,10 +372,7 @@ async def test_deleted_meter_is_recreated_from_next_payload(
     await hass.async_block_till_done()
 
     assert device_registry.async_get(device_entry.id) is not None
-    device_registry.async_update_device(
-        device_entry.id,
-        remove_config_entry_id=config_entry.entry_id,
-    )
+    device_registry.async_remove_device(device_entry.id)
 
     assert config_entry.state is ConfigEntryState.LOADED
     assert config_entry.data == original_data
@@ -415,7 +412,7 @@ async def test_deleted_meter_is_recreated_from_next_payload(
     assert response.status == 200
     await hass.async_block_till_done()
 
-    recreated_device = device_registry.async_get_device(identifiers={(DOMAIN, cpe)})
+    recreated_device = device_entry_for_cpe(device_registry, cpe, config_entry.entry_id)
     assert recreated_device is not None
     assert (
         entity_registry.async_get_entity_id(
@@ -455,7 +452,7 @@ async def test_full_meter_reset_restores_generated_entity_name_and_id(
 
     device_registry = dr.async_get(hass)
     entity_registry = er.async_get(hass)
-    device_entry = device_registry.async_get_device(identifiers={(DOMAIN, cpe)})
+    device_entry = device_entry_for_cpe(device_registry, cpe, config_entry.entry_id)
     assert device_entry is not None
     unique_id = f"{DOMAIN}_{cpe}_active_energy_import"
     original_entity_id = entity_registry.async_get_entity_id(

@@ -10,6 +10,7 @@ from homeassistant.components.binary_sensor import BinarySensorEntity
 from homeassistant.components.select import SelectEntity
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
@@ -39,6 +40,19 @@ class ERedesRuntimeData:
 
 
 type ERedesConfigEntry = ConfigEntry[ERedesRuntimeData]
+
+
+def device_entry_for_cpe(
+    registry: dr.DeviceRegistry, cpe: str, config_entry_id: str
+) -> dr.DeviceEntry | None:
+    """Return a meter device across supported Home Assistant versions."""
+    if get_by_identifier := getattr(registry, "async_get_device_by_identifier", None):
+        return get_by_identifier((DOMAIN, cpe), config_entry_id)
+
+    device = registry.async_get_device(identifiers={(DOMAIN, cpe)})
+    if device is None or config_entry_id not in device.config_entries:
+        return None
+    return device
 
 
 def device_info_for_cpe(cpe: str) -> DeviceInfo:
