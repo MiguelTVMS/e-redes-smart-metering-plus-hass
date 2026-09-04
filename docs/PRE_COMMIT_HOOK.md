@@ -1,6 +1,6 @@
 # Pre-commit Hook
 
-This repository includes a pre-commit hook that automatically validates your code before each commit, ensuring it meets the same quality standards as the GitHub Actions CI/CD pipeline.
+This repository includes a pre-commit hook that validates staged Python changes before each commit. It matches the primary Python 3.14 and Home Assistant 2026.9 checks. GitHub Actions separately tests the Home Assistant 2026.1 minimum.
 
 ## Installation
 
@@ -98,13 +98,15 @@ git commit -m "Your commit message"
 
 ## Bypassing the Hook
 
-**Not recommended**, but you can skip the hook in emergencies:
+Do not bypass the hook for ordinary development. If an exceptional recovery requires it, run the complete `make validate` command before pushing and explain the bypass in the pull request.
+
+The Git command is:
 
 ```bash
 git commit --no-verify -m "Your commit message"
 ```
 
-⚠️ **Warning:** Bypassing the hook may cause your PR to fail GitHub Actions checks.
+Bypassing the hook does not bypass GitHub Actions and does not make an unvalidated commit acceptable for review.
 
 ## Troubleshooting
 
@@ -157,4 +159,4 @@ rm .git/hooks/pre-commit
 
 ---
 
-**Note:** The `.git/hooks` directory is not tracked by Git, so each contributor needs to install the hook separately using `./scripts/install-hooks.sh`.
+**Note:** The `.git/hooks` directory is not tracked by Git, so each contributor needs to install the hook separately. `make bootstrap` is the preferred installation path because it also verifies and prepares the required environment.

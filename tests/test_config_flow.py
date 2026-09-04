@@ -14,12 +14,25 @@ from custom_components.e_redes_smart_metering_plus.const import (
     DOMAIN,
     WEBHOOK_ID,
 )
+from custom_components.e_redes_smart_metering_plus.webhook import handle_webhook
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
 
 pytestmark = pytest.mark.asyncio
 
 TEST_CPE = "PT000000000000000000"
+
+
+class _WebhookRequest:
+    """Minimal webhook request used for runtime authentication checks."""
+
+    def __init__(self, payload: dict) -> None:
+        self._payload = payload
+        self.headers: dict[str, str] = {}
+
+    async def json(self) -> dict:
+        """Return the configured JSON payload."""
+        return self._payload
 
 
 async def test_show_form(hass: HomeAssistant) -> None:
@@ -138,6 +151,55 @@ async def test_options_configure_webhook_authentication(
         config_entry.runtime_data.latest_measurement_sensor_keys[cpe]
         == measurement_keys
     )
+
+
+async def test_options_disable_authentication_accepts_headerless_webhook(
+    hass: HomeAssistant, config_entry
+) -> None:
+    """Disabling previously enabled authentication must affect the live webhook."""
+    result = await hass.config_entries.options.async_init(config_entry.entry_id)
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], user_input={"next_step_id": "webhook_settings"}
+    )
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"],
+        user_input={
+            CONF_WEBHOOK_AUTH_ENABLED: True,
+            CONF_WEBHOOK_AUTH_TOKEN: "configured-token",
+            "generate_auth_token": False,
+        },
+    )
+    assert result["type"] == "create_entry"
+    await hass.async_block_till_done()
+
+    cpe = next(iter(config_entry.runtime_data.allowed_cpes))
+    payload = {"cpe": cpe, "activeEnergyImport": 1000}
+    response = await handle_webhook(
+        hass, WEBHOOK_ID, _WebhookRequest(payload), config_entry
+    )
+    assert response.status == 401
+
+    result = await hass.config_entries.options.async_init(config_entry.entry_id)
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], user_input={"next_step_id": "webhook_settings"}
+    )
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"],
+        user_input={
+            CONF_WEBHOOK_AUTH_ENABLED: False,
+            CONF_WEBHOOK_AUTH_TOKEN: "configured-token",
+            "generate_auth_token": False,
+        },
+    )
+    assert result["type"] == "create_entry"
+    await hass.async_block_till_done()
+
+    assert config_entry.data[CONF_WEBHOOK_AUTH_ENABLED] is False
+    assert config_entry.data[CONF_WEBHOOK_AUTH_TOKEN] == "configured-token"
+    response = await handle_webhook(
+        hass, WEBHOOK_ID, _WebhookRequest(payload), config_entry
+    )
+    assert response.status == 200
 
 
 async def test_options_generate_webhook_authentication_token(
