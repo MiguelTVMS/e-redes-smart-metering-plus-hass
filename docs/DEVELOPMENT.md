@@ -190,10 +190,10 @@ To reproduce the minimum-version CI job locally without replacing `.venv`, creat
 Validate a development Home Assistant configuration after dependency or integration metadata changes:
 
 ```console
-.venv/bin/hass --script check_config --config config
+docker compose run --rm --no-deps homeassistant python -m homeassistant --script check_config --config /config
 ```
 
-On Windows, run this check in the Linux Home Assistant container rather than through the native Python environment.
+This uses the pinned Linux Home Assistant image and the same configuration and read-only custom-integration mounts as the development service on Windows, macOS, and Linux.
 
 ## Platform details
 
